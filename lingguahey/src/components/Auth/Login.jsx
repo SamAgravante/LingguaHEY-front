@@ -19,8 +19,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const emailRef = useRef();
-  const passwordRef = useRef();
   const navigate = useNavigate();
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -58,7 +56,7 @@ const Login = () => {
               sx={{
                   backgroundColor: '#D2E0D3',
                   minHeight: '50vh',
-                  minWidth: '30vw',
+                  minWidth: '20vw',
                   borderBottomLeftRadius: '50px',
                   borderBottomRightRadius: '50px',
               }}>
@@ -72,7 +70,6 @@ const Login = () => {
           </Typography>
 
           <TextField
-            inputRef={emailRef}
             label="Email"
             name="email"
             value={form.email}
@@ -84,7 +81,6 @@ const Login = () => {
           />
 
           <TextField
-            inputRef={passwordRef}
             label="Password"
             name="password"
             value={form.password}

@@ -22,7 +22,7 @@ export default function LandingPage() {
                     sx={{
                         backgroundColor: '#D2E0D3',
                         minHeight: '60vh',
-                        minWidth: '30vw',
+                        minWidth: '20vw',
                         borderBottomLeftRadius: '50px',
                         borderBottomRightRadius: '50px',
                     }}>
