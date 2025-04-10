@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { signup } from "../../firebase/auth";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   Stack,
   Grid,
@@ -12,50 +12,71 @@ import {
   FormControlLabel
 } from "@mui/material";
 
+// Axios instance
+const API = axios.create({
+  baseURL: 'http://localhost:8080/api/alibata/auth',
+  timeout: 100000,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
+
 const Signup = () => {
-  const [confirmPass, setConfirmPass] = useState("");
-  const [form, setForm] = useState({
+  const [user, setUser] = useState({
     firstName: "",
     middleName: "",
     lastName: "",
     email: "",
     password: "",
-    idNumber: ""
+    confirmPassword: "",
   });
+
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "confirmpassword") {
-      setConfirmPass(value);
-    } else {
-      setForm({ ...form, [name]: value });
-    }
+    setUser((prevUser) => ({ ...prevUser, [name]: value }));
   };
 
   const handleCheckbox = (e) => {
     setAgreed(e.target.checked);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
-    if (confirmPass !== form.password) {
-      setError("Passwords do not match.");
+
+    if (user.password !== user.confirmPassword) {
+      setError("Passwords do not match!");
       return;
     }
+
     if (!agreed) {
       setError("You must agree to the terms and conditions.");
       return;
     }
 
-    setError("");
+    const userData = {
+      firstName: user.firstName,
+      middleName: user.middleName,
+      lastName: user.lastName,
+      email: user.email,
+      password: user.password,
+    };
+
     try {
-      await signup(form);
-      navigate("/profile");
+      const response = await API.post("/register", userData);
+      console.log("User registered:", response.data);
+      navigate("/login");
     } catch (err) {
-      setError(err.message);
+      if (err.response?.status === 403) {
+        setError("You do not have permission to perform this action.");
+      } else {
+        setError(err.response?.data?.message || "Signup failed. Please try again.");
+      }
+      console.error("Signup failed:", err);
     }
   };
 
@@ -63,109 +84,110 @@ const Signup = () => {
     <Grid
       container
       sx={{
-          backgroundColor: '#e2a5bf',
-          minHeight: '100vh',
-          minWidth: '100vw',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-            }}
+        backgroundColor: "#e2a5bf",
+        minHeight: "100vh",
+        minWidth: "100vw",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <Stack direction="column" alignItems="center">
+        <Grid
+          sx={{
+            backgroundColor: "#D2E0D3",
+            minHeight: "80vh",
+            minWidth: "90vw",
+            borderRadius: "50px",
+          }}
         >
-      <Stack direction="column" alignItems="center" >
-          <Grid
+          <Stack direction="row" alignItems="center">
+            <Box
               sx={{
-                  backgroundColor: '#D2E0D3',
-                  minHeight: '80vh',
-                  minWidth: '90vw',
-                  borderRadius: '50px',
-              }}>
-                <Stack direction="row" alignItems="center">
-                  <Box
-                    sx={{
-                      backgroundColor: '#D2E000',
-                      minHeight: '80vh',
-                      minWidth: '45vw',
-                      borderRadius: '50px',
-                  }}>
-                    <Grid
-                      sx={{
-                        minHeight: '40vh',
-                        minWidth: '30vw',
-                        borderRadius: '10px',
-                        margin:10
-                    }}>
-                      <Stack direction={"column"}>
-                      <Typography
-                        variant="h4"
-                        paddingBottom={2}>
-                          Sign Up
-                      </Typography>
-                      <TextField
-                        label="First Name"
-                        name="firstName"
-                        value={form.firstName}
-                        onChange={handleChange}
-                        variant="outlined"
-                        placeholder="Enter First Name"
-                        fullWidth
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        label="Middle Name"
-                        name="middleName"
-                        value={form.middleName}
-                        onChange={handleChange}
-                        variant="outlined"
-                        placeholder="Enter Middle Name"
-                        fullWidth
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        label="Last Name"
-                        name="lastName"
-                        value={form.lastName}
-                        onChange={handleChange}
-                        variant="outlined"
-                        placeholder="Enter Last Name"
-                        fullWidth
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        label="Email"
-                        name="email"
-                        value={form.email}
-                        onChange={handleChange}
-                        variant="outlined"
-                        placeholder="Enter Email"
-                        fullWidth
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        label="Password"
-                        name="password"
-                        value={form.password}
-                        onChange={handleChange}
-                        variant="outlined"
-                        placeholder="Enter Password"
-                        fullWidth
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        label="Confirm Password"
-                        name="confirmpassword"
-                        value={confirmPass}
-                        onChange={handleChange}
-                        variant="outlined"
-                        placeholder="Enter Password Again"
-                        fullWidth
-                        sx={{ mb: 2 }}
-                      />
-                      </Stack>
-                      
-                    </Grid>
-                  </Box>
+                backgroundColor: "#D2E000",
+                minHeight: "80vh",
+                minWidth: "45vw",
+                borderRadius: "50px",
+              }}
+            >
+              <Grid
+                sx={{
+                  minHeight: "40vh",
+                  minWidth: "30vw",
+                  borderRadius: "10px",
+                  margin: 10,
+                }}
+              >
+                <Stack direction={"column"}>
+                  <Typography variant="h4" paddingBottom={2}>
+                    Sign Up
+                  </Typography>
+                  <TextField
+                    label="First Name"
+                    name="firstName"
+                    value={user.firstName}
+                    onChange={handleChange}
+                    variant="outlined"
+                    placeholder="Enter First Name"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    label="Middle Name"
+                    name="middleName"
+                    value={user.middleName}
+                    onChange={handleChange}
+                    variant="outlined"
+                    placeholder="Enter Middle Name"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    label="Last Name"
+                    name="lastName"
+                    value={user.lastName}
+                    onChange={handleChange}
+                    variant="outlined"
+                    placeholder="Enter Last Name"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    label="Email"
+                    name="email"
+                    value={user.email}
+                    onChange={handleChange}
+                    variant="outlined"
+                    placeholder="Enter Email"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    label="Password"
+                    name="password"
+                    type="password"
+                    value={user.password}
+                    onChange={handleChange}
+                    variant="outlined"
+                    placeholder="Enter Password"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    label="Confirm Password"
+                    name="confirmPassword"
+                    type="password"
+                    value={user.confirmPassword}
+                    onChange={handleChange}
+                    variant="outlined"
+                    placeholder="Enter Password Again"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                </Stack>
+              </Grid>
+            </Box>
 
-            {/* Right Terms Box */}
             <Box
               sx={{
                 minHeight: "60vh",
@@ -189,29 +211,7 @@ const Signup = () => {
                     mb: 2,
                   }}
                 >
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non dui at velit maximus vehicula:
-                  Nulla a justo eget diam dignissim feugiat.
-                  Pellentesque sit amet diam consectetur, sodales nunc in, pulvinar urna.
-                  Donec lacinia lectus commodo tellus condimentum ornare.
-                  Aliquam at magna at diam tempor ultricies vitae id justo.
-                  Nam non sem vitae libero tincidunt efficitur.
-                  Vivamus sed ex nec sem scelerisque euismod sed fermentum elit.
-                  Mauris quis neque ut eros viverra malesuada in id dolor.
-
-                  Praesent at leo mollis, elementum sapien congue, suscipit metus.
-                  Curabitur eu urna condimentum, faucibus ligula eget, imperdiet mauris.
-
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non dui at velit maximus vehicula:
-                  Nulla a justo eget diam dignissim feugiat.
-                  Pellentesque sit amet diam consectetur, sodales nunc in, pulvinar urna.
-                  Donec lacinia lectus commodo tellus condimentum ornare.
-                  Aliquam at magna at diam tempor ultricies vitae id justo.
-                  Nam non sem vitae libero tincidunt efficitur.
-                  Vivamus sed ex nec sem scelerisque euismod sed fermentum elit.
-                  Mauris quis neque ut eros viverra malesuada in id dolor.
-
-                  Praesent at leo mollis, elementum sapien congue, suscipit metus.
-                  Curabitur eu urna condimentum, faucibus ligula eget, imperdiet mauris.
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit...
                 </Box>
 
                 <FormControlLabel
@@ -235,7 +235,7 @@ const Signup = () => {
                   variant="contained"
                   color="primary"
                   sx={{ mt: 3, borderRadius: "20px" }}
-                  onClick={handleSubmit}
+                  onClick={handleSignUp}
                 >
                   Register
                 </Button>
