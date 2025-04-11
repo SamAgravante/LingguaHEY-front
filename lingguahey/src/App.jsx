@@ -6,8 +6,10 @@ import Signup from "./components/Auth/Signup";
 import Login from "./components/Auth/Login";
 import Homepage from "./components/Pages/Homepage.jsx"
 import LandingPage from "./components/Pages/LandingPage.jsx"
-import ProfilePage from "./components/Profile/ProfilePage.jsx";
+import ProfilePage from "./components/Pages/ProfilePage.jsx";
 //import HomePage from "./components/HomePage.jsx"; // Import HomePage
+
+import Layout from "./components/Pages/Layout.jsx"
 
 function AppContent() {
   const { currentUser } = useAuth();
@@ -15,24 +17,23 @@ function AppContent() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage/>} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/homepage" element={<Homepage />} />
-        <Route
-          path="/profile"
-          element={currentUser ? <ProfilePage /> : <Navigate to="/login" />}
-        />
+
+        <Route element={currentUser ? <Layout /> : <Navigate to="/login" />}>
+          <Route path="/homepage" element={<Homepage />} />
+          <Route path="/profilepage" element={<ProfilePage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
 }
-//<Route path="/profile" element={currentUser ? <ProfilePage /> : <Navigate to="/login" />} />
 
 function App() {
   return (
     <AuthProvider>
-      <AppContent/>
+      <AppContent />
     </AuthProvider>
   );
 }

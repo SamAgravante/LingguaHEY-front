@@ -1,6 +1,12 @@
-import { Grid, Stack } from "@mui/material";
+import { Grid, Stack} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+
+
+const drawerWidth = 240;
 
 export default function Homepage(){
+    
+
     return(
         <Grid
             container
@@ -15,6 +21,7 @@ export default function Homepage(){
                     display: 'flex',
             }}
         >
+
             <Stack direction="row">
                 <p>Hello WOrld</p>
                 <p>Hello WOrld</p>
