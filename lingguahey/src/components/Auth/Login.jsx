@@ -17,7 +17,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 // Axios instance
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api/alibata/auth',
+  baseURL: 'http://localhost:8080/api/lingguahey/auth',
   timeout: 1000,
   headers: {
     "Content-Type": "application/json",
@@ -55,7 +55,7 @@ const Login = () => {
       });
       console.log("Login successful:", res.data);
       localStorage.setItem("token", res.data.token);
-      navigate("/home");
+      navigate("/Homepage");
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);
       setError("Invalid School ID or Password.");

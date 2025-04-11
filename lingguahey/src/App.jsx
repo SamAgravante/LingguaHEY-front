@@ -7,7 +7,7 @@ import Login from "./components/Auth/Login";
 import Homepage from "./components/Pages/Homepage.jsx"
 import LandingPage from "./components/Pages/LandingPage.jsx"
 import ProfilePage from "./components/Profile/ProfilePage.jsx";
-import HomePage from "./components/HomePage.jsx"; // Import HomePage
+//import HomePage from "./components/HomePage.jsx"; // Import HomePage
 
 function AppContent() {
   const { currentUser } = useAuth();
@@ -18,6 +18,7 @@ function AppContent() {
         <Route path="/" element={<LandingPage/>} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/homepage" element={<Homepage />} />
         <Route
           path="/profile"
           element={currentUser ? <ProfilePage /> : <Navigate to="/login" />}
