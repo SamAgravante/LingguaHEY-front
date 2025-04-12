@@ -17,7 +17,8 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 // Axios instance
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api/lingguahey/auth',
+  baseURL: `http://18.139.221.124:8080/api/lingguahey/auth`,
+  //baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
   timeout: 1000,
   headers: {
     "Content-Type": "application/json",
@@ -38,6 +39,7 @@ const Login = () => {
   };
 
   const handleLogin = async (e) => {
+    console.log("ENV:", import.meta.env.VITE_API_BASE_URL);
     e.preventDefault();
     setError("");
 
