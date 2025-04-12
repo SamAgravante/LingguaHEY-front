@@ -14,7 +14,7 @@ import {
 
 // Axios instance
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api/alibata/auth',
+  baseURL: 'http://localhost:8080/api/lingguahey/auth',
   timeout: 100000,
   headers: {
     "Content-Type": "application/json",
