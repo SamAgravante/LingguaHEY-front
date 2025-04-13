@@ -14,8 +14,8 @@ import {
 
 // Axios instance
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api/lingguahey/auth',
-  timeout: 100000,
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
+  timeout: 1000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

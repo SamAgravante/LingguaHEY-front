@@ -1,4 +1,3 @@
-// src/components/Auth/Login.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -14,10 +13,11 @@ import {
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Axios instance
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api/lingguahey/auth',
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
   timeout: 1000,
   headers: {
     "Content-Type": "application/json",
@@ -30,12 +30,14 @@ const Login = () => {
   const [form, setForm] = useState({ schoolId: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { setToken } = useAuth();
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -54,7 +56,8 @@ const Login = () => {
         password,
       });
       console.log("Login successful:", res.data);
-      localStorage.setItem("token", res.data.token);
+
+      setToken(res.data.token); // 👈 set token in context/localStorage
       navigate("/Homepage");
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);
