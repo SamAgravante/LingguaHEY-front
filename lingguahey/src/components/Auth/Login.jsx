@@ -27,7 +27,7 @@ const API = axios.create({
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ schoolId: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { setToken } = useAuth();
@@ -43,25 +43,25 @@ const Login = () => {
     e.preventDefault();
     setError("");
 
-    const { schoolId, password } = form;
+    const { email, password } = form;
 
-    if (!schoolId || !password) {
-      setError("Please enter your School ID and Password.");
+    if (!email || !password) {
+      setError("Please enter your School Email and Password.");
       return;
     }
 
     try {
       const res = await API.post("/login", {
-        email: schoolId,
+        email: email,
         password,
       });
       console.log("Login successful:", res.data);
 
-      setToken(res.data.token); // 👈 set token in context/localStorage
+      setToken(res.data.token); 
       navigate("/Homepage");
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);
-      setError("Invalid School ID or Password.");
+      setError("Invalid School Email or Password.");
     }
   };
 
@@ -96,12 +96,12 @@ const Login = () => {
             </Typography>
 
             <TextField
-              label="School ID"
-              name="schoolId"
-              value={form.schoolId}
+              label="School Email"
+              name="email"
+              value={form.email}
               onChange={handleChange}
               variant="outlined"
-              placeholder="Enter School ID"
+              placeholder="Enter School Email"
               fullWidth
               autoComplete="username"
               sx={{ mb: 2 }}
