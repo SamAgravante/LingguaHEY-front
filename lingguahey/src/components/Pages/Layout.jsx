@@ -6,12 +6,14 @@ const drawerWidth = 240;
 
 const Layout = () => {
     const navigate = useNavigate();
+    const token = localStorage.getItem("token");
     const API = axios.create({
         baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
         timeout: 1000,
         headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        Authorization: `Bearer ${token}`,
         },
     });
 

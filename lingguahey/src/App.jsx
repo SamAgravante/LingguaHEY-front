@@ -7,6 +7,7 @@ import Homepage from "./components/Pages/Homepage.jsx";
 import LandingPage from "./components/Pages/LandingPage.jsx";
 import ProfilePage from "./components/Pages/ProfilePage.jsx";
 import Layout from "./components/Pages/Layout.jsx";
+import Contact from "./components/Pages/Contact.jsx";
 
 function AppContent() {
   const { token } = useAuth();
@@ -21,6 +22,7 @@ function AppContent() {
         <Route element={token ? <Layout /> : <Navigate to="/login" />} >
           <Route path="/homepage" element={<Homepage />} />
           <Route path="/profilepage" element={<ProfilePage />} />
+          <Route path="/contact" element={<Contact />} />
         </Route>
       </Routes>
     </BrowserRouter>
