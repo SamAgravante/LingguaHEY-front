@@ -14,6 +14,7 @@ import {
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../../contexts/AuthContext";
+import { ArrowBack } from "@mui/icons-material";
 
 // Axios instance
 const API = axios.create({
@@ -26,21 +27,24 @@ const API = axios.create({
 });
 
 const RoleSelect = () => {
-const [showPassword, setShowPassword] = useState(false);
-const [form, setForm] = useState({ email: "", password: "" });
-const [error, setError] = useState("");
-const navigate = useNavigate();
-const { setToken } = useAuth();
+    const [showPassword, setShowPassword] = useState(false);
+    const [form, setForm] = useState({ email: "", password: "" });
+    const [error, setError] = useState("");
+    const navigate = useNavigate();
+    const { setToken } = useAuth();
 
+    const handleClose = () => {
+        navigate("/");
+    };
 
-const handleSelect = (role) => {
-    if (role === "Student") {
-        navigate("/signup", { state: { role: "USER" } });
-    }   
-    else if (role === "Teacher") {
-        navigate("/signup", { state: { role: "USER" } });
-    }
-};
+    const handleSelect = (role) => {
+        if (role === "Student") {
+            navigate("/signup", { state: { role: "USER" } });
+        }   
+        else if (role === "Teacher") {
+            navigate("/signup", { state: { role: "USER" } });
+        }
+    };
 
     return (
         <Grid
@@ -66,6 +70,9 @@ const handleSelect = (role) => {
                     borderRadius: 4
                 }}
             >
+                <Stack direction={"column"} spacing={2} sx={{ margin: 3, }}> 
+                <Typography variant="h5" sx={{ marginBottom: 3 }}>
+                Select Your Role</Typography>
                 <Stack direction="row" spacing={2}>
                     {["Student", "Teacher"].map((role) => (
                     <Box
@@ -93,6 +100,13 @@ const handleSelect = (role) => {
                         <Typography>{role}</Typography>
                     </Box>
                     ))}
+                </Stack>
+                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <IconButton onClick={handleClose} aria-label="close">
+                  <ArrowBack fontSize="large" />
+                  <Typography paddingRight={1}>Return to Landing Page</Typography>
+                </IconButton>
+              </Box>
                 </Stack>
             </Grid>
         </Grid>

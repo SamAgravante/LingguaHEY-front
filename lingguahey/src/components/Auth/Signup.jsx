@@ -52,7 +52,7 @@ const Signup = () => {
   };
 
   const handleClose = () => {
-    navigate("/");
+    navigate("/roleselect");
   };
 
   const handleCheckbox = (e) => {
@@ -287,7 +287,7 @@ const Signup = () => {
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                 <IconButton onClick={handleClose} aria-label="close">
                   <ArrowBack fontSize="large" />
-                  <Typography paddingRight={1}>Return to Landing Page</Typography>
+                  <Typography paddingRight={1}>Return to Role Selection</Typography>
                 </IconButton>
               </Box>
             </Box>
