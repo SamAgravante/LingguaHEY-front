@@ -43,15 +43,30 @@ export default function ProfilePage() {
     };
 
     const handleSave = async () => {
+        const payload = {
+          userId:        formData.userId,
+          firstName:     formData.firstName,
+          middleName:    formData.middleName,
+          lastName:      formData.lastName,
+          email:         formData.email,
+          password:      formData.password,
+          idNumber:      formData.idNumber,
+          totalPoints:   formData.totalPoints,
+          profilePic:    formData.profilePic,
+          role:          formData.role,
+        };
+      
+        console.log("payload ", payload);
+      
         try {
-            //const response = await API.put(`/${userID}`, formData);
-            const response = await API.put("", formData, {params:{id:userID}});
-            setUserDetails(response.data);
-            setEditMode(false);
+          const response = await API.put("", payload, { params: { id: userID } });
+          setUserDetails(response.data);
+          setEditMode(false);
         } catch (error) {
-            console.error("Failed to update profile", error);
+          console.error("Failed to update profile", error);
         }
-    };
+      };
+      
 
     return (
         <Grid
