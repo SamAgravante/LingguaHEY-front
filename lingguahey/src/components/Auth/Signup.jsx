@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Stack,
@@ -9,8 +9,12 @@ import {
   TextField,
   Checkbox,
   Button,
-  FormControlLabel
+  FormControlLabel,
+  IconButton,
 } from "@mui/material";
+
+import { ArrowBack } from "@mui/icons-material";
+import { subscribe } from "firebase/data-connect";
 
 // Axios instance
 const API = axios.create({
@@ -23,6 +27,10 @@ const API = axios.create({
 });
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const role = location.state?.role || "";
+
   const [user, setUser] = useState({
     firstName: "",
     middleName: "",
@@ -30,15 +38,21 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    role: role,
+    subscriptionStatus: true,
+    idNumber: "",
   });
 
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUser((prevUser) => ({ ...prevUser, [name]: value }));
+  };
+
+  const handleClose = () => {
+    navigate("/");
   };
 
   const handleCheckbox = (e) => {
@@ -63,9 +77,13 @@ const Signup = () => {
       middleName: user.middleName,
       lastName: user.lastName,
       email: user.email,
+      subscriptionStatus: user.subscriptionStatus,
+      role: user.role,
       password: user.password,
+      idNumber: user.idNumber,
     };
 
+    console.log("User data:", userData);
     try {
       const response = await API.post("/register", userData);
       console.log("User registered:", response.data);
@@ -163,6 +181,16 @@ const Signup = () => {
                     sx={{ mb: 2 }}
                   />
                   <TextField
+                    label="ID Number"
+                    name="idNumber"
+                    value={user.idNumber}
+                    onChange={handleChange}
+                    variant="outlined"
+                    placeholder="Enter ID Number"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
                     label="Password"
                     name="password"
                     type="password"
@@ -184,6 +212,18 @@ const Signup = () => {
                     fullWidth
                     sx={{ mb: 2 }}
                   />
+                  
+                  {role && (
+                    <TextField
+                      label="Role"
+                      name="role"
+                      value={user.role}
+                      variant="outlined"
+                      disabled
+                      fullWidth
+                      sx={{ mb: 2 }}
+                    />
+                  )}
                 </Stack>
               </Grid>
             </Box>
@@ -194,6 +234,9 @@ const Signup = () => {
                 minWidth: "45vw",
                 borderRadius: "50px",
                 padding: 4,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
               }}
             >
               <Stack direction={"column"}>
@@ -240,6 +283,13 @@ const Signup = () => {
                   Register
                 </Button>
               </Stack>
+
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <IconButton onClick={handleClose} aria-label="close">
+                  <ArrowBack fontSize="large" />
+                  <Typography paddingRight={1}>Return to Landing Page</Typography>
+                </IconButton>
+              </Box>
             </Box>
           </Stack>
         </Grid>

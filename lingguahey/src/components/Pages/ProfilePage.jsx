@@ -44,6 +44,7 @@ export default function ProfilePage() {
 
     const handleSave = async () => {
         try {
+            //const response = await API.put(`/${userID}`, formData);
             const response = await API.put("", formData, {params:{id:userID}});
             setUserDetails(response.data);
             setEditMode(false);

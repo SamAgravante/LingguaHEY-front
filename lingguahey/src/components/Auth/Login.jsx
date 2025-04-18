@@ -149,6 +149,14 @@ const Login = () => {
                 {error}
               </Typography>
             )}
+            <Typography 
+              variant="h10" 
+              paddingTop={1}
+              color="#80EF80"
+              onClick={()=>navigate("/signup")}
+              sx={{cursor: 'pointer'}}>
+                No Account? Register Now!
+            </Typography>
         </Stack>
       </form>
     </Grid>
