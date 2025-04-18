@@ -46,7 +46,7 @@ export default function LandingPage() {
                     variant="h10" 
                     paddingTop={1}
                     color="#80EF80"
-                    onClick={()=>navigate("/signup")}
+                    onClick={()=>navigate("/roleselect")}
                     sx={{cursor: 'pointer'}}>
                         No Account? Register Now!
                 </Typography>
