@@ -9,6 +9,8 @@ import ProfilePage from "./components/Pages/ProfilePage.jsx";
 import Layout from "./components/Pages/Layout.jsx";
 import Contact from "./components/Pages/Contact.jsx";
 import RoleSelect from "./components/Pages/RoleSelect.jsx";
+import AdminDashboard from "./components/Pages/AdminDashboard.jsx"; 
+import Activities from "./components/Pages/Activities.jsx";
 
 function AppContent() {
   const { token } = useAuth();
@@ -25,7 +27,8 @@ function AppContent() {
           <Route path="/homepage" element={<Homepage />} />
           <Route path="/profilepage" element={<ProfilePage />} />
           <Route path="/contact" element={<Contact />} />
-          
+          <Route path="/AdminDashboard" element={<AdminDashboard/>}/>
+          <Route path="/Activities" element={<Activities/>}/>
         </Route>
       </Routes>
     </BrowserRouter>

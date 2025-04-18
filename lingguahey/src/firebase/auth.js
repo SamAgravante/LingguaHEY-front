@@ -18,7 +18,7 @@ export const signup = async (formData) => {
     email,
     totalPoints: 0,
     profilePicUrl: "",
-    role: "student"
+    role: "admin"
   });
 
   return uid;
