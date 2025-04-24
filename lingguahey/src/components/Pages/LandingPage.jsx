@@ -4,12 +4,14 @@ import { useNavigate } from "react-router-dom";
 export default function LandingPage() {
 
     const navigate = useNavigate();
+    const primaryBtn = "#FFCC80";
+    const textColor = "#5D4037"; 
 
     return (
         <Grid
             container
             sx={{
-                backgroundColor: '#e2a5bf',
+                background: 'linear-gradient(135deg,#FFECB3 30%,#E1F5FE 90%)',
                 minHeight: '100vh',
                 minWidth: '100vw',
                 display: 'flex',
@@ -28,29 +30,28 @@ export default function LandingPage() {
                     }}>
 
                 </Box>
-                <Typography variant="h4" paddingTop={2}>
+                <Typography variant="h4" paddingTop={2} color="#5D4037">
                     LinnguaHey
                 </Typography>
-                <Typography variant="h10" paddingBottom={3}>
+                <Typography variant="h10" paddingBottom={3} color="#5D4037">
                     A Filipino Language Learning App
                 </Typography>
                 <Button 
                     variant="contained"
                     color="primary"
-                    sx={{minWidth:"250px", borderRadius:"20px"}}
+                    sx={{minWidth:"250px", borderRadius:"20px",backgroundColor: primaryBtn, color: textColor, textTransform: 'none'}}
                     onClick={()=>navigate("/login")}>
                         Get Started
                 </Button>
 
-                <Typography 
-                    variant="h10" 
-                    paddingTop={1}
-                    color="#80EF80"
-                    onClick={()=>navigate("/roleselect")}
-                    sx={{cursor: 'pointer'}}>
-                        No Account? Register Now!
+                <Typography
+                    align="center"
+                    sx={{ color: '#FFCC80', cursor: 'pointer', mt: 1 }}
+                    onClick={() => navigate('/roleselect')}
+                >
+                    No Account? Register Now!
                 </Typography>
-            </Stack>
+                    </Stack>
         </Grid>
     );
 }

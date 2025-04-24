@@ -1,116 +1,50 @@
-import { useState } from "react";
+import { Grid, Stack, Box, Typography, IconButton } from "@mui/material";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import {
-  Grid,
-  Stack,
-  Box,
-  Typography,
-  Button,
-  TextField,
-  InputAdornment,
-  IconButton
-} from "@mui/material";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import { useAuth } from "../../contexts/AuthContext";
-import { ArrowBack } from "@mui/icons-material";
 
-// Axios instance
-const API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
-  timeout: 1000,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
+export default function RoleSelect() {
+  const navigate = useNavigate();
+  const background = "linear-gradient(135deg, #FFECB3 30%, #E1F5FE 90%)";
+  const panelBg = "#FFF3E0";
+  const optionBg = "#E3F2FD";
+  const textColor = "#5D4037";
 
-const RoleSelect = () => {
-    const [showPassword, setShowPassword] = useState(false);
-    const [form, setForm] = useState({ email: "", password: "" });
-    const [error, setError] = useState("");
-    const navigate = useNavigate();
-    const { setToken } = useAuth();
-
-    const handleClose = () => {
-        navigate("/");
-    };
-
-    const handleSelect = (role) => {
-        if (role === "Student") {
-            navigate("/signup", { state: { role: "USER" } });
-        }   
-        else if (role === "Teacher") {
-            navigate("/signup", { state: { role: "USER" } });
-        }
-    };
-
-    return (
-        <Grid
-            container
-            sx={{
-                backgroundColor: "#e2a5bf",
-                minHeight: "100vh",
-                minWidth: "100vw",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-            }}
-            >
-            <Grid
-                container
+  return (
+    <Grid container sx={{ width: '100vw', height: '100vh', background, p: 0 }}>
+      <Box sx={{ width: '100%', height: '100%', backgroundColor: panelBg, p: 4 }}>
+        <Stack spacing={4} sx={{ height: '100%' }} justifyContent="center" alignItems="center">
+          <Typography variant="h4" sx={{ color: textColor }}>Select Your Role</Typography>
+          <Stack direction={{ xs:'column', sm:'row' }} spacing={4} justifyContent="center">
+            {['Student','Teacher'].map(role => (
+              <Box
+                key={role}
+                onClick={() => navigate('/signup', { state: { role: 'USER' } })}
                 sx={{
-                    backgroundColor: '#C9E4DE',
-                    minHeight: '70vh',
-                    minWidth: '70vw',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderRadius: 4
+                  backgroundColor: optionBg,
+                  minHeight: '50vh',
+                  minWidth: '20vw',
+                  maxHeight: '60vh',
+                  maxWidth: '50vw',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  margin: 3,
+                  cursor: 'pointer',
+                  borderRadius: 2,
+                  boxShadow: 2,
+                  transition: 'transform 0.3s',
+                  '&:hover': { transform: 'scale(1.05)', boxShadow: 4 }
                 }}
-            >
-                <Stack direction={"column"} spacing={2} sx={{ margin: 3, }}> 
-                <Typography variant="h5" sx={{ marginBottom: 3 }}>
-                Select Your Role</Typography>
-                <Stack direction="row" spacing={2}>
-                    {["Student", "Teacher"].map((role) => (
-                    <Box
-                        key={role}
-                        onClick={() => handleSelect(role)}
-                        sx={{
-                            backgroundColor: '#F7D9C4',
-                            minHeight: '50vh',
-                            minWidth: '20vw',
-                            maxHeight: '60vh',
-                            maxWidth: '50vw',
-                            display: 'flex',
-                            justifyContent: "center",
-                            alignItems: "center",
-                            margin: 3,
-                            cursor: 'pointer',
-                            borderRadius: 2,
-                            boxShadow: 3,
-                            transition: '0.3s',
-                            '&:hover': {
-                            transform: 'scale(1.05)'
-                            }
-                        }}
-                        >
-                        <Typography>{role}</Typography>
-                    </Box>
-                    ))}
-                </Stack>
-                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <IconButton onClick={handleClose} aria-label="close">
-                  <ArrowBack fontSize="large" />
-                  <Typography paddingRight={1}>Return to Landing Page</Typography>
-                </IconButton>
+              >
+                <Typography sx={{ color: textColor, fontSize: '1.5rem' }}>{role}</Typography>
               </Box>
-                </Stack>
-            </Grid>
-        </Grid>
-    );
-};
-
-export default RoleSelect;
+            ))}
+          </Stack>
+          <Box sx={{ position: 'absolute', top: 16, left: 16 }}>
+            <IconButton onClick={() => navigate('/')}><ArrowBackIcon sx={{ color: textColor }} /></IconButton>
+          </Box>
+        </Stack>
+      </Box>
+    </Grid>
+  );
+}

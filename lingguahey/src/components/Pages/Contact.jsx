@@ -32,7 +32,8 @@ const Contact = () => {
                 minHeight: '100%',
                 minWidth: '100%',
                 display: 'flex',
-                alignContent: 'center'
+                alignContent: 'center',
+                paddingLeft: 17,
             }}
         >
             <Grid

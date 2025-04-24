@@ -1,85 +1,118 @@
-import { Drawer, Toolbar, Divider, List, ListItem, ListItemButton, ListItemText, Grid, Button} from "@mui/material";
+import { Drawer, Toolbar, Divider, List, ListItem, ListItemButton, ListItemText, Grid, Button, Box } from "@mui/material";
 import { useNavigate, Outlet } from "react-router-dom";
 import axios from "axios";
-  
+
 const drawerWidth = 240;
 
+// Pastel palette with full-viewport layout
+const pastelBackground = "#FFE0B2";      // warm pastel peach for drawer
+//const pageGradient = "linear-gradient(135deg, #FFF3E0 30%, #C8E6C9 90%)"; // gentle yellow to mint
+const hoverBg = "rgba(255, 204, 128, 0.4)";
+const selectedBg = "#FFCC80";
+const textColor = "#5D4037";
+
+const routes = [
+  { label: 'Home', path: '/Homepage' },
+  { label: 'Settings', path: '/settings' },
+  { label: 'Payment Method', path: '/payment' },
+  { label: 'Subscriptions', path: '/subscriptions' },
+  { label: 'Contact Us', path: '/contact' },
+  { label: 'Logout', path: '/logout' },
+];
+
 const Layout = () => {
-    const navigate = useNavigate();
-    const token = localStorage.getItem("token");
-    const API = axios.create({
-        baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
-        timeout: 1000,
-        headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        },
-    });
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+  const API = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
-    const routes = {
-        'Home': '/Homepage',
-        'Settings': '/settings',
-        'Payment Method': '/payment',
-        'Subscriptions': '/subscriptions',
-        'Contact Us': '/contact',
-        'Logout': '/logout',
-    };
+  const handleRoute = async (route) => {
+    if (route.label === 'Logout') {
+      try {
+        await API.post('/logout');
+        localStorage.removeItem('token');
+        navigate('/');
+      } catch (err) {
+        console.error('Logout failed:', err.response?.data || err.message);
+      }
+    } else {
+      navigate(route.path);
+    }
+  };
 
-    return (
-        <Grid container sx={{
-        minHeight: '100vh',
-        minWidth: '100vw',
-        backgroundColor: '#FFCBE1',
-        }}>
+  return (
+    <Box sx={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <Grid container sx={{ width: '100%', height: '100%', //background: pageGradient 
+      backgroundColor: '#C8E6C9' }}>
+
         <Drawer
-            sx={{
+          variant="permanent"
+          anchor="left"
+          sx={{
             width: drawerWidth,
             flexShrink: 0,
             '& .MuiDrawer-paper': {
-                width: drawerWidth,
-                boxSizing: 'border-box',
+              width: drawerWidth,
+              height: '100%',
+              boxSizing: 'border-box',
+              bgcolor: pastelBackground,
+              borderRight: '1px solid #FFB74D',
             },
-            }}
-            variant="permanent"
-            anchor="left"
+          }}
         >
-            <Toolbar />
-            <Divider />
-            <Button onClick={()=>navigate("/profilepage")}>
-                Edit Profile
+          <Toolbar />
+          <Divider />
+          <Box sx={{ p: 2 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => navigate('/profilepage')}
+              sx={{
+                backgroundColor: '#AED581',
+                color: textColor,
+                '&:hover': { backgroundColor: '#C5E1A5' },
+                textTransform: 'none',
+              }}
+            >
+              Edit Profile
             </Button>
-            <List>
-            {Object.keys(routes).map((text) => (
-                <ListItem key={text} disablePadding>
+          </Box>
+          <List sx={{ height: 'calc(100% - 112px)', overflowY: 'auto' }}>
+            {routes.map((route) => (
+              <ListItem key={route.label} disablePadding>
                 <ListItemButton
-                    onClick={async () => {
-                    if (text === 'Logout') {
-                        try {
-                        await API.post('/logout');
-                        localStorage.removeItem('token');
-                        navigate('/');
-                        } catch (err) {
-                        console.error("Logout failed:", err.response?.data || err.message);
-                        }
-                    } else {
-                        navigate(routes[text]);
-                    }
-                    }}
+                  onClick={() => handleRoute(route)}
+                  selected={window.location.pathname === route.path}
+                  sx={{
+                    color: textColor,
+                    '&:hover': { backgroundColor: hoverBg },
+                    '&.Mui-selected': { backgroundColor: selectedBg, fontWeight: 'bold' },
+                  }}
                 >
-                    <ListItemText primary={text} />
+                  <ListItemText primary={route.label} primaryTypographyProps={{ fontSize: '1rem' }} />
                 </ListItemButton>
-                </ListItem>
+              </ListItem>
             ))}
-            </List>
+          </List>
         </Drawer>
 
-        <Grid item sx={{ flex: 1, ml: `${drawerWidth}px`, p: 2 }}>
-            <Outlet />
-        </Grid>
-        </Grid>
-    );
+        <Box component="main" 
+            sx={{ 
+                flexGrow: 1, 
+                width: `calc(100% - ${drawerWidth}px)`, 
+                height: '100%', 
+                overflow: 'auto', 
+                p: 3,
+                paddingLeft: 33,
+                }}>
+          <Outlet />
+        </Box>
+
+      </Grid>
+    </Box>
+  );
 };
 
 export default Layout;
-  
