@@ -56,7 +56,7 @@ export default function ProfilePage() {
     console.log("payload ", payload);
   
     try {
-        const response = await API.put(`/${userID}`, formData);
+        const response = await API.put("", payload, { params: { id: userID } });
         setUserDetails(response.data);
         setEditMode(false);
     } catch (error) {
