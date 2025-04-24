@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -25,7 +26,8 @@ const API = axios.create({
   },
 });
 
-const Login = () => {
+export default function Login() {
+  // ---- LOGIC (unchanged) ----
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -33,134 +35,81 @@ const Login = () => {
   const { setToken } = useAuth();
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-
     const { email, password } = form;
-
     if (!email || !password) {
       setError("Please enter your School Email and Password.");
       return;
     }
-
     try {
-      const res = await API.post("/login", {
-        email: email,
-        password,
-      });
-      console.log("Login successful:", res.data);
-
-      setToken(res.data.token); 
+      const res = await API.post("/login", { email, password });
+      setToken(res.data.token);
       navigate("/Homepage");
     } catch (err) {
-      console.error("Login failed:", err.response?.data || err.message);
       setError("Invalid School Email or Password.");
     }
   };
 
+  const pageBg = "linear-gradient(135deg, #FFECB3 30%, #E1F5FE 90%)";
+  const panelBg = "#FFFFFF";
+  const primaryBtn = "#FFCC80";
+  const textColor = "#5D4037"; 
+
   return (
-    <Grid
-      container
-      sx={{
-        backgroundColor: "#e2a5bf",
-        minHeight: "100vh",
-        minWidth: "100vw",
-        display: "flex",
-        justifyContent: "center",
-        //alignItems: "center",
-      }}
-    >
-      <form onSubmit={handleLogin}>
-        <Stack direction="column" alignItems="center">
-          <Box
-            sx={{
-              backgroundColor: "#D2E0D3",
-              minHeight: "50vh",
-              width: { xs: "80vw", sm: "20vw", md: "30vw" },
-              borderBottomLeftRadius: "50px",
-              borderBottomRightRadius: "50px",
-              padding: 4,
+    <Grid container sx={{ minHeight: '100vh',minWidth: '100vw', background: pageBg, p: 2 }} alignItems="center" justifyContent="center">
+      <Box component="form" onSubmit={handleLogin} sx={{ width: '100%', maxWidth: 400, backgroundColor: panelBg, borderRadius: 2, p: 4, boxShadow: 3 }}>
+        <Stack spacing={3}>
+          <Typography variant="h4" align="center" sx={{ color: textColor }}>Log In</Typography>
+
+          <TextField
+            label="School Email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            fullWidth
+            variant="outlined"
+            sx={{ backgroundColor: panelBg }}
+          />
+
+          <TextField
+            label="Password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            value={form.password}
+            onChange={handleChange}
+            fullWidth
+            variant="outlined"
+            sx={{ backgroundColor: panelBg }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={handleClickShowPassword} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              )
             }}
+          />
+
+          <Button type="submit" fullWidth variant="contained" sx={{ backgroundColor: primaryBtn, color: textColor, textTransform: 'none' }}>
+            Log in
+          </Button>
+
+          {error && <Typography color="error" align="center">{error}</Typography>}
+
+          <Typography
+            align="center"
+            sx={{ color: primaryBtn, cursor: 'pointer', mt: 1 }}
+            onClick={() => navigate('/roleselect')}
           >
-
-          </Box>
-          <Typography variant="h4" paddingBottom={2} align="center">
-              Log In
-            </Typography>
-
-            <TextField
-              label="School Email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              variant="outlined"
-              placeholder="Enter School Email"
-              fullWidth
-              autoComplete="username"
-              sx={{ mb: 2 }}
-            />
-
-            <TextField
-              label="Password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              type={showPassword ? "text" : "password"}
-              variant="outlined"
-              placeholder="Enter Password"
-              fullWidth
-              autoComplete="current-password"
-              sx={{ mb: 2 }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <Button
-              variant="contained"
-              color="primary"
-              type="submit"
-              sx={{ minWidth: "100%", borderRadius: "20px" }}
-            >
-              Log in
-            </Button>
-
-            {error && (
-              <Typography color="error" mt={2} align="center">
-                {error}
-              </Typography>
-            )}
-            <Typography 
-              variant="h10" 
-              paddingTop={1}
-              color="#80EF80"
-              onClick={()=>navigate("/roleselect")}
-              sx={{cursor: 'pointer'}}>
-                No Account? Register Now!
-            </Typography>
+            No Account? Register Now!
+          </Typography>
         </Stack>
-      </form>
+      </Box>
     </Grid>
   );
-};
-
-export default Login;
+}
