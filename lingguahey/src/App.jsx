@@ -21,7 +21,7 @@ function AppContent() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/roleselect" element={<RoleSelect />} />
-        <Route path="/subscription" element={<Subscription />} />
+        <Route path="/subscriptions" element={<Subscription />} />
 
         <Route element={token ? <Layout /> : <Navigate to="/login" />} >
           <Route path="/homepage" element={<Homepage />} />
