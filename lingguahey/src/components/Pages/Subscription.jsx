@@ -40,8 +40,9 @@ export default function Subscription() {
   return (
     <Box
       sx={{
-        minHeight: "95vh",
-        width: "98vw",
+        minHeight: "95%",
+        width: "98.1%",
+        overflow: "hidden",
         backgroundColor: "#FFF8E1",
         display: "flex",
         justifyContent: "center",

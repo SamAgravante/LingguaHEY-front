@@ -21,12 +21,12 @@ function AppContent() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/roleselect" element={<RoleSelect />} />
-        <Route path="/subscriptions" element={<Subscription />} />
 
         <Route element={token ? <Layout /> : <Navigate to="/login" />} >
           <Route path="/homepage" element={<Homepage />} />
           <Route path="/profilepage" element={<ProfilePage />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/subscriptions" element={<Subscription />} />
           
         </Route>
       </Routes>
