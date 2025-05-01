@@ -9,6 +9,7 @@ import ProfilePage from "./components/Pages/ProfilePage.jsx";
 import Layout from "./components/Pages/Layout.jsx";
 import Contact from "./components/Pages/Contact.jsx";
 import RoleSelect from "./components/Pages/RoleSelect.jsx";
+import Subscription from "./components/Pages/Subscription.jsx";
 
 function AppContent() {
   const { token } = useAuth();
@@ -25,6 +26,7 @@ function AppContent() {
           <Route path="/homepage" element={<Homepage />} />
           <Route path="/profilepage" element={<ProfilePage />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/subscriptions" element={<Subscription />} />
           
         </Route>
       </Routes>
