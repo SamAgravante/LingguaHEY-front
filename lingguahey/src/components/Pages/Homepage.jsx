@@ -7,6 +7,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BookIcon from '@mui/icons-material/Book';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
+import axios from "axios";
 
 const mockActivities = [
   {
@@ -67,6 +68,33 @@ const VocabularyContent = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [showEndScreen, setShowEndScreen] = useState(false);
+  const token = localStorage.getItem("token");
+
+  const API = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
+    timeout: 5000,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/octet-stream", // Expecting binary audio data
+      Authorization: `Bearer ${token}`,   // Reuse token auth style
+    },
+  });
+
+  const synthesizeSpeech = async (text) => {
+    try {
+      const response = await API.post(
+        '/synthesize',
+        { text },
+        { responseType: 'blob' } // Critical for handling binary MP3 response
+      );
+  
+      const url = URL.createObjectURL(response.data);
+      const audio = new Audio(url);
+      audio.play();
+    } catch (error) {
+      console.error("Failed to synthesize speech", error);
+    }
+  };
 
   const handleChoice = (choice) => {
     const currentQuestion = selectedActivity.questions[currentQuestionIndex];
@@ -151,6 +179,9 @@ const VocabularyContent = () => {
       <LinearProgress variant="determinate" value={progress} sx={{ height: 10, borderRadius: 5, mb: 3 }} />
       <Typography variant="h4" gutterBottom color="#3E2723">
         {currentQuestion.questionText}
+        <Button variant="contained" color="primary" sx={{marginLeft: '20px'}} onClick={() => synthesizeSpeech(currentQuestion.questionText)}>
+          TTS
+        </Button>
       </Typography>
       <Stack spacing={2} sx={{ maxWidth: 400, mx: 'auto', mt: 3 }}>
         {currentQuestion.choices.map((choice) => (
