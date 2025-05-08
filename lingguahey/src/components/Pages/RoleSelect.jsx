@@ -9,16 +9,21 @@ export default function RoleSelect() {
   const optionBg = "#E3F2FD";
   const textColor = "#5D4037";
 
+  const roles = [
+    { label: "Student", value: "USER" },
+    { label: "Teacher", value: "TEACHER" }
+  ];
+
   return (
     <Grid container sx={{ width: '100vw', height: '100vh', background, p: 0 }}>
       <Box sx={{ width: '100%', height: '100%', backgroundColor: panelBg, p: 4 }}>
         <Stack spacing={4} sx={{ height: '100%' }} justifyContent="center" alignItems="center">
           <Typography variant="h4" sx={{ color: textColor }}>Select Your Role</Typography>
-          <Stack direction={{ xs:'column', sm:'row' }} spacing={4} justifyContent="center">
-            {['Student','Teacher'].map(role => (
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} justifyContent="center">
+            {roles.map(({ label, value }) => (
               <Box
-                key={role}
-                onClick={() => navigate('/signup', { state: { role: 'USER' } })}
+                key={label}
+                onClick={() => navigate('/signup', { state: { role: value } })}
                 sx={{
                   backgroundColor: optionBg,
                   minHeight: '50vh',
@@ -36,7 +41,7 @@ export default function RoleSelect() {
                   '&:hover': { transform: 'scale(1.05)', boxShadow: 4 }
                 }}
               >
-                <Typography sx={{ color: textColor, fontSize: '1.5rem' }}>{role}</Typography>
+                <Typography sx={{ color: textColor, fontSize: '1.5rem' }}>{label}</Typography>
               </Box>
             ))}
           </Stack>

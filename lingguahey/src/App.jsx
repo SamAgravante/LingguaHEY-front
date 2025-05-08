@@ -10,6 +10,12 @@ import Layout from "./components/Pages/Layout.jsx";
 import Contact from "./components/Pages/Contact.jsx";
 import RoleSelect from "./components/Pages/RoleSelect.jsx";
 import Subscription from "./components/Pages/Subscription.jsx";
+import AdminDashboard from "./components/Pages/AdminDashboard.jsx";
+import TeacherDashboard from "./components/Pages/TeacherDashboard.jsx";
+import Classroom from "./components/Pages/Classroom.jsx";
+import OnePicFourWords from "./components/Pages/Games/Activities/OnePicFourWords.jsx";
+import PhraseTranslation from "./components/Pages/Games/Activities/PhraseTranslation.jsx";
+import WordTranslation from "./components/Pages/Games/Activities/WordTranslation.jsx";
 
 function AppContent() {
   const { token } = useAuth();
@@ -27,7 +33,15 @@ function AppContent() {
           <Route path="/profilepage" element={<ProfilePage />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/subscriptions" element={<Subscription />} />
-          
+          <Route path="/admindashboard" element={<AdminDashboard />} />
+          <Route path="/teacherdashboard" element={<TeacherDashboard />} />
+          {/* Classroom and Activity Routes */}
+          <Route path="/classroom/:classroomId" element={<Classroom />} />
+          {/* Game Routes */}
+          <Route path="/classroom/:classroomId/activities/:activityId/one-pic-four-words" element={<OnePicFourWords />} />
+          <Route path="/classroom/:classroomId/activities/:activityId/phrase-translation" element={<PhraseTranslation />} />
+          <Route path="/classroom/:classroomId/activities/:activityId/word-translation" element={<WordTranslation />} />
+
         </Route>
       </Routes>
     </BrowserRouter>

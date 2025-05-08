@@ -27,6 +27,7 @@ export default function ProfilePage() {
         const response = await API.get(`/${userID}`);
         setUserDetails(response.data);
         setFormData(response.data);
+        console.log("User data fetched", response.data);
       } catch (error) {
         console.error("Failed to get data", error);
       }
@@ -50,13 +51,13 @@ export default function ProfilePage() {
         idNumber:      formData.idNumber,
         totalPoints:   formData.totalPoints,
         profilePic:    formData.profilePic,
-        role:          formData.role,
+        role:          formData.role
     };
   
-    console.log("payload ", payload);
+    //console.log("payload ", payload);
   
     try {
-        const response = await API.put("", payload, { params: { id: userID } });
+        const response = await API.put(`/${userID}`, payload);
         setUserDetails(response.data);
         setEditMode(false);
     } catch (error) {
