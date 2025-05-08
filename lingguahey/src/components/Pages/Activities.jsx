@@ -8,67 +8,119 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { Link } from 'react-router-dom';
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 const Activities = () => {
   const navigate = useNavigate();
-  const { classroomId } = useParams(); // Get classroomId and activityId from URL
-  const [activities, setActivities] = useState([]);
+  const { classroomId, activityId } = useParams();
+  const [games, setGames] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchActivities = async () => {
+    const fetchGames = async () => {
       const token = localStorage.getItem("token");
       try {
+        // Use the correct API endpoint to get all games for an activity
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/live-activities`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/games/activities/${activityId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
-        setActivities(response.data);
+        setGames(response.data);
       } catch (err) {
-        console.error("Error fetching activities:", err.response?.data || err.message);
-        setError("Failed to fetch activities. Please try again later.");
+        console.error("Error fetching games:", err.response?.data || err.message);
+        setError("Failed to fetch games. Please try again later.");
       }
     };
 
-    fetchActivities();
-  }, [classroomId]);
+    fetchGames();
+  }, [activityId]);
 
-  const handleGoToActivity = (activityId, activityName) => {
-    switch (activityName) {
-      case "One Pic Four Words":
-        navigate(`/classroom/${classroomId}/activities/${activityId}/one-pic-four-words`);
+  const createGame = async (gameType, redirectPath) => {
+    const token = localStorage.getItem("token");
+    try {
+      // Use the correct API endpoint to create a new game for an activity
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/games/activities/${activityId}`,
+        {
+          gameType: gameType,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("Game created:", response.data);
+      navigate(`${redirectPath}/${response.data.gameId}`);
+    } catch (err) {
+      console.error("Error creating game:", err.response?.data || err.message);
+      alert("Failed to create game. Please try again.");
+    }
+  };
+
+  const handleEdit = (gameId, gameType) => {
+    let path = "";
+
+    switch (gameType) {
+      case "GAME1":
+        path = "/create-activity/OnePicFourWords";
         break;
-      case "Phrase Translation":
-        navigate(`/classroom/${classroomId}/activities/${activityId}/phrase-translation`);
+      case "GAME2":
+        path = "/create-activity/PhraseTranslation";
         break;
-      case "Word Translation":
-        navigate(`/classroom/${classroomId}/activities/${activityId}/word-translation`);
+      case "GAME3":
+        path = "/create-activity/WordTranslation";
         break;
       default:
-        console.warn("Unknown game type:", activityName);
-        break;
+        alert("Unknown game type");
+        return;
+    }
+
+    navigate(`${path}/${gameId}`);
+  };
+
+  const handleDelete = async (gameId) => {
+    const token = localStorage.getItem("token");
+    try {
+      // Use the correct API endpoint to delete a game
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/games/${gameId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setGames((prev) => prev.filter((game) => game.gameId !== gameId));
+      //alert("Game deleted successfully.");
+    } catch (err) {
+      console.error("Error deleting game:", err.response?.data || err.message);
+      alert("Failed to delete game. Please try again.");
     }
   };
 
   return (
-    <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E1F5FE", p: 2 }}>
-      <Link to={`/classroom/${classroomId}`} style={{ textDecoration: 'none', color: 'black' }}>
-        <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <ArrowBackIcon />
-          Back to Classroom
-        </Typography>
-      </Link>
+    <Box sx={{ maxHeight: "90vh", minHeight: "60vh", bgcolor: "#A6D6D6", p: 4 }}>
+      <Typography
+        onClick={() => navigate("/admin")}
+        sx={{
+          color: "black",
+          cursor: "pointer",
+          textDecoration: "underline",
+          mb: 2,
+        }}
+      >
+        Back
+      </Typography>
       <Typography variant="h5" fontWeight="bold" color="black" mb={3}>
-        Activities for Classroom {classroomId}
+        Games for Activity {activityId}
       </Typography>
       {error && (
         <Typography color="error" sx={{ mb: 2 }}>
@@ -76,39 +128,85 @@ const Activities = () => {
         </Typography>
       )}
 
-      {/* Activity Buttons */}
-      <Box mt={4}>
-        <Typography variant="h6" color="black" mb={2}>
-          Select Activity Type:
-        </Typography>
-        <Grid container spacing={2}>
-          {activities.map((activity) => (
-            <Grid item key={activity.activityID}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => handleGoToActivity(activity.activityID, activity.activityName)}
-              >
-                {activity.activityName}
-              </Button>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-
-      {/* Activity List */}
-      <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black", mt: 4 }}>
-        <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+      {/*Game List*/}
+      <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
+        <Box
+          sx={{
+            maxHeight: "300px",
+            overflowY: "auto",
+          }}
+        >
           <List>
-            {activities.map((activity) => (
-              <ListItem key={activity.activityID} sx={{ borderBottom: "1px solid #444" }}>
-                <ListItemText primary={`${activity.activityName} (ID: ${activity.activityID})`} />
+            {games.map((game) => (
+              <ListItem key={game.gameId} sx={{ borderBottom: "1px solid #444" }}>
+                <ListItemText
+                  primary={`${game.gameName} (ID: ${game.gameId})`}
+                  secondary={`Game Type: ${game.gameType}`}
+                />
+                <ListItemSecondaryAction>
+                  <IconButton edge="end" color="primary" onClick={() => handleEdit(game.gameId, game.gameType)}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton edge="end" color="error" onClick={() => handleDelete(game.gameId)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItemSecondaryAction>
               </ListItem>
             ))}
           </List>
         </Box>
       </Paper>
-    </Grid>
+
+      <Box mt={4}>
+        <Typography variant="h6" color="black" mb={2}>
+          Create a New Game
+        </Typography>
+        <Grid container spacing={3} sx={{ display: "flex" }}>
+          <Grid item xs={12} sm={4}>
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ bgcolor: "#10B981", ":hover": { bgcolor: "#059669" }, color: "black" }}
+              onClick={() =>
+                createGame(
+                  "GAME1",
+                  "/create-activity/OnePicFourWords"
+                )
+              }
+            >
+              One Pic Four Words
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ bgcolor: "#3B82F6", ":hover": { bgcolor: "#2563EB" }, color: "black" }}
+              onClick={() =>
+                createGame(
+                  "GAME2",
+                  "/create-activity/PhraseTranslation"
+                )
+              }
+            >
+              Phrase Translation
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ bgcolor: "#F59E0B", ":hover": { bgcolor: "#D97706" }, color: "black" }}
+              onClick={() =>
+                createGame("GAME3", "/create-activity/WordTranslation")
+              }
+            >
+              Word Translation
+            </Button>
+          </Grid>
+        </Grid>
+      </Box>
+    </Box>
   );
 };
 

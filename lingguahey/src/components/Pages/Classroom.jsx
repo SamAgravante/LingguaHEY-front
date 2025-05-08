@@ -46,24 +46,23 @@ const Classroom = () => {
     }
   }, []);
 
+  const token = localStorage.getItem("token");
+
+  const API = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    timeout: 10000,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
   useEffect(() => {
-    if (classroomId) { // Check if classroomId is defined
+    if (classroomId) {
       const fetchClassroom = async () => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          setError("No token found. Please login.");
-          setLoading(false);
-          return;
-        }
         try {
-          const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroomId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+          const response = await API.get(`/api/lingguahey/classrooms/${classroomId}`);
           setClassroom(response.data);
           setLoading(false);
         } catch (err) {
@@ -79,24 +78,13 @@ const Classroom = () => {
 
   useEffect(() => {
     const fetchActivities = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("No token found. Please login.");
-        return;
-      }
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroomId}/live-activities`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        // Use the correct API endpoint to get all activities for a classroom
+        const response = await API.get(`/api/lingguahey/activities/${classroomId}/activities`);
         setActivities(response.data);
       } catch (err) {
         console.error("Error fetching activities:", err.response?.data || err.message);
-        //setError("Failed to fetch activities. Please try again later.");
+        setError("Failed to fetch activities. Please try again later.");
       }
     };
 
@@ -104,28 +92,34 @@ const Classroom = () => {
   }, [classroomId]);
 
   const createActivity = async () => {
-    const token = localStorage.getItem("token");
-     if (!token) {
-        setError("No token found. Please login.");
-        return;
-      }
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/live-activities`,
-        {
-          activityName: selectedActivityType, // Use the selected activity type
-          isDeployed: false, // Set a default isDeployed
-          classroomId: classroomId, // Include the classroomId
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      let gameType;
+      switch (selectedActivityType) {
+        case "Word Translation":
+          gameType = "GAME1";
+          break;
+        case "Phrase Translation":
+          gameType = "GAME2";
+          break;
+        case "One Pic Four Words":
+          gameType = "GAME3";
+          break;
+        default:
+          gameType = null; // Or handle the default case as needed
+      }
+
+      // Use the correct API endpoint to create a new activity
+      const response = await API.post(`/api/lingguahey/activities/classrooms/${classroomId}`, {
+        activityName: selectedActivityType,
+        gameType: gameType,
+        completed: false,
+      });
       console.log("Activity created:", response.data);
-      setActivities((prevActivities) => [...prevActivities, response.data]); // Update activities list
-      setSelectedActivityType(""); // Clear the selected activity type
+      setActivities((prevActivities) => [...prevActivities, response.data]);
+      setSelectedActivityType("");
+
+      // Redirect to the newly created activity
+      navigate(`/classroom/${classroomId}/activities/${response.data.id}`);
     } catch (err) {
       console.error("Error creating activity:", err.response?.data || err.message);
       alert("Failed to create activity. Please try again.");
@@ -133,21 +127,9 @@ const Classroom = () => {
   };
 
   const handleDelete = async (activityId) => {
-    const token = localStorage.getItem("token");
-     if (!token) {
-        setError("No token found. Please login.");
-        return;
-      }
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/live-activities/${activityId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setActivities((prev) => prev.filter((activity) => activity.activityID !== activityId));
+      // Use the correct API endpoint to delete an activity
+      await API.delete(`/api/lingguahey/activities/${activityId}`);
       alert("Activity deleted successfully.");
     } catch (err) {
       console.error("Error deleting activity:", err.response?.data || err.message);
@@ -155,9 +137,28 @@ const Classroom = () => {
     }
   };
 
-  const handleGoToActivity = (activityId) => {
-    navigate(`/classroom/${classroomId}/activities/${activityId}`); // Updated route
+  const handleGoToActivity = (activity) => {
+    console.log("activity:", activity); // ADDED
+    let gameRoute = "";
+  
+    switch (activity.gameType) {
+      case "GAME1":
+        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/word-translation`;
+        break;
+      case "GAME2":
+        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/phrase-translation`;
+        break;
+      case "GAME3":
+        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/one-pic-four-words`;
+        break;
+      default:
+        console.warn("Unknown game type:", activity.gameType);
+        return;
+    }
+  
+    navigate(gameRoute);
   };
+
 
   if (loading) {
     return (
@@ -181,7 +182,7 @@ const Classroom = () => {
       )}
 
       {/* Create New Activity Section */}
-      <Box mt={4}>
+      <Box mt={4} p={4}>
         <Typography variant="h6" color="black" mb={2}>
           Create a New Activity
         </Typography>
@@ -213,31 +214,42 @@ const Classroom = () => {
       <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
         <Box
           sx={{
-            maxHeight: "300px",
+            maxHeight: "600px",
             overflowY: "auto",
           }}
         >
           <List>
-            {activities.map((activity) => (
-              <ListItem key={activity.activityID} sx={{ borderBottom: "1px solid #444" }}>
-                <ListItemText
-                  primary={`${activity.activityName} (ID: ${activity.activityID})`}
-                />
-                <ListItemSecondaryAction>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleGoToActivity(activity.activityID)}
-                    sx={{ mr: 1 }}
-                  >
-                    Go To Activity
-                  </Button>
-                  <IconButton edge="end" color="error" onClick={() => handleDelete(activity.activityID)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
+            {activities.map((activity, index) => {
+              return (
+                <ListItem key={activity.id} sx={{ borderBottom: "1px solid #444" }}>
+                  <ListItemText
+                    primary={`${index + 1}: ${
+                      activity.gameType === "GAME1"
+                        ? "Word Translation"
+                        : activity.gameType === "GAME2"
+                        ? "Phrase Translation"
+                        : activity.gameType === "GAME3"
+                        ? "One Pic Four Words"
+                        : activity.activityName // Default to activityName if gameType doesn't match
+                    }`}
+                    secondary={`Room ID: ${classroomId}`}
+                  />
+                  <ListItemSecondaryAction>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleGoToActivity(activity)}
+                      sx={{ mr: 1 }}
+                    >
+                      Go To Activity
+                    </Button>
+                    <IconButton edge="end" color="error" onClick={() => handleDelete(activity.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              );
+            })}
           </List>
         </Box>
       </Paper>
