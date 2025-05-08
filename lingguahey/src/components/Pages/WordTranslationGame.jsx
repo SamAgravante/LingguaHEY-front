@@ -1,32 +1,100 @@
-// WordTranslationGame.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Box, Typography, Button } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Button,
+  LinearProgress,
+  Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
+import { styled } from '@mui/system';
 import { mockQuestions } from './mockQuestions';
+import { getUserFromToken } from '../../utils/auth';
+
+// 🔒 Secure axios instance
+
+
+// Automatically attach token before each request
+/*API.interceptors.request.use(config => {
+  const token = localStorage.getItem('token'); // Get latest token
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});*/
+
+// 🎨 Styled components for pastel aesthetic
+const PastelContainer = styled(Box)({
+  backgroundColor: '#fff4de',
+  padding: '24px',
+  minHeight: '100vh',
+  fontFamily: 'Comic Sans MS, sans-serif',
+});
+
+const ChoiceButton = styled(Button)({
+  backgroundColor: '#DFF7E4',
+  color: '#2E2E34',
+  textTransform: 'none',
+  fontWeight: 'bold',
+  borderRadius: '12px',
+  padding: '12px 16px',
+  margin: '8px',
+  width: '100%',
+  '&:hover': {
+    backgroundColor: '#C8E6C9',
+  },
+});
+
+const PastelProgress = styled(LinearProgress)({
+  height: '12px',
+  borderRadius: '8px',
+  backgroundColor: '#EAEAEA',
+  '& .MuiLinearProgress-bar': {
+    background: 'linear-gradient(to right, #BAFFC9, #FFB3BA)',
+    borderRadius: '8px',
+  },
+});
 
 export default function WordTranslation({ activityId }) {
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [userId, setUserId] = useState(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
 
+  const token = localStorage.getItem('token');
+  const API = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
+    timeout: 1000,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,//Can be removed if interceptor is used
+    },
+  });
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    axios.get(
-      `${import.meta.env.VITE_API_BASE_URL}/api/activities/${activityId}/questions?gameType=GAME3`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    .then(res => {
-      if (Array.isArray(res.data) && res.data.length) {
-        setQuestions(res.data);
-      } else {
-        console.warn('No GAME3 questions returned, using mockQuestions');
+    const user = getUserFromToken();
+    if (user?.userId) setUserId(user.userId);
+
+    API.get(`questions/activities/${activityId}?gameType=GAME3`)
+      .then(res => {
+        if (Array.isArray(res.data) && res.data.length) {
+          setQuestions(res.data);
+        } else {
+          console.warn('No GAME3 questions returned, using mockQuestions');
+          setQuestions(mockQuestions.filter(q => q.questionText && !q.questionImage));
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch GAME3 questions, using mockQuestions', err);
         setQuestions(mockQuestions.filter(q => q.questionText && !q.questionImage));
-      }
-    })
-    .catch(err => {
-      console.error('Failed to fetch GAME3 questions, using mockQuestions', err);
-      setQuestions(mockQuestions.filter(q => q.questionText && !q.questionImage));
-    });
+      });
   }, [activityId]);
 
   if (!questions.length) {
@@ -37,28 +105,80 @@ export default function WordTranslation({ activityId }) {
   const options = Array.isArray(q.choices) ? q.choices : [];
 
   const handleChoice = (choice) => {
-    if (choice.correct) setScore(s => s + (q.score?.score || 1));
-    const token = localStorage.getItem('token');
-    axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/api/score`,
-      { questionId: q.questionId, choiceId: choice.choiceId },
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    .finally(() => {
-      if (index + 1 < questions.length) setIndex(i => i + 1);
-      else alert(`Final Score: ${score}/${questions.length}`);
-    });
+    const isCorrect = choice.correct;
+    const earnedScore = isCorrect ? (q.score?.score || 1) : 0;
+    const newScore = score + earnedScore;
+
+    // Update local score and progress
+    setScore(newScore);
+    const nextIndex = index + 1;
+    setProgress(((nextIndex) / questions.length) * 100);
+
+    // Award score via the raw list endpoint (expects an array of ints)
+    if (userId) {
+      API.post(
+        `scores/award/translation/questions/${q.questionId}/users/${userId}`,
+        [choice.choiceId]
+      )
+      .catch(err => console.error('Error awarding translation score:', err));
+    }
+
+    // Advance or finish
+    if (nextIndex < questions.length) {
+      setIndex(nextIndex);
+    } else {
+      setFinalScore(newScore);
+      setShowDialog(true);
+      // Mark activity completed if perfect
+      if (newScore === questions.length && userId) {
+        API.put(`activities/${activityId}/completed/${userId}`)
+          .then(() => console.log('Activity marked completed 🎯'))
+          .catch(err => console.error('Error marking activity as completed:', err));
+      }
+    }
   };
 
   return (
-    <Box>
-      <Typography variant="h6" sx={{ mb: 2 }}>{q.questionText}</Typography>
-      {options.map(c => (
-        <Button key={c.choiceId} onClick={() => handleChoice(c)} sx={{ m: 1 }}>
-          {c.choiceText}
-        </Button>
-      ))}
-      <Typography sx={{ mt: 2 }}>Score: {score}</Typography>
-    </Box>
+    <PastelContainer>
+      <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2E2E34', mb: 1 }}>
+        Word Translation
+      </Typography>
+      <Typography variant="subtitle1" sx={{ color: '#2E2E34', mb: 2 }}>
+        Score: {score}
+      </Typography>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <PastelProgress variant="determinate" value={progress} />
+        </Box>
+        <Typography variant="body2" sx={{ ml: 2, color: '#2E2E34' }}>
+          {index + 1} / {questions.length}
+        </Typography>
+      </Box>
+
+      <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, color: '#2E2E34' }}>
+        {q.questionText}
+      </Typography>
+
+      <Grid container spacing={2}>
+        {options.map(choice => (
+          <Grid item xs={6} key={choice.choiceId}>
+            <ChoiceButton onClick={() => handleChoice(choice)}>
+              {choice.choiceText}
+            </ChoiceButton>
+          </Grid>
+        ))}
+      </Grid>
+
+      <Dialog open={showDialog} onClose={() => setShowDialog(false)}>
+        <DialogTitle>🎉 Quiz Complete!</DialogTitle>
+        <DialogContent>
+          <Typography>Your final score is {finalScore} / {questions.length}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDialog(false)} variant="contained">Close</Button>
+        </DialogActions>
+      </Dialog>
+    </PastelContainer>
   );
 }

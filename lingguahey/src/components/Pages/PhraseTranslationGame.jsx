@@ -1,66 +1,103 @@
-// PhraseTranslationGame.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Box, Typography, Button } from '@mui/material';
 import { mockQuestions } from './mockQuestions';
+import { getUserFromToken } from '../../utils/auth';
 
 export default function PhraseTranslation({ activityId }) {
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState([]);
   const [score, setScore] = useState(0);
+  const [completed, setCompleted] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  const token = localStorage.getItem('token');
+  const API = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
+    timeout: 1000,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    axios.get(
-      `${import.meta.env.VITE_API_BASE_URL}/api/activities/${activityId}/questions?gameType=GAME2`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    .then(res => {
-      if (Array.isArray(res.data) && res.data.length) {
-        setQuestions(res.data);
-      } else {
-        console.warn('No GAME2 questions returned, using mockQuestions');
+    const user = getUserFromToken();
+    if (user?.userId) setUserId(user.userId);
+
+    API.get(`/lingguahey/activities/${activityId}/questions?gameType=GAME2`)
+      .then(res => {
+        if (Array.isArray(res.data) && res.data.length) {
+          setQuestions(res.data);
+        } else {
+          console.warn('No GAME2 questions returned, using mockQuestions');
+          setQuestions(mockQuestions.filter(q => q.questionDescription));
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch GAME2 questions, using mockQuestions', err);
         setQuestions(mockQuestions.filter(q => q.questionDescription));
-      }
-    })
-    .catch(err => {
-      console.error('Failed to fetch GAME2 questions, using mockQuestions', err);
-      setQuestions(mockQuestions.filter(q => q.questionDescription));
-    });
+      });
   }, [activityId]);
+
+  const handleCompletion = async () => {
+    try {
+      await API.post(`/activities/${activityId}/complete`);
+      setCompleted(true);
+    } catch (err) {
+      console.error('Failed to mark activity as completed', err);
+    }
+  };
+
+  const toggle = (choiceId) => {
+    setSelected(prev =>
+      prev.includes(choiceId)
+        ? prev.filter(id => id !== choiceId)
+        : [...prev, choiceId]
+    );
+  };
+
+  const submit = async () => {
+    const q = questions[index];
+    const nextIndex = index + 1;
+
+    try {
+      if (userId) {
+        await API.post(
+          `/scores/award/translation/questions/${q.questionId}/users/${userId}`,
+          selected
+        );
+        setScore(prev => prev + 1); // optimistic update assuming success = correct
+      }
+    } catch (err) {
+      console.error('Failed to award score:', err);
+    } finally {
+      setSelected([]);
+      if (nextIndex < questions.length) {
+        setIndex(nextIndex);
+      } else {
+        handleCompletion();
+      }
+    }
+  };
 
   if (!questions.length) {
     return <Typography>Loading or no questions available.</Typography>;
   }
 
+  if (completed) {
+    return (
+      <Box sx={{ textAlign: 'center', mt: 4 }}>
+        <Typography variant="h5">🎉 Activity Completed!</Typography>
+        <Typography>Your final score: {score} / {questions.length}</Typography>
+      </Box>
+    );
+  }
+
   const q = questions[index];
   const options = Array.isArray(q.choices) ? q.choices : [];
-  const correctSeq = Array.isArray(q.choices)
-    ? q.choices.filter(c => c.correct).sort((a, b) => (a.choiceOrder || 0) - (b.choiceOrder || 0)).map(c => c.choiceId)
-    : [];
-
-  const toggle = (choiceId) => {
-    setSelected(sel => sel.includes(choiceId)
-      ? sel.filter(id => id !== choiceId)
-      : [...sel, choiceId]
-    );
-  };
-
-  const submit = () => {
-    if (JSON.stringify(selected) === JSON.stringify(correctSeq)) setScore(s => s + 1);
-    const token = localStorage.getItem('token');
-    axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/api/translation-score`,
-      { questionId: q.questionId, selectedIds: selected },
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    .finally(() => {
-      setSelected([]);
-      if (index + 1 < questions.length) setIndex(i => i + 1);
-      else alert(`Final Score: ${score}/${questions.length}`);
-    });
-  };
 
   return (
     <Box>
