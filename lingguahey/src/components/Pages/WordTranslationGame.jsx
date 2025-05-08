@@ -15,18 +15,6 @@ import { styled } from '@mui/system';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
 
-// 🔒 Secure axios instance
-
-
-// Automatically attach token before each request
-/*API.interceptors.request.use(config => {
-  const token = localStorage.getItem('token'); // Get latest token
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});*/
-
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)({
   backgroundColor: '#fff4de',
@@ -75,9 +63,20 @@ export default function WordTranslation({ activityId }) {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,//Can be removed if interceptor is used
+      Authorization: `Bearer ${token}`,
     },
   });
+
+  const APItts = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
+    timeout: 5000,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/octet-stream", // Expecting binary audio data
+      Authorization: `Bearer ${token}`,   // Reuse token auth style
+    },
+  });
+
   useEffect(() => {
     const user = getUserFromToken();
     if (user?.userId) setUserId(user.userId);
@@ -97,6 +96,22 @@ export default function WordTranslation({ activityId }) {
       });
   }, [activityId]);
 
+  const synthesizeSpeech = async (text) => {
+    try {
+      const response = await APItts.post(
+        '/synthesize',
+        { text },
+        { responseType: 'blob' } // Critical for handling binary MP3 response
+      );
+
+      const url = URL.createObjectURL(response.data);
+      const audio = new Audio(url);
+      audio.play();
+    } catch (error) {
+      console.error("Failed to synthesize speech", error);
+    }
+  };
+
   if (!questions.length) {
     return <Typography>Loading or no questions available.</Typography>;
   }
@@ -109,12 +124,10 @@ export default function WordTranslation({ activityId }) {
     const earnedScore = isCorrect ? (q.score?.score || 1) : 0;
     const newScore = score + earnedScore;
 
-    // Update local score and progress
     setScore(newScore);
     const nextIndex = index + 1;
     setProgress(((nextIndex) / questions.length) * 100);
 
-    // Award score via the raw list endpoint (expects an array of ints)
     if (userId) {
       API.post(
         `scores/award/translation/questions/${q.questionId}/users/${userId}`,
@@ -123,13 +136,12 @@ export default function WordTranslation({ activityId }) {
       .catch(err => console.error('Error awarding translation score:', err));
     }
 
-    // Advance or finish
     if (nextIndex < questions.length) {
       setIndex(nextIndex);
     } else {
       setFinalScore(newScore);
       setShowDialog(true);
-      // Mark activity completed if perfect
+
       if (newScore === questions.length && userId) {
         API.put(`activities/${activityId}/completed/${userId}`)
           .then(() => console.log('Activity marked completed 🎯'))
@@ -156,9 +168,19 @@ export default function WordTranslation({ activityId }) {
         </Typography>
       </Box>
 
-      <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, color: '#2E2E34' }}>
-        {q.questionText}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+        <Typography variant="h6" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+          {q.questionText}
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ marginLeft: '20px' }}
+          onClick={() => synthesizeSpeech(q.questionText)}
+        >
+          TTS
+        </Button>
+      </Box>
 
       <Grid container spacing={2}>
         {options.map(choice => (
