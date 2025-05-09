@@ -10,7 +10,7 @@ import {
   Box,
   Typography,
 } from "@mui/material";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
@@ -33,6 +33,7 @@ const allRoutes = [
 
 const Layout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [userData, setUserData] = useState({
     userId: "",
@@ -78,6 +79,15 @@ const Layout = () => {
             // Immediately fetch points after getting user
             const pointsRes = await API.get(`scores/users/${user.userId}/total`);
             setTotalPoints(pointsRes.data);
+
+            // Redirect based on role after fetching user data
+            if (user.role === "USER" && location.pathname === "/") {
+              navigate("/Homepage");
+            } else if (user.role === "TEACHER" && location.pathname === "/") {
+              navigate("/teacherdashboard");
+            } else if (user.role === "ADMIN" && location.pathname === "/") {
+              navigate("/admindashboard");
+            }
           } catch (err) {
             console.error("Failed to fetch user or points:", err);
           }
@@ -88,7 +98,7 @@ const Layout = () => {
         console.error("Failed to decode token:", err);
       }
     }
-  }, [token]);
+  }, [token, navigate, location.pathname]);
 
   useEffect(() => {
     if (!userData.userId) return;
@@ -149,8 +159,7 @@ const Layout = () => {
           }}
         >
           <Typography variant="h6" align="center" sx={{ color: textColor, padding: 2 }}>
-            {userData.firstName}{" "}
-            {userData.middleName ? userData.middleName.charAt(0) + "." : ""}{" "}
+            {userData.firstName} {userData.middleName ? userData.middleName.charAt(0) + "." : ""}{" "}
             {userData.lastName}
           </Typography>
 
@@ -185,10 +194,7 @@ const Layout = () => {
                     "&.Mui-selected": { backgroundColor: selectedBg, fontWeight: "bold" },
                   }}
                 >
-                  <ListItemText
-                    primary={route.label}
-                    primaryTypographyProps={{ fontSize: "1rem" }}
-                  />
+                  <ListItemText primary={route.label} primaryTypographyProps={{ fontSize: "1rem" }} />
                 </ListItemButton>
               </ListItem>
             ))}
