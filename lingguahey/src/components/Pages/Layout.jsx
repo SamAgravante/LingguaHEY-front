@@ -23,12 +23,12 @@ const selectedBg = "#FFCC80";
 const textColor = "#5D4037";
 
 const allRoutes = [
-  { label: "Home", path: "/Homepage" },
-  { label: "admindb", path: "/admindashboard" },
-  { label: "teacherdb", path: "/teacherdashboard" },
-  { label: "Subscriptions", path: "/subscriptions" },
-  { label: "Contact Us", path: "/contact" },
-  { label: "Logout", path: "/logout" },
+  { label: "Home", path: "/Homepage", roles: ["USER", "ADMIN", "TEACHER"] },
+  { label: "admindb", path: "/admindashboard", roles: ["ADMIN"] },
+  { label: "teacherdb", path: "/teacherdashboard", roles: ["TEACHER", "ADMIN"] },
+  { label: "Subscriptions", path: "/subscriptions", roles: ["USER", "TEACHER", "ADMIN"] },
+  { label: "Contact Us", path: "/contact", roles: ["USER", "TEACHER", "ADMIN"] },
+  { label: "Logout", path: "/logout", roles: ["USER", "TEACHER", "ADMIN"] },
 ];
 
 const Layout = () => {
