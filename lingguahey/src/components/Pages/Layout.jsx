@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   Drawer,
   Divider,
@@ -10,32 +11,32 @@ import {
   Box,
   Typography,
 } from "@mui/material";
-import { useNavigate, Outlet, useLocation } from "react-router-dom";
-import axios from "axios";
-import { useState, useEffect } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import API from "../../api";
 import { jwtDecode } from "jwt-decode";
-import API from "../../api"; 
 
 const drawerWidth = 240;
-
 const pastelBackground = "#FFE0B2";
 const hoverBg = "rgba(255, 204, 128, 0.4)";
 const selectedBg = "#FFCC80";
 const textColor = "#5D4037";
 
 const allRoutes = [
-  { label: "Home", path: "/Homepage", roles: ["USER", "ADMIN", "TEACHER"] },
-  { label: "admindb", path: "/admindashboard", roles: ["ADMIN"] },
-  { label: "teacherdb", path: "/teacherdashboard", roles: ["TEACHER", "ADMIN"] },
+  { label: "Home", path: "/homepage", roles: ["USER", "ADMIN", "TEACHER"] },
+  { label: "Profile", path: "/profilepage", roles: ["USER", "ADMIN", "TEACHER"] },
   { label: "Subscriptions", path: "/subscriptions", roles: ["USER", "TEACHER", "ADMIN"] },
   { label: "Contact Us", path: "/contact", roles: ["USER", "TEACHER", "ADMIN"] },
+  { label: "Admin DB", path: "/admindashboard", roles: ["ADMIN"] },
+  { label: "Teacher DB", path: "/teacherdashboard", roles: ["TEACHER", "ADMIN"] },
   { label: "Logout", path: "/logout", roles: ["USER", "TEACHER", "ADMIN"] },
 ];
 
 const Layout = () => {
+  const { token, setToken, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [token, setToken] = useState(localStorage.getItem("token"));
+
   const [userData, setUserData] = useState({
     userId: "",
     firstName: "",
@@ -45,103 +46,61 @@ const Layout = () => {
   });
   const [totalPoints, setTotalPoints] = useState(0);
 
-
-
+  // Fetch user info and points whenever token changes
   useEffect(() => {
-    /*
-    const API = axios.create({
-      baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
-      headers: { Authorization: `Bearer ${token}` },
-    });*/
-    const token = localStorage.getItem("token");
+    if (!token) return;
 
-    if (token) {
+    const { userId } = jwtDecode(token);
+
+    const loadUser = async () => {
       try {
-        const decoded = jwtDecode(token);
+        const userRes = await API.get(`/users/${userId}`);
+        setUserData(userRes.data);
 
-        const fetchUserAndPoints = async () => {
-          try {
-            const response = await axios.get(
-              `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users/${decoded.userId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-            const user = response.data;
+        const ptsRes = await API.get(`/scores/users/${userId}/total`);
+        setTotalPoints(ptsRes.data);
 
-            setUserData({
-              userId: user.userId,
-              firstName: user.firstName,
-              middleName: user.middleName || "",
-              lastName: user.lastName || "",
-              role: user.role,
-            });
-
-            // Immediately fetch points after getting user
-            const pointsRes = await API.get(`scores/users/${user.userId}/total`);
-            setTotalPoints(pointsRes.data);
-
-            // Redirect based on role after fetching user data
-            if (user.role === "USER" && location.pathname === "/") {
-              navigate("/Homepage");
-            } else if (user.role === "TEACHER" && location.pathname === "/") {
-              navigate("/teacherdashboard");
-            } else if (user.role === "ADMIN" && location.pathname === "/") {
-              navigate("/admindashboard");
-            }
-          } catch (err) {
-            console.error("Failed to fetch user or points:", err);
-          }
-        };
-
-        fetchUserAndPoints();
+        // role-based redirect on initial login
+        if (location.pathname === "/") {
+          if (userRes.data.role === "USER") navigate("/homepage");
+          if (userRes.data.role === "TEACHER") navigate("/teacherdashboard");
+          if (userRes.data.role === "ADMIN") navigate("/admindashboard");
+        }
       } catch (err) {
-        console.error("Failed to decode token:", err);
+        console.error("Failed to fetch user or points:", err);
       }
-    }
+    };
+
+    loadUser();
   }, [token, navigate, location.pathname]);
 
+  // Poll for updated points
   useEffect(() => {
-    if (!userData.userId) return;
+    if (!userData.userId || !token) return;
 
-    const fetchTotal = async () => {
+    const interval = setInterval(async () => {
       try {
-        const { data } = await API.get(`scores/users/${userData.userId}/total`);
+        const { data } = await API.get(`/scores/users/${userData.userId}/total`);
         setTotalPoints(data);
       } catch (err) {
         console.error("Failed to fetch user points:", err);
       }
-    };
+    }, 10000);
 
-    const interval = setInterval(fetchTotal, 10000); // Update every 10 seconds
     return () => clearInterval(interval);
-  }, [userData.userId]);
+  }, [userData.userId, token]);
 
-  const handleRoute = async (route) => {
-    const authAPI = axios.create({
-      baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
+  const handleRoute = (route) => {
     if (route.label === "Logout") {
-      try {
-        await authAPI.post("/logout");
-        localStorage.removeItem("token");
-        setToken(null);
-        navigate("/");
-      } catch (err) {
-        console.error("Logout failed:", err.response?.data || err.message);
-      }
+      logout();
+      navigate("/login");
     } else {
       navigate(route.path);
     }
   };
 
-  const filteredRoutes = allRoutes.filter((route) =>
-    route.roles ? route.roles.includes(userData.role) : true
-  );
+  const filteredRoutes = allRoutes.filter((r) => r.roles.includes(userData.role));
+
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
