@@ -16,14 +16,14 @@ import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
 
 // 🎨 Styled components for pastel aesthetic
-const PastelContainer = styled(Box)({
+const PastelContainer = styled(Box)(() => ({
   backgroundColor: '#fff4de',
   padding: '24px',
   minHeight: '100vh',
   fontFamily: 'Comic Sans MS, sans-serif',
-});
+}));
 
-const ChoiceButton = styled(Button)({
+const ChoiceButton = styled(Button)(() => ({
   backgroundColor: '#DFF7E4',
   color: '#2E2E34',
   textTransform: 'none',
@@ -35,9 +35,9 @@ const ChoiceButton = styled(Button)({
   '&:hover': {
     backgroundColor: '#C8E6C9',
   },
-});
+}));
 
-const PastelProgress = styled(LinearProgress)({
+const PastelProgress = styled(LinearProgress)(() => ({
   height: '12px',
   borderRadius: '8px',
   backgroundColor: '#EAEAEA',
@@ -45,11 +45,20 @@ const PastelProgress = styled(LinearProgress)({
     background: 'linear-gradient(to right, #BAFFC9, #FFB3BA)',
     borderRadius: '8px',
   },
-});
+}));
 
-export default function WordTranslation({ activityId }) {
+// Utility to shuffle an array
+function shuffleArray(array) {
+  return array
+    .map(value => ({ value, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ value }) => value);
+}
+
+export default function WordTranslation({ activityId, onBack, isCompleted = false }) {
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
+  const [shuffledOptions, setShuffledOptions] = useState([]);
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
   const [userId, setUserId] = useState(null);
@@ -71,9 +80,9 @@ export default function WordTranslation({ activityId }) {
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
     timeout: 5000,
     headers: {
-      "Content-Type": "application/json",
-      Accept: "application/octet-stream", // Expecting binary audio data
-      Authorization: `Bearer ${token}`,   // Reuse token auth style
+      'Content-Type': 'application/json',
+      Accept: 'application/octet-stream',
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -96,19 +105,25 @@ export default function WordTranslation({ activityId }) {
       });
   }, [activityId]);
 
+  useEffect(() => {
+    if (!questions.length) return;
+    const currentChoices = questions[index].choices || [];
+    setShuffledOptions(shuffleArray(currentChoices));
+  }, [questions, index]);
+
   const synthesizeSpeech = async (text) => {
     try {
       const response = await APItts.post(
         '/synthesize',
         { text },
-        { responseType: 'blob' } // Critical for handling binary MP3 response
+        { responseType: 'blob' }
       );
 
       const url = URL.createObjectURL(response.data);
       const audio = new Audio(url);
       audio.play();
     } catch (error) {
-      console.error("Failed to synthesize speech", error);
+      console.error('Failed to synthesize speech', error);
     }
   };
 
@@ -117,7 +132,6 @@ export default function WordTranslation({ activityId }) {
   }
 
   const q = questions[index];
-  const options = Array.isArray(q.choices) ? q.choices : [];
 
   const handleChoice = (choice) => {
     const isCorrect = choice.correct;
@@ -126,14 +140,13 @@ export default function WordTranslation({ activityId }) {
 
     setScore(newScore);
     const nextIndex = index + 1;
-    setProgress(((nextIndex) / questions.length) * 100);
+    setProgress((nextIndex / questions.length) * 100);
 
-    if (userId) {
+    if (!isCompleted && userId) {
       API.post(
         `scores/award/translation/questions/${q.questionId}/users/${userId}`,
         [choice.choiceId]
-      )
-      .catch(err => console.error('Error awarding translation score:', err));
+      ).catch(err => console.error('Error awarding translation score:', err));
     }
 
     if (nextIndex < questions.length) {
@@ -142,12 +155,17 @@ export default function WordTranslation({ activityId }) {
       setFinalScore(newScore);
       setShowDialog(true);
 
-      if (newScore === questions.length && userId) {
+      if (!isCompleted && newScore === questions.length && userId) {
         API.put(`activities/${activityId}/completed/${userId}`)
           .then(() => console.log('Activity marked completed 🎯'))
           .catch(err => console.error('Error marking activity as completed:', err));
       }
     }
+  };
+
+  const handleDialogClose = () => {
+    setShowDialog(false);
+    if (onBack) onBack();
   };
 
   return (
@@ -183,7 +201,7 @@ export default function WordTranslation({ activityId }) {
       </Box>
 
       <Grid container spacing={2}>
-        {options.map(choice => (
+        {shuffledOptions.map(choice => (
           <Grid item xs={6} key={choice.choiceId}>
             <ChoiceButton onClick={() => handleChoice(choice)}>
               {choice.choiceText}
@@ -192,13 +210,13 @@ export default function WordTranslation({ activityId }) {
         ))}
       </Grid>
 
-      <Dialog open={showDialog} onClose={() => setShowDialog(false)}>
+      <Dialog open={showDialog} onClose={handleDialogClose}>
         <DialogTitle>🎉 Quiz Complete!</DialogTitle>
         <DialogContent>
           <Typography>Your final score is {finalScore} / {questions.length}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowDialog(false)} variant="contained">Close</Button>
+          <Button onClick={handleDialogClose} variant="contained">Close</Button>
         </DialogActions>
       </Dialog>
     </PastelContainer>

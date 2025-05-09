@@ -1,7 +1,15 @@
+import React, { useState, useEffect } from 'react';
 import {
-  Grid, Stack, Box, Typography, Modal, Fade, Backdrop, IconButton, Button
+  Grid,
+  Stack,
+  Box,
+  Typography,
+  Modal,
+  Fade,
+  Backdrop,
+  IconButton,
+  Button
 } from "@mui/material";
-import { useState, useEffect } from "react";
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BookIcon from '@mui/icons-material/Book';
@@ -24,7 +32,6 @@ export default function Homepage() {
   const [userDetails, setUserDetails] = useState({});
   const [userActivities, setUserActivities] = useState([]);
 
-  // Secure axios instance with token
   const token = localStorage.getItem('token');
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
@@ -36,57 +43,36 @@ export default function Homepage() {
     },
   });
 
-  // Decode token on mount
   useEffect(() => {
     const decoded = getUserFromToken();
-    if (decoded && decoded.userId) {
-      setUser(decoded);
-    }
+    if (decoded?.userId) setUser(decoded);
   }, []);
 
-  // Fetch user and classroom when user is ready
   useEffect(() => {
     if (!user) return;
-    const fetchUserAndClassroom = async () => {
+    (async () => {
       try {
-        const userResponse = await API.get(`users/${user.userId}`);
-        const userData = userResponse.data;
-        setUserDetails(userData);
-        const classroomResponse = await API.get(`classrooms`);
-        const classrooms = classroomResponse.data;
+        const userResp = await API.get(`users/${user.userId}`);
+        setUserDetails(userResp.data);
 
-        const userClassroom = classrooms.find(c =>
-          c.users.some(u => u.userId === userData.userId)
+        const classResp = await API.get(`classrooms`);
+        const userClass = classResp.data.find(c =>
+          c.users.some(u => u.userId === user.userId)
         );
+        if (userClass) setClassroom(userClass.classroomID);
 
-        if (userClassroom) {
-          setClassroom(userClassroom.classroomID);
-        }
-
-        // Fetch user activities
-        const activitiesResponse = await API.get(`activities/users/${user.userId}`);
-        setUserActivities(activitiesResponse.data);
-      } catch (error) {
-        console.error("Failed to fetch user or classroom data", error);
+        const actResp = await API.get(`activities/users/${user.userId}`);
+        setUserActivities(actResp.data);
+      } catch (err) {
+        console.error(err);
       }
-    };
-
-    fetchUserAndClassroom();
+    })();
   }, [user]);
 
-  // Fetch activities when classroom is set
   useEffect(() => {
     if (!classroom) return;
-
     API.get(`activities/${classroom}/activities`)
-      .then(res => {
-        const data = res.data;
-        if (Array.isArray(data) && data.length) {
-          setActivities(data);
-        } else {
-          throw new Error('empty');
-        }
-      })
+      .then(res => setActivities(res.data))
       .catch(() => {
         setActivities(mockQuestions.map(q => ({
           activityId: q.questionId,
@@ -96,45 +82,43 @@ export default function Homepage() {
       });
   }, [classroom]);
 
-  const openModal = (key) => { setSection(key); setCurrent(null); setOpen(true); };
+  const openModal = key => { setSection(key); setCurrent(null); setOpen(true); };
   const closeModal = () => { setOpen(false); setSection(''); setCurrent(null); };
-  const start = (act) => setCurrent(act);
+  const startActivity = act => setCurrent(act);
 
   const renderBody = () => {
     if (!current) {
       const list = section === 'Vocabulary'
-        ? activities.filter(a => ['GAME1', 'GAME3'].includes(a.gameType))
+        ? activities.filter(a => ['GAME1','GAME3'].includes(a.gameType))
         : activities.filter(a => a.gameType === 'GAME2');
 
       return (
         <Stack spacing={3} sx={{ mt: 4, px: 2 }}>
           {list.map(a => {
-            // Check if the activity is completed
-            const isCompleted = userActivities.some(activity => activity.activity_ActivityId === a.activityId && activity.completed);
-
+            const isCompleted = userActivities.some(ua =>
+              ua.activity_ActivityId === a.activityId && ua.completed
+            );
             return (
               <Box
                 key={a.activityId}
-                onClick={() => start(a)}
+                onClick={() => startActivity(a)}
                 sx={{
-                  backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',  // Green if completed
+                  backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
                   borderRadius: 4,
                   p: 3,
-                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  width: '95%',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                   cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.02)',
-                    boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
-                  },
+                  '&:hover': { transform: 'scale(1.02)' }
                 }}
               >
                 <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold' }}>
                   {a.activityName}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#8D6E63' }}>
-                  {a.gameType === 'GAME1' ? 'One Pic Four Words' :
-                    a.gameType === 'GAME2' ? 'Phrase Translation' : 'Word Translation'}
+                  {a.gameType === 'GAME1' ? 'One Pic Four Words'
+                    : a.gameType === 'GAME2' ? 'Phrase Translation'
+                    : 'Word Translation'}
                 </Typography>
               </Box>
             );
@@ -143,14 +127,39 @@ export default function Homepage() {
       );
     }
 
-    // Render the correct game component
-    if (section === 'Vocabulary') {
-      return current.gameType === 'GAME1'
-        ? <OnePicFourWord activityId={current.activityId} />
-        : <WordTranslation activityId={current.activityId} />;
+    const isCompleted = userActivities.some(ua =>
+      ua.activity_ActivityId === current.activityId && ua.completed
+    );
+
+    if (section === 'Grammar') {
+      return (
+        <PhraseTranslation
+          activityId={current.activityId}
+          onBack={() => { setCurrent(null); closeModal(); }}
+          isCompleted={isCompleted}
+        />
+      );
     }
 
-    return <PhraseTranslation activityId={current.activityId} />;
+    if (section === 'Vocabulary') {
+      return current.gameType === 'GAME1'
+        ? (
+          <OnePicFourWord
+            activityId={current.activityId}
+            onBack={() => { setCurrent(null); closeModal(); }}
+            isCompleted={isCompleted}
+          />
+        )
+        : (
+          <WordTranslation
+            activityId={current.activityId}
+            onBack={() => { setCurrent(null); closeModal(); }}
+            isCompleted={isCompleted}
+          />
+        );
+    }
+
+    return null;
   };
 
   const sections = [
@@ -160,40 +169,42 @@ export default function Homepage() {
   ];
 
   return (
-    <Grid container direction="column" alignItems="center" sx={{ minHeight: '100vh', p: 2, backgroundColor: '#E1F5FE' }}>
+    <Grid container direction="column" alignItems="center" sx={{ p: 2, backgroundColor: '#E1F5FE' }}>
       <Typography variant="h4" sx={{ mb: 2, color: '#4E342E' }}>
-        {user ? `Welcome, ${userDetails.firstName}!` : 'Welcome, Friend!'}
+        {userDetails.firstName ? `Welcome, ${userDetails.firstName}!` : 'Welcome!'}
       </Typography>
       <Typography variant="h5" sx={{ mb: 4, color: '#6D4C41' }}>
         Choose a section to start learning:
       </Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
         {sections.map(s => (
-          <Box
-            key={s.key}
-            onClick={() => openModal(s.key)}
+          <Box key={s.key} onClick={() => openModal(s.key)}
             sx={{
               backgroundColor: s.bg,
               width: 360, height: 560,
+              borderRadius: 3,
               display: 'flex', flexDirection: 'column',
               justifyContent: 'center', alignItems: 'center',
-              borderRadius: 3, boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
               cursor: 'pointer', transition: 'transform 0.2s',
-              '&:hover': { transform: 'scale(1.05)', boxShadow: '0 6px 12px rgba(0,0,0,0.15)' }
+              '&:hover': { transform: 'scale(1.05)' }
             }}>
             {s.icon}
             <Typography variant="subtitle1" sx={{ mt: 1, color: '#4E342E' }}>{s.key}</Typography>
           </Box>
         ))}
       </Stack>
+
       <Modal open={open} onClose={closeModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={open}>
-          <Box sx={{ position: 'fixed', top: 0, left: 0, width: '98vw', height: '100vh', bgcolor: '#FFFFFF', color: '#3E2723', p: 3, display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <IconButton onClick={closeModal}><ArrowBackIcon fontSize='large' sx={{ color: '#6D4C41' }} /></IconButton>
-              <IconButton onClick={closeModal}><CloseIcon fontSize='large' sx={{ color: '#6D4C41' }} /></IconButton>
+          <Box sx={{ position: 'fixed', top: 0, left: 0, width: '98vw', height: '100vh', bgcolor: '#FFFFFF', p: 3 }}>
+            <Stack direction="row" justifyContent="space-between">
+              <IconButton onClick={closeModal}><ArrowBackIcon fontSize="large" /></IconButton>
+              <IconButton onClick={closeModal}><CloseIcon fontSize="large" /></IconButton>
+            </Stack>
+            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+              {renderBody()}
             </Box>
-            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>{renderBody()}</Box>
           </Box>
         </Fade>
       </Modal>

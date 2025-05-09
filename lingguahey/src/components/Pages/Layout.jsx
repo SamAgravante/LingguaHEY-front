@@ -26,8 +26,6 @@ const allRoutes = [
   { label: "Home", path: "/Homepage" },
   { label: "admindb", path: "/admindashboard" },
   { label: "teacherdb", path: "/teacherdashboard" },
-  { label: "Settings", path: "/settings" },
-  { label: "Payment Method", path: "/payment" },
   { label: "Subscriptions", path: "/subscriptions" },
   { label: "Contact Us", path: "/contact" },
   { label: "Logout", path: "/logout" },

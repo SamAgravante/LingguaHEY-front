@@ -15,15 +15,14 @@ import { styled } from '@mui/system';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
 
-// 🎨 Styled pastel UI
-const PastelContainer = styled(Box)({
+const PastelContainer = styled(Box)(() => ({
   backgroundColor: '#fff4de',
   padding: '24px',
   minHeight: '100vh',
   fontFamily: 'Comic Sans MS, sans-serif',
-});
+}));
 
-const ChoiceButton = styled(Button)({
+const ChoiceButton = styled(Button)(() => ({
   backgroundColor: '#DFF7E4',
   color: '#2E2E34',
   textTransform: 'none',
@@ -32,12 +31,10 @@ const ChoiceButton = styled(Button)({
   padding: '12px 16px',
   margin: '8px',
   width: '100%',
-  '&:hover': {
-    backgroundColor: '#C8E6C9',
-  },
-});
+  '&:hover': { backgroundColor: '#C8E6C9' },
+}));
 
-const PastelProgress = styled(LinearProgress)({
+const PastelProgress = styled(LinearProgress)(() => ({
   height: '12px',
   borderRadius: '8px',
   backgroundColor: '#EAEAEA',
@@ -45,21 +42,37 @@ const PastelProgress = styled(LinearProgress)({
     background: 'linear-gradient(to right, #BAFFC9, #FFB3BA)',
     borderRadius: '8px',
   },
-});
+}));
 
-export default function OnePicFourWord({ activityId }) {
+// Utility: Fisher–Yates shuffle
+function shuffleArray(array) {
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * Props:
+ *  - activityId: ID of the activity
+ *  - onBack: callback to return to parent
+ *  - isCompleted: boolean indicating if activity was already completed
+ */
+export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
+  const [shuffledOptions, setShuffledOptions] = useState([]);
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
   const [userId, setUserId] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
-  const [selectedWords, setSelectedWords] = useState([]);  // New state to store selected words
 
   const token = localStorage.getItem('token');
   const API = axios.create({
-    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
     timeout: 1000,
     headers: {
       'Content-Type': 'application/json',
@@ -68,11 +81,12 @@ export default function OnePicFourWord({ activityId }) {
     },
   });
 
+  // Fetch questions and user ID
   useEffect(() => {
     const user = getUserFromToken();
     if (user?.userId) setUserId(user.userId);
 
-    API.get(`activities/${activityId}/questions?gameType=GAME1`)
+    API.get(`questions/activities/${activityId}?gameType=GAME1`)
       .then(res => {
         if (Array.isArray(res.data) && res.data.length) {
           setQuestions(res.data);
@@ -87,12 +101,18 @@ export default function OnePicFourWord({ activityId }) {
       });
   }, [activityId]);
 
+  // Shuffle options on load or when index changes
+  useEffect(() => {
+    if (!questions.length) return;
+    const opts = Array.isArray(questions[index].choices) ? questions[index].choices : [];
+    setShuffledOptions(shuffleArray(opts));
+  }, [questions, index]);
+
   if (!questions.length) {
     return <Typography>Loading or no questions available.</Typography>;
   }
 
   const q = questions[index];
-  const options = Array.isArray(q.choices) ? q.choices : [];
 
   const handleChoice = (choice) => {
     const isCorrect = choice.correct;
@@ -101,29 +121,31 @@ export default function OnePicFourWord({ activityId }) {
 
     setScore(newScore);
     const nextIndex = index + 1;
-    setProgress(((nextIndex) / questions.length) * 100);
+    setProgress((nextIndex / questions.length) * 100);
 
-    // Add selected word to the selectedWords state
-    setSelectedWords((prevWords) => [...prevWords, choice.choiceText]);
-
-    // Send selected choice
-    API.post('score', {
-      questionId: q.questionId,
-      choiceId: choice.choiceId
-    }).catch(err => console.error('Error recording choice', err));
+    // Only send score if activity not already completed
+    if (userId && !isCompleted) {
+      API.post(
+        `scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${choice.choiceId}`
+      ).catch(err => console.error('Error awarding score:', err));
+    }
 
     if (nextIndex < questions.length) {
       setIndex(nextIndex);
     } else {
       setFinalScore(newScore);
       setShowDialog(true);
-      // Mark complete if perfect
-      if (newScore === questions.length && userId) {
-        API.post(`activities/${activityId}/complete`)
-          .then(() => console.log('Activity marked completed 🎯'))
-          .catch(err => console.error('Error marking activity as completed', err));
+      // Only mark complete if not already
+      if (newScore === questions.length && userId && !isCompleted) {
+        API.put(`activities/${activityId}/completed/${userId}`)
+          .catch(err => console.error('Error marking activity as completed:', err));
       }
     }
+  };
+
+  const handleDialogClose = () => {
+    setShowDialog(false);
+    if (onBack) onBack();
   };
 
   return (
@@ -155,7 +177,7 @@ export default function OnePicFourWord({ activityId }) {
       )}
 
       <Grid container spacing={2}>
-        {options.map(choice => (
+        {shuffledOptions.map(choice => (
           <Grid item xs={6} key={choice.choiceId}>
             <ChoiceButton onClick={() => handleChoice(choice)}>
               {choice.choiceText}
@@ -164,31 +186,13 @@ export default function OnePicFourWord({ activityId }) {
         ))}
       </Grid>
 
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" sx={{ color: '#2E2E34' }}>
-          Selected Words:
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {selectedWords.map((word, index) => (
-            <Box key={index} sx={{
-              backgroundColor: '#DFF7E4',
-              padding: '8px 16px',
-              borderRadius: '12px',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-            }}>
-              {word}
-            </Box>
-          ))}
-        </Box>
-      </Box>
-
-      <Dialog open={showDialog} onClose={() => setShowDialog(false)}>
+      <Dialog open={showDialog} onClose={handleDialogClose}>
         <DialogTitle>🎉 Quiz Complete!</DialogTitle>
         <DialogContent>
           <Typography>Your final score is {finalScore} / {questions.length}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowDialog(false)} variant="contained">Close</Button>
+          <Button onClick={handleDialogClose} variant="contained">Close</Button>
         </DialogActions>
       </Dialog>
     </PastelContainer>
