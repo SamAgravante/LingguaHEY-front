@@ -1,45 +1,50 @@
 import React, { useState, useEffect } from "react";
-import {Box, TextField, Button, Typography, Paper, List, ListItem, ListItemText, IconButton, Grid,} from "@mui/material";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  Grid,
+} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
 function WordTranslation() {
-  const [word, setWord] = useState("");
-  const [correctTranslation, setCorrectTranslation] = useState("");
-  const [inputChoice, setInputChoice] = useState("");
-  const [choices, setChoices] = useState([]);
-  const [questions, setQuestions] = useState([]);
-  const [message, setMessage] = useState("");
-  const [isWordSubmitted, setIsWordSubmitted] = useState(false);
+  const [word, setWord] = useState(""); // State for the word to be posted
+  const [correctTranslation, setCorrectTranslation] = useState(""); // State for the correct answer
+  const [inputChoice, setInputChoice] = useState(""); // State for the current choice input
+  const [choices, setChoices] = useState([]); // State for the list of choices
+  const [questions, setQuestions] = useState([]); // State for the list of questions
+  const [message, setMessage] = useState(""); // State for success or error messages
+  const [isWordSubmitted, setIsWordSubmitted] = useState(false); // Track if the word is submitted
   const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
   const [questionId, setQuestionId] = useState(null);
-  const [editingQuestionId, setEditingQuestionId] = useState(null);
-  const [editedQuestionText, setEditedQuestionText] = useState("");
-  const [editingChoiceId, setEditingChoiceId] = useState(null);
-  const [editedChoiceText, setEditedChoiceText] = useState("");
-  const [editingChoicesQuestionId, setEditingChoicesQuestionId] = useState(null);
-  const [editingChoices, setEditingChoices] = useState([]);
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const token = localStorage.getItem("token");
+  const [editingQuestionId, setEditingQuestionId] = useState(null); // Track the question being edited
+  const [editedQuestionText, setEditedQuestionText] = useState(""); // Track the edited text
+  const [editingChoicesQuestionId, setEditingChoicesQuestionId] = useState(null); // Track the question being edited
+  const [editingChoices, setEditingChoices] = useState([]); // Track the choices being edited
 
-  const API = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
-    timeout: 10000,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
+  // Fetch questions for the activity
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const response = await API.get(`/api/lingguahey/questions/activities/${activityId}`);
-        setQuestions(response.data);
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
+            },
+          }
+        );
+        setQuestions(response.data); // Store the questions in state
       } catch (err) {
         console.error("Failed to fetch questions:", err.response?.data || err.message);
         setMessage("Failed to fetch questions. Please try again.");
@@ -50,12 +55,12 @@ function WordTranslation() {
   }, [activityId]);
 
   const submitWord = async () => {
-    console.log("submitWord function called");
     if (!word) {
       setMessage("Please enter a word to post.");
       return;
     }
 
+    const token = localStorage.getItem("token");
     if (!token) {
       setMessage("You are not logged in. Please log in again.");
       navigate("/login");
@@ -63,31 +68,33 @@ function WordTranslation() {
     }
 
     try {
+      // Use a FormData object to send as multipart/form-data
       const formData = new FormData();
-      formData.append("questionText", word);
-      formData.append("questionDescription", "");
-      formData.append("image", null);
+      formData.append("questionText", word); // Add the word as questionText
+      formData.append("questionDescription", ""); // Add an empty description (or set a value if needed)
+      formData.append("image", null); // Add null for the image (or attach a file if needed)
 
-      const response = await API.post(
-        `/api/lingguahey/questions/activities/${activityId}`,
+      // Post the word to the backend
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`, // Include token
+            "Content-Type": "multipart/form-data", // Set the correct Content-Type
           },
         }
       );
 
-      console.log("Backend response:", response.data);
-      console.log("response.data", response.data);
+      console.log("Backend response:", response.data); // Log the backend response
 
       setMessage("Word successfully submitted!");
       setIsWordSubmitted(true);
-      setQuestions((prevQuestions) => [...prevQuestions, response.data]);
+      setQuestions((prevQuestions) => [...prevQuestions, response.data]); // Add the new question to the list
 
+      // Get the questionId from the backend response
       if (response.data.questionId) {
-        console.log("response.data.questionId", response.data.questionId);
-        setQuestionId(response.data.questionId);
+        setQuestionId(response.data.questionId); // Use response.data.questionId
       } else {
         console.error("No questionId found in the response.");
         setMessage("Failed to retrieve question ID. Please try again.");
@@ -99,14 +106,12 @@ function WordTranslation() {
   };
 
   const addChoice = () => {
-    console.log("addChoice function called");
     if (!inputChoice) {
       setMessage("Choice cannot be empty.");
       return;
     }
 
-    setChoices([...choices, inputChoice]);
-    console.log("choices array:", choices);
+    setChoices([...choices, inputChoice]); // Add the choice to the local state
     setInputChoice("");
     setMessage("Choice added successfully.");
   };
@@ -134,25 +139,36 @@ function WordTranslation() {
         const choice = choices[i];
         const isGeneratedChoice = correctTranslation.split(" ").includes(choice);
 
-        await API.post(
-          `/api/lingguahey/choices/questions/${questionId}`,
+        // Add the choice to the backend
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${questionId}`,
           {
             choiceText: choice,
-            choiceOrder: isGeneratedChoice ? i + 1 : null,
-            correct: isGeneratedChoice,
+            choiceOrder: isGeneratedChoice ? i + 1 : null, // Add choiceOrder for generated choices, null for manual choices
+            correct: isGeneratedChoice, // True for generated choices, false for manual choices
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
+            },
           }
         );
 
+        // Increment score if the choice is correct
         if (isGeneratedChoice) {
           score++;
         }
       }
 
-      await API.post(
-        `/api/lingguahey/scores/questions/${questionId}`,
+      // Set the score for the question
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${questionId}`,
         null,
         {
-          params: { scoreValue: score }
+          params: { scoreValue: score },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
+          },
         }
       );
 
@@ -170,7 +186,15 @@ function WordTranslation() {
 
   const editQuestion = async (id, updatedData) => {
     try {
-      await API.put(`/api/lingguahey/questions/${id}`, updatedData);
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
+        updatedData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
       setMessage("Question updated successfully!");
       setQuestions((prevQuestions) =>
         prevQuestions.map((q) => (q.questionId === id ? { ...q, ...updatedData } : q))
@@ -183,66 +207,49 @@ function WordTranslation() {
 
   const deleteQuestion = async (id) => {
     try {
-      await API.delete(`/api/lingguahey/questions/${id}`);
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       setMessage("Question deleted successfully!");
-      setQuestions(questions.filter((q) => q.questionId !== id));
+      setQuestions(questions.filter((q) => q.questionId !== id)); // Remove from local state
     } catch (err) {
       console.error("Failed to delete question:", err.response?.data || err.message);
       setMessage("Failed to delete question. Please try again.");
     }
   };
 
-  const editChoice = async (id, updatedData) => {
-    try {
-      await API.put(`/api/lingguahey/choices/${id}`, updatedData);
-      setMessage("Choice updated successfully!");
-      setChoices((prevChoices) =>
-        prevChoices.map((c) => (c.id === id ? { ...c, ...updatedData } : c))
-      );
-    } catch (err) {
-      console.error("Failed to update choice:", err.response?.data || err.message);
-      setMessage("Failed to update choice:", err.response?.data || err.message);
-    }
-  };
-
-  const saveEditedChoice = async (id) => {
-    try {
-      await API.put(
-        `/api/lingguahey/choices/${id}`,
-        { choiceText: editedChoiceText }
-      );
-      setMessage("Choice updated successfully!");
-      setChoices((prevChoices) =>
-        prevChoices.map((c) => (c.id === id ? { ...c, choiceText: editedChoiceText } : c))
-      );
-      setEditingChoiceId(null);
-    } catch (err) {
-      console.error("Failed to update choice:", err.response?.data || err.message);
-      setMessage("Failed to update choice. Please try again.");
-    }
-  };
-
   const deleteChoice = async (id) => {
     try {
-      await API.delete(`/api/lingguahey/choices/${id}`);
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       setMessage("Choice deleted successfully!");
-      setChoices(choices.filter((c) => c.id !== id));
+      setChoices(choices.filter((c) => c.id !== id)); // Remove from local state
     } catch (err) {
       console.error("Failed to delete choice:", err.response?.data || err.message);
       setMessage("Failed to delete choice. Please try again.");
     }
   };
 
-  const startEditingQuestion = (id, currentText) => {
+  const startEditing = (id, currentText) => {
     setEditingQuestionId(id);
     setEditedQuestionText(currentText);
   };
 
   const saveEditedQuestion = async (id) => {
     try {
-      await API.put(
-        `/api/lingguahey/questions/${id}`,
-        { questionText: editedQuestionText }
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
+        { questionText: editedQuestionText },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
       );
       setMessage("Question updated successfully!");
       setQuestions((prevQuestions) =>
@@ -250,27 +257,26 @@ function WordTranslation() {
           q.questionId === id ? { ...q, questionText: editedQuestionText } : q
         )
       );
-      setEditingQuestionId(null);
+      setEditingQuestionId(null); // Exit editing mode
     } catch (err) {
       console.error("Failed to update question:", err.response?.data || err.message);
       setMessage("Failed to update question. Please try again.");
     }
   };
 
-  const startEditingChoice = (id, currentText) => {
-    setEditingChoiceId(id);
-    setEditedChoiceText(currentText);
-  };
-
-  const handleGoBackToActivities = () => {
-    navigate(`/classroom/${classroomId}`);
-  };
-
   const startEditingChoices = async (question) => {
     setEditingChoicesQuestionId(question.questionId);
+    setEditedQuestionText(question.questionText);
 
     try {
-      const response = await API.get(`/api/lingguahey/choices/questions/${question.questionId}`);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${question.questionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
       setEditingChoices(response.data);
     } catch (err) {
       console.error("Failed to fetch choices:", err.response?.data || err.message);
@@ -287,19 +293,32 @@ function WordTranslation() {
   const saveEditedChoices = async (questionId) => {
     try {
       for (const choice of editingChoices) {
-        await API.put(
-          `/api/lingguahey/choices/${choice.choiceId}`,
-          { choiceText: choice.choiceText }
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${choice.choiceId}`,
+          { choiceText: choice.choiceText },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
         );
       }
 
       setMessage("Choices updated successfully!");
       setEditingChoicesQuestionId(null);
 
+      // Refetch questions to update the list
       const fetchQuestions = async () => {
         try {
-          const response = await API.get(`/api/lingguahey/questions/activities/${activityId}`);
-          setQuestions(response.data);
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
+              },
+            }
+          );
+          setQuestions(response.data); // Set the questions in state
         } catch (err) {
           console.error("Failed to fetch questions:", err.response?.data || err.message);
           setMessage("Failed to fetch questions. Please try again.");
@@ -316,7 +335,11 @@ function WordTranslation() {
   return (
     <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E0F7FA", p: 2 }}>
       <Box p={3} sx={{ width: "100%", maxWidth: 600, mx: "auto" }}>
-        <Button variant="contained" onClick={handleGoBackToActivities} sx={{ mb: 2, bgcolor: "#81D4FA", color: "black", '&:hover': { bgcolor: "#4FC3F7" } }}>
+        <Button
+          variant="contained"
+          onClick={() => navigate(`/classroom/${classroomId}`)}
+          sx={{ mb: 2, bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
+        >
           Back to Activities
         </Button>
         <Typography variant="h4" fontWeight="bold" color="#0277BD" mb={3} align="center">
@@ -333,7 +356,13 @@ function WordTranslation() {
           margin="normal"
           sx={{ bgcolor: "white" }}
         />
-        <Button variant="contained" onClick={submitWord} mt={3} color="primary" sx={{ bgcolor: "#81D4FA", color: "black", '&:hover': { bgcolor: "#4FC3F7" } }}>
+        <Button
+          variant="contained"
+          onClick={submitWord}
+          mt={3}
+          color="primary"
+          sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
+        >
           Submit Word
         </Button>
 
@@ -360,7 +389,14 @@ function WordTranslation() {
           sx={{ bgcolor: "white" }}
           disabled={!isWordSubmitted}
         />
-        <Button variant="contained" onClick={addChoice} mt={3} color="primary" sx={{ bgcolor: "#81D4FA", color: "black", '&:hover': { bgcolor: "#4FC3F7" } }} disabled={!isWordSubmitted}>
+        <Button
+          variant="contained"
+          onClick={addChoice}
+          mt={3}
+          color="primary"
+          sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
+          disabled={!isWordSubmitted}
+        >
           Add Choice
         </Button>
 
@@ -372,56 +408,23 @@ function WordTranslation() {
           <List>
             {choices.map((choice, index) => (
               <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
-                {editingChoiceId === choice.id ? (
-                  <TextField
-                    variant="outlined"
-                    value={editedChoiceText}
-                    onChange={(e) => setEditedChoiceText(e.target.value)}
-                    fullWidth
-                    sx={{ bgcolor: "white" }}
-                  />
-                ) : (
-                  <ListItemText primary={choice} />
-                )}
-                <Box sx={{ display: "flex", gap: 2 }}>
-                  {editingChoiceId === choice.id ? (
-                    <>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => saveEditedChoice(choice.id)}
-                        sx={{ bgcolor: "#81D4FA", color: "black", '&:hover': { bgcolor: "#4FC3F7" } }}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        variant="contained"
-                        color="error"
-                        onClick={() => setEditingChoiceId(null)}
-                        sx={{ bgcolor: "#E57373", color: "black", '&:hover': { bgcolor: "#F44336" } }}
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <IconButton
-                        edge="end"
-                        aria-label="edit"
-                        onClick={() => startEditingChoice(choice.id, choice.choiceText || choice)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        onClick={() => deleteChoice(choice.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </>
-                  )}
-                </Box>
+                <ListItemText primary={choice} />
+                {/*<Box sx={{ display: "flex", gap: 2 }}>
+                  <IconButton
+                    edge="end"
+                    aria-label="edit"
+                    onClick={() => startEditingChoice(choice.id, choice.choiceText || choice)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => deleteChoice(choice.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>*/}
               </ListItem>
             ))}
           </List>
@@ -434,7 +437,7 @@ function WordTranslation() {
           mt={3}
           color="primary"
           disabled={!isWordSubmitted}
-          sx={{ bgcolor: "#81D4FA", color: "black", '&:hover': { bgcolor: "#4FC3F7" } }}
+          sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
         >
           Save Word and Choices
         </Button>
@@ -460,10 +463,7 @@ function WordTranslation() {
                     fullWidth
                   />
                 ) : (
-                  <ListItemText
-                    primary={`Word: ${question.questionText}`}
-                    secondary={`Choices: ${question.choices ? question.choices.map(choice => choice.choiceText).join(', ') : 'No choices'}`}
-                  />
+                  <ListItemText primary={`Word: ${question.questionText}`} />
                 )}
                 <Box>
                   {editingQuestionId === question.questionId ? (
@@ -472,7 +472,7 @@ function WordTranslation() {
                         variant="contained"
                         color="primary"
                         onClick={() => saveEditedQuestion(question.questionId)}
-                        sx={{ bgcolor: "#81D4FA", color: "black", '&:hover': { bgcolor: "#4FC3F7" } }}
+                        sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
                       >
                         Save
                       </Button>
@@ -480,7 +480,7 @@ function WordTranslation() {
                         variant="contained"
                         color="error"
                         onClick={() => setEditingQuestionId(null)}
-                        sx={{ bgcolor: "#E57373", color: "black", '&:hover': { bgcolor: "#F44336" } }}
+                        sx={{ bgcolor: "#E57373", color: "black", "&:hover": { bgcolor: "#F44336" } }}
                       >
                         Cancel
                       </Button>
@@ -505,6 +505,7 @@ function WordTranslation() {
                         variant="contained"
                         color="secondary"
                         onClick={() => startEditingChoices(question)}
+                        sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
                       >
                         Edit Choices
                       </Button>
@@ -532,9 +533,7 @@ function WordTranslation() {
                       onChange={(e) => handleChoiceChange(index, e.target.value)}
                       fullWidth
                       sx={{
-                        bgcolor: "#c8e3e3",
-                        input: { color: "black" },
-                        label: { color: "#BDBDBD" },
+                        bgcolor: "white",
                       }}
                     />
                   </ListItem>
@@ -545,6 +544,7 @@ function WordTranslation() {
                   variant="contained"
                   color="primary"
                   onClick={() => saveEditedChoices(editingChoicesQuestionId)}
+                  sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
                 >
                   Save Choices
                 </Button>
@@ -552,6 +552,7 @@ function WordTranslation() {
                   variant="contained"
                   color="error"
                   onClick={() => setEditingChoicesQuestionId(null)}
+                  sx={{ bgcolor: "#E57373", color: "black", "&:hover": { bgcolor: "#F44336" } }}
                 >
                   Cancel
                 </Button>

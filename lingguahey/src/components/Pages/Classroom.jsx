@@ -95,13 +95,13 @@ const Classroom = () => {
     try {
       let gameType;
       switch (selectedActivityType) {
-        case "Word Translation":
+        case "One Pic Four Words":
           gameType = "GAME1";
           break;
         case "Phrase Translation":
           gameType = "GAME2";
           break;
-        case "One Pic Four Words":
+        case "Words Translation":
           gameType = "GAME3";
           break;
         default:
@@ -143,13 +143,13 @@ const Classroom = () => {
   
     switch (activity.gameType) {
       case "GAME1":
-        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/word-translation`;
+        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/one-pic-four-words`;
         break;
       case "GAME2":
         gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/phrase-translation`;
         break;
       case "GAME3":
-        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/one-pic-four-words`;
+        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/word-translation`;
         break;
       default:
         console.warn("Unknown game type:", activity.gameType);
@@ -195,9 +195,9 @@ const Classroom = () => {
             onChange={(e) => setSelectedActivityType(e.target.value)}
             label="Activity Type"
           >
-            <MenuItem value="Word Translation">Word Translation</MenuItem>
-            <MenuItem value="Phrase Translation">Phrase Translation</MenuItem>
             <MenuItem value="One Pic Four Words">One Pic Four Words</MenuItem>
+            <MenuItem value="Phrase Translation">Phrase Translation</MenuItem>
+            <MenuItem value="Word Translation">Word Translation</MenuItem>
           </Select>
         </FormControl>
         <Button
@@ -225,14 +225,14 @@ const Classroom = () => {
                   <ListItemText
                     primary={`${index + 1}: ${
                       activity.gameType === "GAME1"
-                        ? "Word Translation"
+                        ? "One Pic Four Words"
                         : activity.gameType === "GAME2"
                         ? "Phrase Translation"
                         : activity.gameType === "GAME3"
-                        ? "One Pic Four Words"
+                        ? "Word Translation"
                         : activity.activityName // Default to activityName if gameType doesn't match
                     }`}
-                    secondary={`Room ID: ${classroomId}`}
+                    secondary={`Activity ID: ${activity.activityId}`}
                   />
                   <ListItemSecondaryAction>
                     <Button
