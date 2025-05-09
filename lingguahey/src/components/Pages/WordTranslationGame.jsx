@@ -14,6 +14,7 @@ import {
 import { styled } from '@mui/system';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
+import API from "../../api"; 
 
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
@@ -64,8 +65,9 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
   const [userId, setUserId] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
-
+  
   const token = localStorage.getItem('token');
+  /*
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
     timeout: 1000,
@@ -75,7 +77,7 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
       Authorization: `Bearer ${token}`,
     },
   });
-
+  */
   const APItts = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
     timeout: 5000,
