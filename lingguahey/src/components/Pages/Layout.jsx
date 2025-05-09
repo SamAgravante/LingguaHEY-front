@@ -14,6 +14,7 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
+import API from "../../api"; 
 
 const drawerWidth = 240;
 
@@ -44,12 +45,14 @@ const Layout = () => {
   });
   const [totalPoints, setTotalPoints] = useState(0);
 
-  const API = axios.create({
-    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
-    headers: { Authorization: `Bearer ${token}` },
-  });
+
 
   useEffect(() => {
+    /*
+    const API = axios.create({
+      baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
+      headers: { Authorization: `Bearer ${token}` },
+    });*/
     const token = localStorage.getItem("token");
 
     if (token) {

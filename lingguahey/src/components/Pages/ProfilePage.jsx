@@ -2,7 +2,7 @@ import { Box, Typography, Grid, Stack, TextField, Button } from "@mui/material";
 import { useEffect, useState } from "react";
 import { getUserFromToken } from "../../utils/auth";
 import axios from "axios";
-
+import API from "../../api"; 
 export default function ProfilePage() {
   // ---- LOGIC: DO NOT MODIFY ----
   const userID = getUserFromToken().userId;
@@ -10,7 +10,7 @@ export default function ProfilePage() {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const token = localStorage.getItem("token");
-
+  
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users`,
     timeout: 1000,

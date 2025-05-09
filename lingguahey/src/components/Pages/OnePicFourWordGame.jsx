@@ -14,6 +14,7 @@ import {
 import { styled } from '@mui/system';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
+import API from "../../api"; 
 
 const PastelContainer = styled(Box)(() => ({
   backgroundColor: '#fff4de',
@@ -70,6 +71,7 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
 
+  /*
   const token = localStorage.getItem('token');
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
@@ -80,7 +82,7 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
       Authorization: `Bearer ${token}`,
     },
   });
-
+  */
   // Fetch questions and user ID
   useEffect(() => {
     const user = getUserFromToken();

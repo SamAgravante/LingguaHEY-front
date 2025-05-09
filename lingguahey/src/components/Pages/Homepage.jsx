@@ -21,6 +21,7 @@ import WordTranslation from "./WordTranslationGame";
 import OnePicFourWord from "./OnePicFourWordGame";
 import { mockQuestions } from "./mockQuestions";
 import { getUserFromToken } from "../../utils/auth";
+import API from "../../api"; 
 
 export default function Homepage() {
   const [user, setUser] = useState(null);
@@ -33,6 +34,7 @@ export default function Homepage() {
   const [userActivities, setUserActivities] = useState([]);
 
   const token = localStorage.getItem('token');
+  /*
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
     timeout: 1000,
@@ -41,7 +43,7 @@ export default function Homepage() {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
     },
-  });
+  });*/
 
   useEffect(() => {
     const decoded = getUserFromToken();
