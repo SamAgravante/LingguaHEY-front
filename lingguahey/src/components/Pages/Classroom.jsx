@@ -101,7 +101,7 @@ const Classroom = () => {
         case "Phrase Translation":
           gameType = "GAME2";
           break;
-        case "Words Translation":
+        case "Word Translation":
           gameType = "GAME3";
           break;
         default:
@@ -119,7 +119,7 @@ const Classroom = () => {
       setSelectedActivityType("");
 
       // Redirect to the newly created activity
-      navigate(`/classroom/${classroomId}/activities/${response.data.id}`);
+      //navigate(`/classroom/${classroomId}/activities/${response.data.id}`);
     } catch (err) {
       console.error("Error creating activity:", err.response?.data || err.message);
       alert("Failed to create activity. Please try again.");
