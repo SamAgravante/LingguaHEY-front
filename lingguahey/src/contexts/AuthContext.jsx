@@ -1,5 +1,4 @@
-// context/AuthContext.jsx
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext();
 
@@ -22,9 +21,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const logout = () => {
-    setToken(null);
-  };
+  const logout = () => setToken(null);
 
   return (
     <AuthContext.Provider value={{ token, setToken, logout }}>
