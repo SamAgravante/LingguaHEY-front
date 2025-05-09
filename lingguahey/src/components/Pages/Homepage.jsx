@@ -22,8 +22,10 @@ import OnePicFourWord from "./OnePicFourWordGame";
 import { mockQuestions } from "./mockQuestions";
 import { getUserFromToken } from "../../utils/auth";
 import API from "../../api"; 
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function Homepage() {
+  const { token, logout } = useAuth();
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState("");
@@ -33,22 +35,11 @@ export default function Homepage() {
   const [userDetails, setUserDetails] = useState({});
   const [userActivities, setUserActivities] = useState([]);
 
-  const token = localStorage.getItem('token');
-  /*
-  const API = axios.create({
-    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
-    timeout: 1000,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });*/
-
   useEffect(() => {
+    if (!token) return;
     const decoded = getUserFromToken();
     if (decoded?.userId) setUser(decoded);
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (!user) return;
