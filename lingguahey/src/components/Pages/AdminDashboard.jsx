@@ -106,21 +106,18 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
-        const token = localStorage.getItem("token"); // Retrieve the token from local storage
+        const token = localStorage.getItem("token");
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`, {
           headers: {
-            Authorization: `Bearer ${token}`, // Pass the token in the Authorization header
+            Authorization: `Bearer ${token}`,
           },
         });
 
-        //console.log("Classroom API response:", response.data);
-
-        // Map the response to match the frontend structure
         const classroomsWithActivitiesCount = await Promise.all(
           response.data.map(async (classroom) => {
             try {
               const activitiesResponse = await axios.get(
-                `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroom.classroomId}/live-activities`,
+                `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/activities/${classroom.classroomId}/activities`,
                 {
                   headers: {
                     Authorization: `Bearer ${token}`,
@@ -128,35 +125,37 @@ const Dashboard = () => {
                 }
               );
               return {
-                label: classroom.classroomName || "Unnamed Classroom", // Adjust field names as needed
-                count: activitiesResponse.data.length || 0, // Number of activities
-                color: "#FFEBEE", // Assign a default color or use dynamic logic
-                id: classroom.classroomId, // Assuming each classroom has an ID
+                ...classroom, // Keep all existing classroom properties
+                label: classroom.classroomName || "Unnamed Classroom",
+                count: activitiesResponse.data.length || 0,
+                color: "#FFEBEE",
+                id: classroom.classroomId,
+                activities: activitiesResponse.data, // Store the activities
               };
             } catch (error) {
               console.error("Failed to fetch activities for classroom:", classroom.classroomId, error);
               return {
-                label: classroom.classroomName || "Unnamed Classroom", // Adjust field names as needed
-                count: 0, // Default to 0 if activities fetch fails
-                color: "#FFEBEE", // Assign a default color or use dynamic logic
-                id: classroom.classroomId, // Assuming each classroom has an ID
+                ...classroom, // Keep all existing classroom properties
+                label: classroom.classroomName || "Unnamed Classroom",
+                count: 0,
+                color: "#FFEBEE",
+                id: classroom.classroomId,
+                activities: [], // Store an empty array if activities fetch fails
               };
             }
           })
         );
 
-        setClassroomData(classroomsWithActivitiesCount); // Set the fetched classrooms
+        setClassroomData(classroomsWithActivitiesCount);
       } catch (error) {
         console.error("Failed to fetch classrooms:", error);
-        setClassroomData([]); // Fallback to an empty array in case of an error
+        setClassroomData([]);
       }
     };
 
     fetchClassrooms();
   }, []);
 
-  // Placeholder for Users Data
-  // TODO: Replace with actual data from the backend when ready
   const usersData = [
     { label: "Concurrent users", count: concurrentUsers, color: "#FFEBEE" },
     { label: "Registered users", count: registeredUsers, color: "#E3F2FD" },
@@ -164,12 +163,11 @@ const Dashboard = () => {
     { label: "Teachers Registered", count: teachersRegistered, color: "#E8F5E9" },
   ];
 
-  // Handle Classroom Click to Open Modal
+
   const handleClassroomClick = async (classroom) => {
     setSelectedClassroom(classroom);
-    setOpen(true); // Open modal
+    setOpen(true);
 
-    // Fetch activities for the selected classroom
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
@@ -180,23 +178,20 @@ const Dashboard = () => {
           },
         }
       );
-      setSelectedClassroom({ ...classroom, activities: response.data }); // Store activities in selectedClassroom
+      setSelectedClassroom({ ...classroom, activities: response.data }); 
     } catch (error) {
       console.error("Failed to fetch activities:", error);
-      setSelectedClassroom({ ...classroom, activities: [] }); // Fallback to an empty array in case of an error
+      setSelectedClassroom({ ...classroom, activities: [] }); 
     }
   };
 
-  // Handle Modal Close
   const handleCloseModal = () => setOpen(false);
 
-  // Handle Subject Selection from Modal (redirect to Activities page)
   const handleSubjectSelect = (subject) => {
-    navigate(`/activities/${selectedClassroom}/${subject}`); // Navigate to the activities page
-    setOpen(false); // Close modal
+    navigate(`/activities/${selectedClassroom}/${subject}`);
+    setOpen(false);
   };
 
-  // Handle Delete Classroom
   const handleDeleteClassroom = async (classroomId) => {
     try {
       const token = localStorage.getItem("token");
@@ -229,7 +224,6 @@ const Dashboard = () => {
     }
   };
 
-  // Handle Delete Activity
   const handleDeleteActivity = async (activityId) => {
     try {
       const token = localStorage.getItem("token");
@@ -315,7 +309,7 @@ const Dashboard = () => {
                       {classroom.count}
                     </Typography>
                     <Typography variant="body2" color="#6D4C41">
-                      {classroom.label}
+                      Activities in {classroom.label}
                     </Typography>
                     <Box mt={2}>
                       <Button
@@ -348,10 +342,6 @@ const Dashboard = () => {
               </Typography>
             )}
           </Grid>
-
-          {/* Remove Add New Classroom Section */}
-
-          {/* Remove Add New Classroom Section */}
         </Grid>
 
         {/* Users Data */}

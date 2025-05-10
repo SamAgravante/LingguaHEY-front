@@ -19,6 +19,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { jwtDecode } from "jwt-decode";
+import API from "../../api";
 
 const Classroom = () => {
   const navigate = useNavigate();
@@ -129,8 +130,13 @@ const Classroom = () => {
   const handleDelete = async (activityId) => {
     try {
       // Use the correct API endpoint to delete an activity
-      await API.delete(`/api/lingguahey/activities/${activityId}`);
-      alert("Activity deleted successfully.");
+      await API.delete(`/api/lingguahey/activities/${activityId}`,{
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setActivities(activities.filter((activity) => activity.activityId !== activityId));
+      //alert("Activity deleted successfully.");
     } catch (err) {
       console.error("Error deleting activity:", err.response?.data || err.message);
       alert("Failed to delete activity. Please try again.");
@@ -243,7 +249,7 @@ const Classroom = () => {
                     >
                       Go To Activity
                     </Button>
-                    <IconButton edge="end" color="error" onClick={() => handleDelete(activity.id)}>
+                    <IconButton edge="end" color="error" onClick={() => handleDelete(activity.activityId)}>
                       <DeleteIcon />
                     </IconButton>
                   </ListItemSecondaryAction>

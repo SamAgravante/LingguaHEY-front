@@ -517,13 +517,13 @@ function OnePicFourWords() {
                         >
                           Edit Choices
                         </Button>
-                        {/*<Button
+                        <Button
                           variant="contained"
                           color="error"
                           onClick={() => deleteQuestion(question.questionId)}
                         >
                           Delete
-                        </Button>*/}
+                        </Button>
                       </Box>
                     </Box>
                   </ListItem>
@@ -553,7 +553,7 @@ function OnePicFourWords() {
                         bgcolor: "white",
                       }}
                     />
-                  </ListItem>
+                  </ListItem>              
                 ))}
               </List>
               <Box mt={2} sx={{ display: "flex", gap: 2 }}>
