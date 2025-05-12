@@ -1,3 +1,4 @@
+// src/components/WordTranslationGame.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -14,7 +15,6 @@ import {
 import { styled } from '@mui/system';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
-import API from "../../api"; 
 
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
@@ -67,17 +67,16 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
   const [finalScore, setFinalScore] = useState(0);
   
   const token = localStorage.getItem('token');
-  /*
+
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
-    timeout: 1000,
+    timeout: 5000,
     headers: {
       'Content-Type': 'application/json',
-      Accept: 'application/json',
       Authorization: `Bearer ${token}`,
     },
   });
-  */
+
   const APItts = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
     timeout: 5000,
@@ -109,8 +108,7 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
 
   useEffect(() => {
     if (!questions.length) return;
-    const currentChoices = questions[index].choices || [];
-    setShuffledOptions(shuffleArray(currentChoices));
+    setShuffledOptions(shuffleArray(questions[index].choices || []));
   }, [questions, index]);
 
   const synthesizeSpeech = async (text) => {
@@ -120,10 +118,8 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
         { text },
         { responseType: 'blob' }
       );
-
       const url = URL.createObjectURL(response.data);
-      const audio = new Audio(url);
-      audio.play();
+      new Audio(url).play();
     } catch (error) {
       console.error('Failed to synthesize speech', error);
     }
@@ -167,7 +163,7 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
 
   const handleDialogClose = () => {
     setShowDialog(false);
-    if (onBack) onBack();
+    if (onBack) onBack();  // ← this will now refresh + go back
   };
 
   return (
@@ -194,7 +190,6 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
         </Typography>
         <Button
           variant="contained"
-          color="primary"
           sx={{ marginLeft: '20px' }}
           onClick={() => synthesizeSpeech(q.questionText)}
         >

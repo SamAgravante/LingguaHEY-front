@@ -1,3 +1,4 @@
+// src/components/Homepage.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Grid,
@@ -8,24 +9,22 @@ import {
   Fade,
   Backdrop,
   IconButton,
-  Button
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BookIcon from '@mui/icons-material/Book';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
-import axios from 'axios';
+import API from "../../api"; 
 import PhraseTranslation from "./PhraseTranslationGame";
 import WordTranslation from "./WordTranslationGame";
 import OnePicFourWord from "./OnePicFourWordGame";
 import { mockQuestions } from "./mockQuestions";
 import { getUserFromToken } from "../../utils/auth";
-import API from "../../api"; 
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function Homepage() {
-  const { token, logout } = useAuth();
+  const { token } = useAuth();
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState("");
@@ -35,49 +34,99 @@ export default function Homepage() {
   const [userDetails, setUserDetails] = useState({});
   const [userActivities, setUserActivities] = useState([]);
 
+  // Decode token → user
   useEffect(() => {
     if (!token) return;
     const decoded = getUserFromToken();
     if (decoded?.userId) setUser(decoded);
   }, [token]);
 
+  // Fetch classroom & initial userActivities once
   useEffect(() => {
     if (!user) return;
-    (async () => {
-      try {
-        const userResp = await API.get(`users/${user.userId}`);
-        setUserDetails(userResp.data);
+    let isMounted = true;
 
-        const classResp = await API.get(`classrooms`);
-        const userClass = classResp.data.find(c =>
-          c.users.some(u => u.userId === user.userId)
-        );
+    const fetchClassAndActivities = async () => {
+      try {
+        // get classroom
+        const classResp = await API.get(`classrooms/user/${user.userId}`);
+        if (!isMounted) return;
+        const userClass = classResp.data;
         if (userClass) setClassroom(userClass.classroomID);
 
-        const actResp = await API.get(`activities/users/${user.userId}`);
-        setUserActivities(actResp.data);
+        // initial load of userActivities
+        await fetchUserActivities();
       } catch (err) {
         console.error(err);
       }
-    })();
+    };
+
+    fetchClassAndActivities();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
+  // Fetch activities for the classroom
   useEffect(() => {
     if (!classroom) return;
     API.get(`activities/${classroom}/activities`)
       .then(res => setActivities(res.data))
       .catch(() => {
+        // fallback to mockQuestions
         setActivities(mockQuestions.map(q => ({
           activityId: q.questionId,
           activityName: q.questionDescription || q.questionText,
-          gameType: q.questionDescription ? 'GAME2' : q.questionImage ? 'GAME1' : 'GAME3'
+          gameType: q.questionDescription
+            ? 'GAME2'
+            : q.questionImage
+            ? 'GAME1'
+            : 'GAME3'
         })));
       });
   }, [classroom]);
 
-  const openModal = key => { setSection(key); setCurrent(null); setOpen(true); };
-  const closeModal = () => { setOpen(false); setSection(''); setCurrent(null); };
+  // helper to refresh only when needed
+  const fetchUserActivities = async () => {
+    try {
+      const actResp = await API.get(`activities/users/${user.userId}`);
+      setUserActivities(actResp.data);
+    } catch (err) {
+      console.error("Failed to fetch user activities:", err);
+    }
+  };
+
+  // openModal now also refreshes userActivities
+  const openModal = async key => {
+    await fetchUserActivities();
+    setSection(key);
+    setCurrent(null);
+    setOpen(true);
+  };
+  const closeModal = () => {
+    setOpen(false);
+    setSection('');
+    setCurrent(null);
+  };
   const startActivity = act => setCurrent(act);
+
+  // when arrow back is clicked:
+  const handleBackClick = () => {
+    if (current) {
+      // inside an activity → refresh completions then go back to list
+      backToList();
+    } else {
+      // already at list → close modal
+      closeModal();
+    }
+  };
+
+  // 📌 new: combine fetch + go-back
+  const backToList = () => {
+    fetchUserActivities();
+    setCurrent(null);
+  };
 
   const renderBody = () => {
     if (!current) {
@@ -109,8 +158,10 @@ export default function Homepage() {
                   {a.activityName}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#8D6E63' }}>
-                  {a.gameType === 'GAME1' ? 'One Pic Four Words'
-                    : a.gameType === 'GAME2' ? 'Phrase Translation'
+                  {a.gameType === 'GAME1'
+                    ? 'One Pic Four Words'
+                    : a.gameType === 'GAME2'
+                    ? 'Phrase Translation'
                     : 'Word Translation'}
                 </Typography>
               </Box>
@@ -128,37 +179,47 @@ export default function Homepage() {
       return (
         <PhraseTranslation
           activityId={current.activityId}
-          onBack={() => { setCurrent(null); closeModal(); }}
+          onBack={backToList}
           isCompleted={isCompleted}
         />
       );
     }
 
     if (section === 'Vocabulary') {
-      return current.gameType === 'GAME1'
-        ? (
-          <OnePicFourWord
-            activityId={current.activityId}
-            onBack={() => { setCurrent(null); closeModal(); }}
-            isCompleted={isCompleted}
-          />
-        )
-        : (
-          <WordTranslation
-            activityId={current.activityId}
-            onBack={() => { setCurrent(null); closeModal(); }}
-            isCompleted={isCompleted}
-          />
-        );
+      return current.gameType === 'GAME1' ? (
+        <OnePicFourWord
+          activityId={current.activityId}
+          onBack={backToList}
+          isCompleted={isCompleted}
+        />
+      ) : (
+        <WordTranslation
+          activityId={current.activityId}
+          onBack={backToList}
+          isCompleted={isCompleted}
+        />
+      );
     }
 
     return null;
   };
 
   const sections = [
-    { key: 'Vocabulary', icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />, bg: '#FFEBEE' },
-    { key: 'Grammar', icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />, bg: '#E3F2FD' },
-    { key: 'Activity', icon: <SportsEsportsIcon sx={{ fontSize: 48, color: '#388E3C' }} />, bg: '#E8F5E9' }
+    {
+      key: 'Vocabulary',
+      icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />,
+      bg: '#FFEBEE'
+    },
+    {
+      key: 'Grammar',
+      icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />,
+      bg: '#E3F2FD'
+    },
+    {
+      key: 'Activity',
+      icon: <SportsEsportsIcon sx={{ fontSize: 48, color: '#388E3C' }} />,
+      bg: '#E8F5E9'
+    }
   ];
 
   return (
@@ -171,29 +232,48 @@ export default function Homepage() {
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
         {sections.map(s => (
-          <Box key={s.key} onClick={() => openModal(s.key)}
+          <Box
+            key={s.key}
+            onClick={() => openModal(s.key)}
             sx={{
               backgroundColor: s.bg,
-              width: 360, height: 560,
+              width: 360,
+              height: 560,
               borderRadius: 3,
-              display: 'flex', flexDirection: 'column',
-              justifyContent: 'center', alignItems: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
               boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-              cursor: 'pointer', transition: 'transform 0.2s',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
               '&:hover': { transform: 'scale(1.05)' }
-            }}>
+            }}
+          >
             {s.icon}
-            <Typography variant="subtitle1" sx={{ mt: 1, color: '#4E342E' }}>{s.key}</Typography>
+            <Typography variant="subtitle1" sx={{ mt: 1, color: '#4E342E' }}>
+              {s.key}
+            </Typography>
           </Box>
         ))}
       </Stack>
 
-      <Modal open={open} onClose={closeModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
+      <Modal
+        open={open}
+        onClose={closeModal}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{ timeout: 5000 }}
+      >
         <Fade in={open}>
-          <Box sx={{ position: 'fixed', top: 0, left: 0, width: '98vw', height: '100vh', bgcolor: '#FFFFFF', p: 3 }}>
+          <Box sx={{ position: 'fixed', top: 0, left: 0, width: '98vw', height: '100vh', bgcolor: '#FFF', p: 3 }}>
             <Stack direction="row" justifyContent="space-between">
-              <IconButton onClick={closeModal}><ArrowBackIcon fontSize="large" /></IconButton>
-              <IconButton onClick={closeModal}><CloseIcon fontSize="large" /></IconButton>
+              <IconButton onClick={handleBackClick}>
+                <ArrowBackIcon fontSize="large" />
+              </IconButton>
+              <IconButton onClick={closeModal} >
+                <CloseIcon fontSize="large" />
+              </IconButton>
             </Stack>
             <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
               {renderBody()}

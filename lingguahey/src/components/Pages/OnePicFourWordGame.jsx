@@ -1,3 +1,4 @@
+// src/components/OnePicFourWordGame.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -16,6 +17,7 @@ import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
 import API from "../../api"; 
 
+// 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
   backgroundColor: '#fff4de',
   padding: '24px',
@@ -58,7 +60,7 @@ function shuffleArray(array) {
 /**
  * Props:
  *  - activityId: ID of the activity
- *  - onBack: callback to return to parent
+ *  - onBack: callback to return to parent (should refresh + close)
  *  - isCompleted: boolean indicating if activity was already completed
  */
 export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
@@ -71,18 +73,6 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
 
-  /*
-  const token = localStorage.getItem('token');
-  const API = axios.create({
-    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
-    timeout: 1000,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  */
   // Fetch questions and user ID
   useEffect(() => {
     const user = getUserFromToken();
@@ -145,6 +135,8 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
     }
   };
 
+  // ▶️ When the dialog closes, this calls onBack(), which your Homepage
+  //    should have wired up to fetchUserActivities() + setCurrent(null).
   const handleDialogClose = () => {
     setShowDialog(false);
     if (onBack) onBack();
