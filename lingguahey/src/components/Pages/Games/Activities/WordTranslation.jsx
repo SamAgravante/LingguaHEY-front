@@ -493,13 +493,6 @@ function WordTranslation() {
                         onClick={() => startEditingQuestion(question.questionId, question.questionText)}
                       >
                         <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        onClick={() => deleteQuestion(question.questionId)}
-                      >
-                        <DeleteIcon />
                       </IconButton>*/}
                       <Button
                         variant="contained"
@@ -509,6 +502,14 @@ function WordTranslation() {
                       >
                         Edit Choices
                       </Button>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        color="error"
+                        onClick={() => deleteQuestion(question.questionId)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
                     </>
                   )}
                 </Box>
