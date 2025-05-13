@@ -22,6 +22,8 @@ import OnePicFourWord from "./OnePicFourWordGame";
 import { mockQuestions } from "./mockQuestions";
 import { getUserFromToken } from "../../utils/auth";
 import { useAuth } from "../../contexts/AuthContext";
+import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
+import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
 
 export default function Homepage() {
   const { token } = useAuth();
@@ -224,12 +226,17 @@ export default function Homepage() {
 
   return (
     <Grid container direction="column" alignItems="center" sx={{ p: 2, backgroundColor: '#E1F5FE' }}>
-      <Typography variant="h4" sx={{ mb: 2, color: '#4E342E' }}>
-        {userDetails.firstName ? `Welcome, ${userDetails.firstName}!` : 'Welcome!'}
-      </Typography>
-      <Typography variant="h5" sx={{ mb: 4, color: '#6D4C41' }}>
-        Choose a section to start learning:
-      </Typography>
+      <Stack direction="row" alignItems="center" sx={{ mb: 4 }}>
+        <Grid container direction="column" alignItems="center" sx={{ p: 2, backgroundColor: '#E1F5FE' }}>
+          <Typography variant="h4" sx={{ mb: 2, color: '#4E342E' }}>
+            {userDetails.firstName ? `Welcome, ${userDetails.firstName}!` : 'Welcome!'}
+          </Typography>
+          <Typography variant="h5" sx={{ mb: 4, color: '#6D4C41' }}>
+            Choose a section to start learning:
+          </Typography>
+        </Grid>
+        <img src={bunnyWave} alt="Bunny Wave" style={{ width: 100, height: 120 }} />
+      </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
         {sections.map(s => (
           <Box
@@ -266,7 +273,10 @@ export default function Homepage() {
         BackdropProps={{ timeout: 5000 }}
       >
         <Fade in={open}>
-          <Box sx={{ position: 'fixed', top: 0, left: 0, width: '98vw', height: '100vh', bgcolor: '#FFF', p: 3 }}>
+          <Box sx={{ position: 'fixed', top: 0, left: 0, width: '98vw', height: '100vh', 
+            //bgcolor: '#FFF',
+            backgroundImage: `url(${modalBg})`, 
+            p: 3 }}>
             <Stack direction="row" justifyContent="space-between">
               <IconButton onClick={handleBackClick}>
                 <ArrowBackIcon fontSize="large" />

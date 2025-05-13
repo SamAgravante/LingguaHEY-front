@@ -1,4 +1,3 @@
-// src/components/PhraseTranslationGame.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -11,23 +10,40 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  LinearProgress
+  LinearProgress,
+  IconButton,
+  Stack
 } from '@mui/material';
 import { styled } from '@mui/system';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
-import API from "../../api"; 
+import API from '../../api';
+import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
+import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
+import speechBubble from '../../assets/images/objects/speech-bubble.png';
 
-// 🎨 Styled components for pastel aesthetic
+// Pastel color palette
+const pastels = [
+  '#FFCDD2', // light red
+  '#C8E6C9', // light green
+  '#BBDEFB', // light blue
+  '#FFF9C4', // light yellow
+  '#D1C4E9', // light purple
+];
+
+// 🎨 Styled components
 const PastelContainer = styled(Box)(() => ({
-  backgroundColor: '#fff4de',
+  backgroundImage: `url(${modalBg})`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
   padding: '24px',
-  minHeight: '100vh',
+  minHeight: '800px',
   fontFamily: 'Comic Sans MS, sans-serif',
+  borderRadius: '20px',
 }));
 
 const ChoiceButton = styled(Button)(() => ({
-  backgroundColor: '#DFF7E4',
   color: '#2E2E34',
   textTransform: 'none',
   fontWeight: 'bold',
@@ -35,8 +51,10 @@ const ChoiceButton = styled(Button)(() => ({
   padding: '12px 16px',
   margin: '8px',
   width: '100%',
-  '&:hover': { backgroundColor: '#C8E6C9' },
-  '&.MuiButton-contained': { backgroundColor: '#BAFFC9' }
+  '&:hover': {
+    filter: 'brightness(1.1)',
+    transform: 'scale(1.05)',
+  },
 }));
 
 const PastelProgress = styled(LinearProgress)(() => ({
@@ -49,7 +67,7 @@ const PastelProgress = styled(LinearProgress)(() => ({
   },
 }));
 
-// Utility: Fisher–Yates shuffle
+// Fisher–Yates shuffle
 function shuffleArray(array) {
   const arr = array.slice();
   for (let i = arr.length - 1; i > 0; i--) {
@@ -59,13 +77,7 @@ function shuffleArray(array) {
   return arr;
 }
 
-/**
- * Props:
- *  - activityId: ID of the activity
- *  - onBack: callback to return to parent (should refresh + close)
- *  - isCompleted: boolean indicating if activity was already completed
- */
-export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
+export default function PhraseTranslation({ activityId, onBack, isCompleted = false }) {
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
   const [shuffledChoices, setShuffledChoices] = useState([]);
@@ -75,6 +87,18 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [userId, setUserId] = useState(null);
+
+  // grab token and build TTS API client
+  const token = localStorage.getItem('token');
+  const APItts = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
+    timeout: 5000,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/octet-stream',
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   // Fetch questions and userId
   useEffect(() => {
@@ -92,11 +116,10 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
       );
   }, [activityId]);
 
-  // Shuffle on load or index change
+  // Shuffle choices on load or index change
   useEffect(() => {
     if (!questions.length) return;
-    const choices = questions[index].choices || [];
-    setShuffledChoices(shuffleArray(choices));
+    setShuffledChoices(shuffleArray(questions[index].choices || []));
     setSelected([]);
   }, [questions, index]);
 
@@ -106,16 +129,21 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
 
   const q = questions[index];
 
+  const synthesizeSpeech = async (text) => {
+    try {
+      const response = await APItts.post('/synthesize', { text }, { responseType: 'blob' });
+      const url = URL.createObjectURL(response.data);
+      new Audio(url).play();
+    } catch (error) {
+      console.error('Failed to synthesize speech', error);
+    }
+  };
+
   const handleSelect = (choice) =>
     setSelected(prev => [...prev, choice.choiceId]);
 
   const handleRemove = (choiceId) =>
     setSelected(prev => prev.filter(id => id !== choiceId));
-
-  const handleDialogClose = () => {
-    setShowDialog(false);
-    onBack?.();  // ← this will now refresh + go back in Homepage
-  };
 
   const handleSubmit = async () => {
     const correctSeq = q.choices
@@ -129,7 +157,6 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
 
     const newScore = score + (isCorrect ? 1 : 0);
     setScore(newScore);
-
     const nextIndex = index + 1;
     setProgress((nextIndex / questions.length) * 100);
 
@@ -151,12 +178,14 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
     }
   };
 
+  const handleDialogClose = () => {
+    setShowDialog(false);
+    onBack?.();
+  };
+
   return (
     <PastelContainer>
-      <Typography
-        variant="h4"
-        sx={{ fontWeight: 'bold', color: '#2E2E34', mb: 1 }}
-      >
+      <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2E2E34', mb: 1 }}>
         Phrase Translation
       </Typography>
       <Typography variant="subtitle1" sx={{ color: '#2E2E34', mb: 2 }}>
@@ -172,33 +201,107 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
         </Typography>
       </Box>
 
-      <Typography variant="h6" sx={{ mb: 2, color: '#2E2E34' }}>
-        {q.questionDescription}
-      </Typography>
+      <Grid sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        }}>
+        <Stack direction="row" >
+          <Box sx={{
+            minHeight: 250,
+            minWidth: 100,
+            backgroundImage: `url(${bunnyStand})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+          }}>
+          </Box>
+          <Box sx={{
+            minHeight: 250,
+            minWidth: 100,
+            maxWidth: 400,
+            backgroundImage: `url(${speechBubble})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            justifyItems: 'center',}}>
+            <Grid>
+              <Stack direction="column" alignItems="center">
+                <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+                  What is
+                </Typography>
+                <Stack direction="row" alignItems="center" sx={{flexWrap: 'wrap'}}>
+                  <Typography variant="h3" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+                    {q.questionDescription}
+                  </Typography>
+                  <IconButton onClick={() => synthesizeSpeech(q.questionDescription)}>
+                    <VolumeUpIcon sx={{ fontSize: 32, color: '#2E2E34' }} />
+                  </IconButton>
+                </Stack>
+                <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+                  in English?
+                </Typography>
 
-      {selected.length > 0 && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
-          {selected.map(id => {
-            const choice = q.choices.find(c => c.choiceId === id) || {};
-            return (
-              <Chip
-                key={id}
-                label={choice.choiceText}
-                onDelete={() => handleRemove(id)}
-                sx={{ m: 0.5, backgroundColor: '#FFECB3', color: '#2E2E34' }}
-              />
-            );
-          })}
-        </Box>
-      )}
+              </Stack>
+            </Grid>
+          </Box>
+        </Stack>
+      </Grid>
 
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        {shuffledChoices.map(c => (
-          <Grid item xs={6} key={c.choiceId}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          mb: 2,
+          minHeight: 80,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#BBDEFB',
+          p: 1,
+          borderRadius: 1,
+          marginBottom: 4,
+        }}
+      >
+        {selected.map(id => {
+          const choice = q.choices.find(c => c.choiceId === id) || {};
+          return (
+            <Chip
+              key={id}
+              label={choice.choiceText}
+              onClick={() => handleRemove(id)}
+              sx={{ m: 0.5, 
+                backgroundColor: '#FFECB3', 
+                color: '#2E2E34', 
+                fontSize: '3rem',
+                minHeight: 70,
+                minWidth: 50, 
+              }}
+            />
+          );
+        })}
+      </Box>
+
+      <Grid container spacing={4} sx={{ justifyContent: 'center' }}>
+        {shuffledChoices.map((c, i) => (
+          <Grid
+            item
+            xs={6}
+            key={c.choiceId}
+            sx={{
+              minHeight: 150,
+              minWidth: 250,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <ChoiceButton
-              variant={selected.includes(c.choiceId) ? 'contained' : 'outlined'}
-              disabled={selected.includes(c.choiceId)}
               onClick={() => handleSelect(c)}
+              variant={selected.includes(c.choiceId) }
+              disabled={selected.includes(c.choiceId)}
+              sx={{
+                backgroundColor: pastels[i % pastels.length],
+                fontSize: '3rem',
+                height: '100%',
+              }}
             >
               {c.choiceText}
             </ChoiceButton>
@@ -206,14 +309,22 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted }) {
         ))}
       </Grid>
 
-      <Button
-        onClick={handleSubmit}
-        variant="contained"
-        sx={{ mt: 2 }}
-        disabled={!selected.length}
-      >
-        Submit
-      </Button>
+      <Grid container spacing={4} sx={{ justifyContent: 'center', mt: 4 }}>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          sx={{ 
+            mt: 2, 
+            backgroundColor: '#FFB3BA', 
+            color: '#2E2E34',
+            justifyContent: 'center',
+          }}
+          disabled={!selected.length}
+        >
+          Submit
+        </Button>
+      </Grid>
+
 
       <Dialog open={showDialog} onClose={handleDialogClose}>
         <DialogTitle>🎉 Quiz Complete!</DialogTitle>

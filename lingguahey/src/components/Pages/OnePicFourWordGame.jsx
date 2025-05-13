@@ -10,20 +10,36 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Stack
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
 import API from "../../api"; 
+import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
+import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
+import speechBubble from '../../assets/images/objects/speech-bubble.png';
 
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
-  backgroundColor: '#fff4de',
+  backgroundImage: `url(${modalBg})`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
   padding: '24px',
-  minHeight: '100vh',
+  minHeight: '800px',
   fontFamily: 'Comic Sans MS, sans-serif',
+  borderRadius: '20px',
+
 }));
+
+const pastels = [
+  '#FFCDD2', // light red
+  '#C8E6C9', // light green
+  '#BBDEFB', // light blue
+  '#FFF9C4', // light yellow
+  '#D1C4E9', // light purple
+];
 
 const ChoiceButton = styled(Button)(() => ({
   backgroundColor: '#DFF7E4',
@@ -57,12 +73,6 @@ function shuffleArray(array) {
   return arr;
 }
 
-/**
- * Props:
- *  - activityId: ID of the activity
- *  - onBack: callback to return to parent (should refresh + close)
- *  - isCompleted: boolean indicating if activity was already completed
- */
 export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
@@ -73,7 +83,6 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
 
-  // Fetch questions and user ID
   useEffect(() => {
     const user = getUserFromToken();
     if (user?.userId) setUserId(user.userId);
@@ -93,7 +102,6 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
       });
   }, [activityId]);
 
-  // Shuffle options on load or when index changes
   useEffect(() => {
     if (!questions.length) return;
     const opts = Array.isArray(questions[index].choices) ? questions[index].choices : [];
@@ -115,7 +123,6 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
     const nextIndex = index + 1;
     setProgress((nextIndex / questions.length) * 100);
 
-    // Only send score if activity not already completed
     if (userId && !isCompleted) {
       API.post(
         `scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${choice.choiceId}`
@@ -127,7 +134,6 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
     } else {
       setFinalScore(newScore);
       setShowDialog(true);
-      // Only mark complete if not already
       if (newScore === questions.length && userId && !isCompleted) {
         API.put(`activities/${activityId}/completed/${userId}`)
           .catch(err => console.error('Error marking activity as completed:', err));
@@ -135,8 +141,6 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
     }
   };
 
-  // ▶️ When the dialog closes, this calls onBack(), which your Homepage
-  //    should have wired up to fetchUserActivities() + setCurrent(null).
   const handleDialogClose = () => {
     setShowDialog(false);
     if (onBack) onBack();
@@ -160,20 +164,84 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
         </Typography>
       </Box>
 
-      {q.questionImage && (
-        <Box sx={{ textAlign: 'center', mb: 2 }}>
-          <img
-            src={`data:image/png;base64,${q.questionImage}`}
-            alt="quiz"
-            style={{ width: 200, height: 200 }}
-          />
-        </Box>
-      )}
+      <Grid sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: '5vh' }}>
+        <Stack direction="row">
+          <Box sx={{
+            minHeight: 250,
+            minWidth: 100,
+            backgroundImage: `url(${bunnyStand})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+          }} />
 
-      <Grid container spacing={2}>
-        {shuffledOptions.map(choice => (
-          <Grid item xs={6} key={choice.choiceId}>
-            <ChoiceButton onClick={() => handleChoice(choice)}>
+          <Box sx={{
+            height: '190px',
+            width: '300px',     // explicitly halved height
+            minWidth: 100,
+            maxWidth: 400,
+            backgroundImage: `url(${speechBubble})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Grid>
+              <Stack direction="column" alignItems="center">
+                <Typography
+                  variant="h4"
+                  sx={{
+                    textAlign: 'center',
+                    color: '#2E2E34',
+                    maxWidth: '80%',
+                  }}
+                >
+                  Can you tell me what is this?
+                </Typography>
+              </Stack>
+            </Grid>
+          </Box>
+
+          {q.questionImage && (
+            <Box 
+            sx={{ 
+              textAlign: 'center', 
+              mb: 2, 
+              minWidth: 300, 
+              minHeight: 300 }}>
+              <img
+                src={`data:image/png;base64,${q.questionImage}`}
+                alt="quiz"
+                style={{ width: 200, height: 200 }}
+              />
+            </Box>
+          )}
+        </Stack>
+      </Grid>
+
+      <Grid container spacing={4} sx={{ justifyContent: 'center' }}>
+        {shuffledOptions.map((choice, i) => (
+          <Grid
+            item
+            xs={6}
+            key={choice.choiceId}
+            sx={{
+              minHeight: 150,
+              minWidth: 250,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ChoiceButton
+              onClick={() => handleChoice(choice)}
+              sx={{
+                fontSize: '3rem',
+                height: '100%',
+                backgroundColor: pastels[i % pastels.length],
+                '&:hover': { scale: 1.05 },
+              }}
+            >
               {choice.choiceText}
             </ChoiceButton>
           </Grid>

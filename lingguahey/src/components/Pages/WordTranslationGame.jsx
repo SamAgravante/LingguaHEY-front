@@ -1,4 +1,3 @@
-// src/components/WordTranslationGame.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -10,22 +9,39 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  IconButton
 } from '@mui/material';
-import { styled } from '@mui/system';
+import { Stack, styled } from '@mui/system';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { mockQuestions } from './mockQuestions';
 import { getUserFromToken } from '../../utils/auth';
+import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
+import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
+import speechBubble from '../../assets/images/objects/speech-bubble.png';
+import API from '../../api';
+
+// Pastel color palette for choice buttons
+const pastels = [
+  '#FFCDD2', // light red
+  '#C8E6C9', // light green
+  '#BBDEFB', // light blue
+  '#FFF9C4', // light yellow
+  '#D1C4E9', // light purple
+];
 
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
-  backgroundColor: '#fff4de',
+  backgroundImage: `url(${modalBg})`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
   padding: '24px',
-  minHeight: '100vh',
+  minHeight: '800px',
   fontFamily: 'Comic Sans MS, sans-serif',
+  borderRadius: '20px',
 }));
 
 const ChoiceButton = styled(Button)(() => ({
-  backgroundColor: '#DFF7E4',
   color: '#2E2E34',
   textTransform: 'none',
   fontWeight: 'bold',
@@ -34,7 +50,7 @@ const ChoiceButton = styled(Button)(() => ({
   margin: '8px',
   width: '100%',
   '&:hover': {
-    backgroundColor: '#C8E6C9',
+    filter: 'brightness(1.1)',
   },
 }));
 
@@ -65,17 +81,10 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
   const [userId, setUserId] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
-  
+
+
   const token = localStorage.getItem('token');
 
-  const API = axios.create({
-    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/`,
-    timeout: 5000,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
 
   const APItts = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
@@ -163,7 +172,7 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
 
   const handleDialogClose = () => {
     setShowDialog(false);
-    if (onBack) onBack();  // ← this will now refresh + go back
+    if (onBack) onBack();
   };
 
   return (
@@ -184,27 +193,84 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-          {q.questionText}
-        </Typography>
-        <Button
-          variant="contained"
-          sx={{ marginLeft: '20px' }}
-          onClick={() => synthesizeSpeech(q.questionText)}
-        >
-          TTS
-        </Button>
-      </Box>
+      <Grid sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        paddingBottom: '10vh' 
+        }}>
+        <Stack direction="row" >
+          <Box sx={{
+            minHeight: 250,
+            minWidth: 100,
+            backgroundImage: `url(${bunnyStand})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+          }}>
+          </Box>
+          <Box sx={{
+            minHeight: 250,
+            minWidth: 300,
+            backgroundImage: `url(${speechBubble})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            justifyItems: 'center',}}>
+            <Grid>
+              <Stack direction="column" alignItems="center">
+                <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+                  What is
+                </Typography>
+                <Stack direction="row" alignItems="center">
+                  <Typography variant="h3" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+                    {q.questionText}
+                  </Typography>
+                  <IconButton onClick={() => synthesizeSpeech(q.questionText)}>
+                    <VolumeUpIcon sx={{ fontSize: 32, color: '#2E2E34' }} />
+                  </IconButton>
+                </Stack>
+                <Typography variant="h4" sx={{ textAlign: 'cnter', color: '#2E2E34' }}>
+                  in Tagalog?
+                </Typography>
 
-      <Grid container spacing={2}>
-        {shuffledOptions.map(choice => (
-          <Grid item xs={6} key={choice.choiceId}>
-            <ChoiceButton onClick={() => handleChoice(choice)}>
+              </Stack>
+            </Grid>
+          </Box>
+        </Stack>
+      </Grid>
+      
+
+      <Grid container spacing={4} sx={{ justifyContent: 'center' }}>
+        {shuffledOptions.map((choice, i) => (
+          <Grid
+            item
+            xs={6}
+            key={choice.choiceId}
+            sx={{
+              minHeight: 150,
+              minWidth: 250,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              
+            }}
+          >
+            <ChoiceButton
+              onClick={() => handleChoice(choice)}
+              sx={{
+                fontSize: '3rem',
+                height: '100%',
+                backgroundColor: pastels[i % pastels.length],
+                '&:hover': {
+                  //backgroundColor: pastels[i % pastels.length],
+                  //filter: 'brightness(1.2)',
+                  scale: 1.05,
+                }
+              }}
+            >
               {choice.choiceText}
             </ChoiceButton>
           </Grid>
-        ))}
+        ))}e
       </Grid>
 
       <Dialog open={showDialog} onClose={handleDialogClose}>
