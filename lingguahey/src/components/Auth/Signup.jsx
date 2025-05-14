@@ -127,8 +127,70 @@ export default function Signup() {
           <Stack spacing={2} sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ color: textColor }}>Terms and Conditions</Typography>
             <Box sx={{ backgroundColor: '#F5F5F5', p: 2, borderRadius: 1, height: 200, overflow: 'auto' }}>
-              {/* Terms content here */}
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit...
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  Welcome to <strong>LingguaHEY</strong>! These Terms and Conditions outline the rules for using our services. By accessing this website or using our services, you accept these terms in full.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>1. Definitions</strong><br />
+                  "Company" refers to LingguaHEY.<br />
+                  "User" refers to anyone using our services.<br />
+                  "Service" refers to the products and services offered by LingguaHEY.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>2. Use of Our Services</strong><br />
+                  You must have parental/guardian/teacher consent.<br />
+                  You agree not to use our services for illegal or unauthorized purposes.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>3. User Accounts & Personal Information</strong><br />
+                  You may need an account to access certain features.<br />
+                  We collect personal info such as email, password, and name.<br />
+                  You are responsible for maintaining the security of your account.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>4. Intellectual Property</strong><br />
+                  All content is owned by LingguaHEY and protected by intellectual property laws.<br />
+                  You may not reproduce, distribute, or modify any content without permission.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>5. Privacy Policy</strong><br />
+                  Our Privacy Policy explains how we handle your data.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>6. Limitation of Liability</strong><br />
+                  We do not guarantee that our services will be error-free.<br />
+                  We are not liable for any indirect or incidental damages.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>7. Termination</strong><br />
+                  We may suspend or terminate accounts that violate these terms.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>8. Governing Law</strong><br />
+                  These terms are governed by the laws of imomama.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>9. Changes to These Terms</strong><br />
+                  We may update these terms from time to time.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
+                  <strong>10. Contact Us</strong><br />
+                  If you have any questions, contact us at baliguat.hanzharvey@gmail.com.
+                </Typography>
+                <br />
+                <Typography variant="body2" sx={{ fontStyle: "italic", mt: 1 }}>
+                  By using our services, you agree to these Terms & Conditions.
+                </Typography>
             </Box>
             <FormControlLabel
               control={<Checkbox checked={agreed} onChange={handleCheckbox} />}

@@ -229,7 +229,7 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
                   </IconButton>
                 </Stack>
                 <Typography variant="h4" sx={{ textAlign: 'cnter', color: '#2E2E34' }}>
-                  in Tagalog?
+                  in English?
                 </Typography>
 
               </Stack>

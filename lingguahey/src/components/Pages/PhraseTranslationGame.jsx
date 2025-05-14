@@ -237,7 +237,7 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
                   </IconButton>
                 </Stack>
                 <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-                  in English?
+                  in Tagalog?
                 </Typography>
 
               </Stack>
