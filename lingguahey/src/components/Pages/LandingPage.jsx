@@ -1,5 +1,6 @@
 import { Box, Button, Grid, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
 
 export default function LandingPage() {
 
@@ -27,8 +28,10 @@ export default function LandingPage() {
                         minWidth: '20vw',
                         borderBottomLeftRadius: '50px',
                         borderBottomRightRadius: '50px',
+                        justifyContent: 'center',
+                        alignItems: 'center',
                     }}>
-
+                <img src={bunnyWave} alt="Bunny Wave" style={{ width: 340, height: 450, paddingTop:50 }} />
                 </Box>
                 <Typography variant="h4" paddingTop={2} color="#5D4037">
                     LinnguaHey
