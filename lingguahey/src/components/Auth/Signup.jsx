@@ -188,7 +188,7 @@ export default function Signup() {
                   If you have any questions, contact us at baliguat.hanzharvey@gmail.com.
                 </Typography>
                 <br />
-                <Typography variant="body2" sx={{ fontStyle: "italic", mt: 1 }}>
+                <Typography variant="body2" sx={{ fontStyle: "italic", color: "black", mt: 1 }}>
                   By using our services, you agree to these Terms & Conditions.
                 </Typography>
             </Box>
