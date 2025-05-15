@@ -23,6 +23,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
 function OnePicFourWords() {
+  // Helper to choose between URL or base64 payload
+  const getImageSrc = (img) =>
+    img.startsWith("http") ? img : `data:image/png;base64,${img}`;
+
   // State for adding a new question (all parts collected before saving)
   const [newQuestionImage, setNewQuestionImage] = useState(null);
   const [newQuestionChoices, setNewQuestionChoices] = useState([]);
@@ -45,7 +49,7 @@ function OnePicFourWords() {
   const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
 
-  // Fetch questions for the activity on component mount
+  // Fetch questions on mount
   useEffect(() => {
     fetchQuestions();
   }, [activityId]);
@@ -54,395 +58,206 @@ function OnePicFourWords() {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       setQuestions(response.data);
     } catch (err) {
-      console.error("Failed to fetch questions:", err.response?.data || err.message);
-      setNewQuestionMessage("Failed to fetch existing questions. Please try again.");
+      console.error(err);
+      setNewQuestionMessage("Failed to fetch questions.");
     }
   };
 
-  // --- New Question Creation Logic ---
+  // --- New Question Logic ---
 
   const handleNewImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        setNewQuestionMessage("File size exceeds the 10MB limit. Please upload a smaller file.");
+        setNewQuestionMessage("File size exceeds the 10MB limit.");
         return;
       }
       setNewQuestionImage(file);
       setNewQuestionImagePreview(URL.createObjectURL(file));
-      setNewQuestionMessage(""); // Clear previous messages
+      setNewQuestionMessage("");
     }
   };
 
   const addQuestionChoice = () => {
-    if (!newQuestionInputChoice.trim()) {
-      setNewQuestionMessage("Choice cannot be empty.");
-      return;
-    }
-    if (newQuestionChoices.length >= 5) {
-      setNewQuestionMessage("You can only add up to 5 choices.");
-      return;
-    }
-    if (newQuestionChoices.includes(newQuestionInputChoice.trim())) {
-      setNewQuestionMessage("This choice has already been added.");
-      setNewQuestionInputChoice("");
-      return;
-    }
-    setNewQuestionChoices([...newQuestionChoices, newQuestionInputChoice.trim()]);
+    const choice = newQuestionInputChoice.trim();
+    if (!choice) return setNewQuestionMessage("Choice cannot be empty.");
+    if (newQuestionChoices.includes(choice)) return setNewQuestionMessage("Duplicate choice.");
+    if (newQuestionChoices.length >= 5) return setNewQuestionMessage("Max 5 choices.");
+    setNewQuestionChoices([...newQuestionChoices, choice]);
     setNewQuestionInputChoice("");
     setNewQuestionMessage("");
   };
 
-  const removeQuestionChoice = (choiceToRemove) => {
-    setNewQuestionChoices(newQuestionChoices.filter((choice) => choice !== choiceToRemove));
-    if (newQuestionCorrectAnswer === choiceToRemove) {
-      setNewQuestionCorrectAnswer("");
-    }
+  const removeQuestionChoice = (choice) => {
+    setNewQuestionChoices(newQuestionChoices.filter((c) => c !== choice));
+    if (newQuestionCorrectAnswer === choice) setNewQuestionCorrectAnswer("");
     setNewQuestionMessage("");
   };
 
-  const handleSelectCorrectAnswer = (choice) => {
-    setNewQuestionCorrectAnswer(choice);
-    setNewQuestionMessage("");
-  };
+  const handleSelectCorrectAnswer = (choice) => setNewQuestionCorrectAnswer(choice);
 
   const handleSaveNewQuestion = async () => {
-    if (!newQuestionImage) {
-      setNewQuestionMessage("Please upload an image for the new question.");
-      return;
-    }
-    if (
-      !newQuestionCorrectAnswer.trim() ||
-      newQuestionChoices.length < 3 ||
-      newQuestionChoices.length > 5
-    ) {
-      setNewQuestionMessage("Please select a correct answer and provide 3 to 5 choices.");
-      return;
-    }
-    if (!newQuestionChoices.includes(newQuestionCorrectAnswer.trim())) {
-      setNewQuestionMessage("The correct answer must be one of the choices.");
-      return;
-    }
+    if (!newQuestionImage) return setNewQuestionMessage("Upload an image.");
+    if (newQuestionChoices.length < 3) return setNewQuestionMessage("Provide 3-5 choices.");
+    if (!newQuestionCorrectAnswer) return setNewQuestionMessage("Select correct answer.");
 
     const token = localStorage.getItem("token");
-    if (!token) {
-      setNewQuestionMessage("You are not logged in. Please log in again.");
-      navigate("/login");
-      return;
-    }
+    if (!token) return navigate("/login");
 
-    setNewQuestionMessage("Saving new question..."); // Provide feedback
+    setNewQuestionMessage("Saving...");
 
     try {
-      // 1. Submit the image to create the question and get its ID
       const formData = new FormData();
-      formData.append("questionDescription", ""); // Set description/text as per previous logic
+      formData.append("questionDescription", "");
       formData.append("questionText", "");
       formData.append("image", newQuestionImage);
       formData.append("gameType", newQuestionGameType);
 
-      const questionResponse = await axios.post(
+      const { data: { questionId } } = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
         formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
       );
-      const newQuestionId = questionResponse.data.questionId; // Get the ID of the newly created question
 
-      // 2. Submit the choices for the newly created question
-      let score = 0; // Assuming score is 1 for correct answer in this format
+      let score = 0;
       for (const choice of newQuestionChoices) {
-        const isCorrect = choice === newQuestionCorrectAnswer.trim();
-
+        const correct = choice === newQuestionCorrectAnswer;
         await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${newQuestionId}`,
-          {
-            choiceText: choice,
-            correct: isCorrect,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${questionId}`,
+          { choiceText: choice, correct },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-
-        if (isCorrect) {
-          score = 1;
-        }
+        if (correct) score = 1;
       }
 
-      // 3. Set the score for the newly created question
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${newQuestionId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${questionId}`,
         null,
-        {
-          params: { scoreValue: score },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+        { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setNewQuestionMessage("New question saved successfully!");
-
-      // Reset the form for adding a new question
+      setNewQuestionMessage("Saved successfully!");
       setNewQuestionImage(null);
       setNewQuestionImagePreview(null);
       setNewQuestionChoices([]);
-      setNewQuestionInputChoice("");
       setNewQuestionCorrectAnswer("");
-      setNewQuestionGameType("guess_object");
+      setNewQuestionInputChoice("");
 
-      // Refetch the list of questions to show the newly added one
       fetchQuestions();
     } catch (err) {
-      console.error("Failed to save new question:", err.response?.data || err.message);
-      setNewQuestionMessage(`Failed to save new question: ${err.response?.data?.message || err.message}`);
+      console.error(err);
+      setNewQuestionMessage("Failed to save new question.");
     }
   };
 
-  // --- Existing Question Management Logic ---
+  // --- Edit/Delete Logic ---
 
-  const startEditingChoices = async (question) => {
-    setEditingChoicesQuestionId(question.questionId);
+  const startEditingChoices = async (q) => {
+    setEditingChoicesQuestionId(q.questionId);
     setEditingImageFile(null);
-    setEditingImagePreview(
-      question.questionImage
-        ? (question.questionImage.startsWith("http")
-          ? question.questionImage
-          : `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "")}/${question.questionImage.replace(/^\/+/, "")}`)
-        : null
-    );
+    setEditingImagePreview(getImageSrc(q.questionImage || ""));
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${question.questionId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${q.questionId}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      setEditingChoices(response.data);
-      const correct = response.data.find((choice) => choice.correct === true);
-      if (correct) {
-        setEditingCorrectAnswer(correct.choiceText);
-      } else {
-        setEditingCorrectAnswer("");
-      }
+      setEditingChoices(data);
+      const correct = data.find((c) => c.correct);
+      setEditingCorrectAnswer(correct ? correct.choiceText : "");
     } catch (err) {
-      console.error("Failed to fetch choices:", err.response?.data || err.message);
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [question.questionId]: "Failed to fetch choices for editing. Please try again.",
-      }));
+      console.error(err);
+      setQuestionMessages((prev) => ({ ...prev, [q.questionId]: "Failed to load choices." }));
     }
   };
 
   const handleEditingImageUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setQuestionMessages((prev) => ({
-          ...prev,
-          [editingChoicesQuestionId]: "File size exceeds the 10MB limit. Please upload a smaller file.",
-        }));
-        return;
-      }
-      setEditingImageFile(file);
-      setEditingImagePreview(URL.createObjectURL(file));
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [editingChoicesQuestionId]: "",
-      }));
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setQuestionMessages((prev) => ({ ...prev, [editingChoicesQuestionId]: "File too large." }));
+      return;
     }
+    setEditingImageFile(file);
+    setEditingImagePreview(URL.createObjectURL(file));
   };
 
-  const handleEditingChoiceChange = (index, value) => {
-    const newChoices = [...editingChoices];
-    newChoices[index].choiceText = value;
-    setEditingChoices(newChoices);
-  };
-
-  const handleEditingCorrectAnswerChange = (e) => {
-    setEditingCorrectAnswer(e.target.value);
+  const handleEditingChoiceChange = (i, text) => {
+    const arr = [...editingChoices];
+    arr[i].choiceText = text;
+    setEditingChoices(arr);
   };
 
   const saveEditedChoices = async () => {
-    if (!editingChoicesQuestionId) return;
-
-    if (!editingCorrectAnswer.trim()) {
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [editingChoicesQuestionId]: "Correct answer cannot be empty.",
-      }));
+    const id = editingChoicesQuestionId;
+    if (!id) return;
+    if (!editingCorrectAnswer) {
+      setQuestionMessages((prev) => ({ ...prev, [id]: "Select correct answer." }));
       return;
     }
-
-    if (!editingChoices.find((choice) => choice.choiceText === editingCorrectAnswer.trim())) {
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [editingChoicesQuestionId]: "The correct answer must be one of the choices being edited.",
-      }));
-      return;
-    }
-
     const token = localStorage.getItem("token");
-    if (!token) {
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [editingChoicesQuestionId]: "You are not logged in. Please log in again.",
-      }));
-      navigate("/login");
-      return;
-    }
-
-    setQuestionMessages((prev) => ({
-      ...prev,
-      [editingChoicesQuestionId]: "Saving edited choices...",
-    }));
+    if (!token) return navigate("/login");
 
     try {
-      // If image changed, upload it with questionDescription and questionText (empty if not used)
       if (editingImageFile) {
-        const formData = new FormData();
-        formData.append("questionDescription", "");
-        formData.append("questionText", "");
-        formData.append("image", editingImageFile);
-
+        const fd = new FormData();
+        fd.append("questionDescription", "");
+        fd.append("questionText", "");
+        fd.append("image", editingImageFile);
         await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${editingChoicesQuestionId}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
+          fd,
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
         );
       }
 
       let score = 0;
-      for (const choice of editingChoices) {
-        const isCorrect = choice.choiceText === editingCorrectAnswer.trim();
+      for (const c of editingChoices) {
+        const correct = c.choiceText === editingCorrectAnswer;
         await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${choice.choiceId}`,
-          { choiceText: choice.choiceText, correct: isCorrect },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${c.choiceId}`,
+          { choiceText: c.choiceText, correct },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        if (isCorrect) {
-          score = 1;
-        }
+        if (correct) score = 1;
       }
 
-      // Use PUT for score update, with scoreValue as a query param
       await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${editingChoicesQuestionId}/score`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${id}/score`,
         null,
-        {
-          params: { scoreValue: score },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [editingChoicesQuestionId]: "Choices and correct answer updated successfully!",
-      }));
-
-      setTimeout(() => {
-        setEditingChoicesQuestionId(null);
-        setEditingChoices([]);
-        setEditingCorrectAnswer("");
-        setEditingImageFile(null);
-        setEditingImagePreview(null);
-        setQuestionMessages((prev) => ({
-          ...prev,
-          [editingChoicesQuestionId]: "",
-        }));
-        fetchQuestions();
-      }, 1200);
+      setQuestionMessages((prev) => ({ ...prev, [id]: "Updated!" }));
+      setTimeout(() => setEditingChoicesQuestionId(null), 1000);
+      fetchQuestions();
     } catch (err) {
-      console.error("Failed to update choices:", err.response?.data || err.message);
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [editingChoicesQuestionId]: `Failed to update choices: ${err.response?.data?.message || err.message}`,
-      }));
+      console.error(err);
+      setQuestionMessages((prev) => ({ ...prev, [id]: "Failed to update." }));
     }
   };
 
-  const cancelEditingChoices = () => {
-    setEditingChoicesQuestionId(null);
-    setEditingChoices([]);
-    setEditingCorrectAnswer("");
-    setEditingImageFile(null);
-    setEditingImagePreview(null);
-    setQuestionMessages((prev) => ({
-      ...prev,
-      [editingChoicesQuestionId]: "Editing cancelled.",
-    }));
-  };
+  const cancelEditingChoices = () => setEditingChoicesQuestionId(null);
 
   const deleteQuestion = async (id) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [id]: "You are not logged in. Please log in again.",
-      }));
-      navigate("/login");
-      return;
-    }
-    if (window.confirm("Are you sure you want to delete this question?")) {
-      setQuestionMessages((prev) => ({
-        ...prev,
-        [id]: "Deleting question...",
-      }));
-      try {
-        await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setQuestionMessages((prev) => ({
-          ...prev,
-          [id]: "Question deleted successfully!",
-        }));
-        setQuestions(questions.filter((q) => q.questionId !== id));
-        if (editingChoicesQuestionId === id) {
-          cancelEditingChoices(); // Cancel editing if the deleted question was being edited
-        }
-      } catch (err) {
-        console.error("Failed to delete question:", err.response?.data || err.message);
-        setQuestionMessages((prev) => ({
-          ...prev,
-          [id]: `Failed to delete question: ${err.response?.data?.message || err.message}`,
-        }));
-      }
+    if (!window.confirm("Delete?")) return;
+    const token = localStorage.getItem("token"); if (!token) return navigate("/login");
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setQuestions((arr) => arr.filter((q) => q.questionId !== id));
+    } catch (err) {
+      console.error(err);
+      setQuestionMessages((prev) => ({ ...prev, [id]: "Failed to delete." }));
     }
   };
 
-  const goBackToActivities = () => {
-    navigate(`/classroom/${classroomId}`);
-  };
+  const goBackToActivities = () => navigate(`/classroom/${classroomId}`);
 
   return (
     <Grid
@@ -506,7 +321,7 @@ function OnePicFourWords() {
                   {/* Image */}
                   <Box sx={{ flex: 1, minWidth: 220 }}>
                     {editingChoicesQuestionId === question.questionId ? (
-                      <Box sx={{ position: "relative", width: 120, height: 120, mx: "auto" }}>
+                      <Box sx={{ position: "relative", width: 120, height: 120, mx: "auto"}}>
                         <input
                           type="file"
                           accept="image/*"
@@ -555,14 +370,7 @@ function OnePicFourWords() {
                     ) : (
                       question.questionImage && (
                         <img
-                          src={
-                            question.questionImage.startsWith("http")
-                              ? question.questionImage
-                              : `${import.meta.env.VITE_API_BASE_URL.replace(
-                                  /\/$/,
-                                  ""
-                                )}/${question.questionImage.replace(/^\/+/, "")}`
-                          }
+                          src={getImageSrc(question.questionImage || "")}
                           alt={`Question ${index + 1}`}
                           style={{
                             width: 120,
@@ -575,6 +383,7 @@ function OnePicFourWords() {
                           }}
                         />
                       )
+
                     )}
                     {/* Show correct answer label */}
                     <Typography

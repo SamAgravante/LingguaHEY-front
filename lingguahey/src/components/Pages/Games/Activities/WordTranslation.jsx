@@ -1,569 +1,318 @@
 import React, { useState, useEffect } from "react";
 import {
   Box,
-  TextField,
-  Button,
   Typography,
+  Button,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
+  TextField,
   Grid,
+  Chip,
+  IconButton,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-function WordTranslation() {
-  const [word, setWord] = useState(""); // State for the word to be posted
-  const [correctTranslation, setCorrectTranslation] = useState(""); // State for the correct answer
-  const [inputChoice, setInputChoice] = useState(""); // State for the current choice input
-  const [choices, setChoices] = useState([]); // State for the list of choices
-  const [questions, setQuestions] = useState([]); // State for the list of questions
-  const [message, setMessage] = useState(""); // State for success or error messages
-  const [isWordSubmitted, setIsWordSubmitted] = useState(false); // Track if the word is submitted
+export default function WordTranslation() {
   const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
-  const [questionId, setQuestionId] = useState(null);
-  const [editingQuestionId, setEditingQuestionId] = useState(null); // Track the question being edited
-  const [editedQuestionText, setEditedQuestionText] = useState(""); // Track the edited text
-  const [editingChoicesQuestionId, setEditingChoicesQuestionId] = useState(null); // Track the question being edited
-  const [editingChoices, setEditingChoices] = useState([]); // Track the choices being edited
 
-  // Fetch questions for the activity
+  // New question state
+  const [newWord, setNewWord] = useState("");
+  const [newChoices, setNewChoices] = useState([]);
+  const [inputChoice, setInputChoice] = useState("");
+  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [newMessage, setNewMessage] = useState("");
+
+  // Existing questions
+  const [questions, setQuestions] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editWord, setEditWord] = useState("");
+  const [editChoices, setEditChoices] = useState([]);
+  const [editCorrect, setEditCorrect] = useState("");
+  const [msgMap, setMsgMap] = useState({});
+
+  const token = localStorage.getItem("token");
+  const api = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
   useEffect(() => {
-    const fetchQuestions = async () => {
+    async function fetchData() {
+      if (!activityId) return;
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
-            },
-          }
-        );
-        setQuestions(response.data); // Store the questions in state
-      } catch (err) {
-        console.error("Failed to fetch questions:", err.response?.data || err.message);
-        setMessage("Failed to fetch questions. Please try again.");
+        const res = await api.get(`/api/lingguahey/questions/activities/${activityId}`);
+        setQuestions(res.data);
+      } catch {
+        setNewMessage("Failed to load questions.");
       }
-    };
-
-    fetchQuestions();
+    }
+    fetchData();
   }, [activityId]);
 
-  const submitWord = async () => {
-    if (!word) {
-      setMessage("Please enter a word to post.");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setMessage("You are not logged in. Please log in again.");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      // Use a FormData object to send as multipart/form-data
-      const formData = new FormData();
-      formData.append("questionText", word); // Add the word as questionText
-      formData.append("questionDescription", ""); // Add an empty description (or set a value if needed)
-      formData.append("image", null); // Add null for the image (or attach a file if needed)
-
-      // Post the word to the backend
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Include token
-            "Content-Type": "multipart/form-data", // Set the correct Content-Type
-          },
-        }
-      );
-
-      console.log("Backend response:", response.data); // Log the backend response
-
-      setMessage("Word successfully submitted!");
-      setIsWordSubmitted(true);
-      setQuestions((prevQuestions) => [...prevQuestions, response.data]); // Add the new question to the list
-
-      // Get the questionId from the backend response
-      if (response.data.questionId) {
-        setQuestionId(response.data.questionId); // Use response.data.questionId
-      } else {
-        console.error("No questionId found in the response.");
-        setMessage("Failed to retrieve question ID. Please try again.");
-      }
-    } catch (err) {
-      console.error("Failed to submit word:", err.response?.data || err.message);
-      setMessage("Failed to submit word. Please try again.");
-    }
-  };
-
-  const addChoice = () => {
-    if (!inputChoice) {
-      setMessage("Choice cannot be empty.");
-      return;
-    }
-
-    setChoices([...choices, inputChoice]); // Add the choice to the local state
+  // Add choice for new question
+  const handleAddChoice = () => {
+    const val = inputChoice.trim();
+    if (!val) return setNewMessage("Choice cannot be empty.");
+    if (newChoices.includes(val)) return setNewMessage("Already added.");
+    if (newChoices.length >= 5) return setNewMessage("Max 5 choices.");
+    setNewChoices([...newChoices, val]);
     setInputChoice("");
-    setMessage("Choice added successfully.");
+    setNewMessage("");
   };
 
-  const removeChoice = (choice) => {
-    setChoices(choices.filter((c) => c !== choice));
-    setMessage("Choice removed successfully.");
+  const handleRemoveChoice = (c) => {
+    setNewChoices(newChoices.filter(x => x !== c));
+    if (correctAnswer === c) setCorrectAnswer("");
   };
 
-  const handleSubmit = async () => {
-    if (!correctTranslation || choices.length < 3) {
-      setMessage("Please fill in all fields and ensure at least 3 choices are generated.");
-      return;
-    }
+  const handleSaveNew = async () => {
+    if (!newWord.trim()) return setNewMessage("Enter a word.");
+    if (newChoices.length < 3) return setNewMessage("Add at least 3 choices.");
+    if (!correctAnswer) return setNewMessage("Select correct answer.");
+    if (!token) return navigate("/login");
 
+    setNewMessage("Saving new question...");
     try {
-      if (!questionId) {
-        setMessage("No question ID found. Please submit a phrase first.");
-        return;
-      }
-
+      const form = new FormData();
+      form.append("questionText", newWord);
+      form.append("questionDescription", "");
+      form.append("image", null);
+      const { data } = await api.post(`/api/lingguahey/questions/activities/${activityId}`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const qId = data.questionId;
       let score = 0;
-
-      for (let i = 0; i < choices.length; i++) {
-        const choice = choices[i];
-        const isGeneratedChoice = correctTranslation.split(" ").includes(choice);
-
-        // Add the choice to the backend
-        await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${questionId}`,
-          {
-            choiceText: choice,
-            choiceOrder: isGeneratedChoice ? i + 1 : null, // Add choiceOrder for generated choices, null for manual choices
-            correct: isGeneratedChoice, // True for generated choices, false for manual choices
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
-            },
-          }
-        );
-
-        // Increment score if the choice is correct
-        if (isGeneratedChoice) {
-          score++;
-        }
+      for (let c of newChoices) {
+        const isCorr = c === correctAnswer;
+        await api.post(`/api/lingguahey/choices/questions/${qId}`, { choiceText: c, correct: isCorr });
+        if (isCorr) score = 1;
       }
-
-      // Set the score for the question
-      await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${questionId}`,
-        null,
-        {
-          params: { scoreValue: score },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
-          },
-        }
-      );
-
-      setMessage("Choices and score successfully added to the question!");
-      setCorrectTranslation("");
-      setChoices([]);
-      setWord("");
-      setIsWordSubmitted(false);
-      setQuestionId(null);
-    } catch (err) {
-      console.error("Failed to add choices or score:", err.response?.data || err.message);
-      setMessage("Failed to add choices or score. Please try again.");
+      await api.post(`/api/lingguahey/scores/questions/${qId}`, null, { params: { scoreValue: score } });
+      setNewMessage("Saved successfully!");
+      setNewWord(""); setNewChoices([]); setCorrectAnswer("");
+      const res = await api.get(`/api/lingguahey/questions/activities/${activityId}`);
+      setQuestions(res.data);
+    } catch {
+      setNewMessage("Save failed.");
     }
   };
 
-  const editQuestion = async (id, updatedData) => {
+  // Edit existing question
+  const startEdit = q => {
+    setEditingId(q.questionId);
+    setEditWord(q.questionText);
+    setEditChoices(q.choices.map(c => ({ ...c })));
+    setEditCorrect(q.choices.find(c => c.correct)?.choiceText || "");
+    setMsgMap({});
+  };
+
+  const handleChoiceEdit = (i, text) => {
+    const arr = [...editChoices]; arr[i].choiceText = text;
+    setEditChoices(arr);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editWord.trim()) return setMsgMap(m => ({ ...m, [editingId]: "Word cannot be empty." }));
+    if (editChoices.length < 3) return setMsgMap(m => ({ ...m, [editingId]: "Add at least 3 choices." }));
+    if (!editCorrect) return setMsgMap(m => ({ ...m, [editingId]: "Select correct answer." }));
+
+    setMsgMap(m => ({ ...m, [editingId]: "Saving changes..." }));
     try {
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
-        updatedData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      setMessage("Question updated successfully!");
-      setQuestions((prevQuestions) =>
-        prevQuestions.map((q) => (q.questionId === id ? { ...q, ...updatedData } : q))
-      );
-    } catch (err) {
-      console.error("Failed to update question:", err.response?.data || err.message);
-      setMessage("Failed to update question. Please try again.");
-    }
-  };
-
-  const deleteQuestion = async (id) => {
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      setMessage("Question deleted successfully!");
-      setQuestions(questions.filter((q) => q.questionId !== id)); // Remove from local state
-    } catch (err) {
-      console.error("Failed to delete question:", err.response?.data || err.message);
-      setMessage("Failed to delete question. Please try again.");
-    }
-  };
-
-  const deleteChoice = async (id) => {
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      setMessage("Choice deleted successfully!");
-      setChoices(choices.filter((c) => c.id !== id)); // Remove from local state
-    } catch (err) {
-      console.error("Failed to delete choice:", err.response?.data || err.message);
-      setMessage("Failed to delete choice. Please try again.");
-    }
-  };
-
-  const startEditing = (id, currentText) => {
-    setEditingQuestionId(id);
-    setEditedQuestionText(currentText);
-  };
-
-  const saveEditedQuestion = async (id) => {
-    try {
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
-        { questionText: editedQuestionText },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      setMessage("Question updated successfully!");
-      setQuestions((prevQuestions) =>
-        prevQuestions.map((q) =>
-          q.questionId === id ? { ...q, questionText: editedQuestionText } : q
-        )
-      );
-      setEditingQuestionId(null); // Exit editing mode
-    } catch (err) {
-      console.error("Failed to update question:", err.response?.data || err.message);
-      setMessage("Failed to update question. Please try again.");
-    }
-  };
-
-  const startEditingChoices = async (question) => {
-    setEditingChoicesQuestionId(question.questionId);
-    setEditedQuestionText(question.questionText);
-
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${question.questionId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      setEditingChoices(response.data);
-    } catch (err) {
-      console.error("Failed to fetch choices:", err.response?.data || err.message);
-      setMessage("Failed to fetch choices. Please try again.");
-    }
-  };
-
-  const handleChoiceChange = (index, value) => {
-    const newChoices = [...editingChoices];
-    newChoices[index].choiceText = value;
-    setEditingChoices(newChoices);
-  };
-
-  const saveEditedChoices = async (questionId) => {
-    try {
-      for (const choice of editingChoices) {
-        await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${choice.choiceId}`,
-          { choiceText: choice.choiceText },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+      await api.put(`/api/lingguahey/questions/${editingId}`, { questionText: editWord, questionDescription: "", image: null });
+      let score = 0;
+      for (let c of editChoices) {
+        const isCorr = c.choiceText === editCorrect;
+        await api.put(`/api/lingguahey/choices/${c.choiceId}`, { choiceText: c.choiceText, correct: isCorr });
+        if (isCorr) score = 1;
       }
+      await api.put(`/api/lingguahey/scores/questions/${editingId}/score`, null, { params: { scoreValue: score } });
+      setMsgMap(m => ({ ...m, [editingId]: "Updated successfully!" }));
+      setEditingId(null);
+      const res = await api.get(`/api/lingguahey/questions/activities/${activityId}`);
+      setQuestions(res.data);
+    } catch {
+      setMsgMap(m => ({ ...m, [editingId]: "Update failed." }));
+    }
+  };
 
-      setMessage("Choices updated successfully!");
-      setEditingChoicesQuestionId(null);
-
-      // Refetch questions to update the list
-      const fetchQuestions = async () => {
-        try {
-          const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token
-              },
-            }
-          );
-          setQuestions(response.data); // Set the questions in state
-        } catch (err) {
-          console.error("Failed to fetch questions:", err.response?.data || err.message);
-          setMessage("Failed to fetch questions. Please try again.");
-        }
-      };
-
-      fetchQuestions();
-    } catch (err) {
-      console.error("Failed to update choices:", err.response?.data || err.message);
-      setMessage("Failed to update choices. Please try again.");
+  const handleDelete = async id => {
+    if (!window.confirm("Delete this question?")) return;
+    setMsgMap(m => ({ ...m, [id]: "Deleting..." }));
+    try {
+      await api.delete(`/api/lingguahey/questions/${id}`);
+      setQuestions(questions.filter(q => q.questionId !== id));
+      setMsgMap(m => ({ ...m, [id]: "Deleted." }));
+    } catch {
+      setMsgMap(m => ({ ...m, [id]: "Delete failed." }));
     }
   };
 
   return (
-    <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E0F7FA", p: 2 }}>
-      <Box p={3} sx={{ width: "100%", maxWidth: 600, mx: "auto" }}>
-        <Button
-          variant="contained"
-          onClick={() => navigate(`/classroom/${classroomId}`)}
-          sx={{ mb: 2, bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
-        >
-          Back to Activities
-        </Button>
-        <Typography variant="h4" fontWeight="bold" color="#0277BD" mb={3} align="center">
-          Word Translation
-        </Typography>
+    <Grid container justifyContent="center" sx={{ minHeight: '100vh', bgcolor: '#18191B', p: 2 }}>
+      <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto' }}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5" fontWeight="bold" color="#B3E5FC">Word Translation</Typography>
+          <Button variant="text" onClick={() => navigate(`/classroom/${classroomId}`)} sx={{ color: '#81D4FA' }}>← Back</Button>
+        </Box>
 
-        {/* Word Input */}
-        <TextField
-          label="Word to Post"
-          variant="outlined"
-          value={word}
-          onChange={(e) => setWord(e.target.value)}
-          fullWidth
-          margin="normal"
-          sx={{ bgcolor: "white" }}
-        />
-        <Button
-          variant="contained"
-          onClick={submitWord}
-          mt={3}
-          color="primary"
-          sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
-        >
-          Submit Word
-        </Button>
-
-        {/* Correct Answer Input */}
-        <TextField
-          label="Correct Answer"
-          variant="outlined"
-          value={correctTranslation}
-          onChange={(e) => setCorrectTranslation(e.target.value)}
-          fullWidth
-          margin="normal"
-          sx={{ bgcolor: "white" }}
-          disabled={!isWordSubmitted}
-        />
-
-        {/* Add Choice Input */}
-        <TextField
-          label="Add Choice"
-          variant="outlined"
-          value={inputChoice}
-          onChange={(e) => setInputChoice(e.target.value)}
-          fullWidth
-          margin="normal"
-          sx={{ bgcolor: "white" }}
-          disabled={!isWordSubmitted}
-        />
-        <Button
-          variant="contained"
-          onClick={addChoice}
-          mt={3}
-          color="primary"
-          sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
-          disabled={!isWordSubmitted}
-        >
-          Add Choice
-        </Button>
-
-        {/* Choices List */}
-        <Paper sx={{ bgcolor: "#B2EBF2", p: 2, color: "black", mt: 4 }}>
-          <Typography variant="h6" color="black" mb={2}>
-            Choices
-          </Typography>
-          <List>
-            {choices.map((choice, index) => (
-              <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
-                <ListItemText primary={choice} />
-                {/*<Box sx={{ display: "flex", gap: 2 }}>
-                  <IconButton
-                    edge="end"
-                    aria-label="edit"
-                    onClick={() => startEditingChoice(choice.id, choice.choiceText || choice)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={() => deleteChoice(choice.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>*/}
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-
-        {/* Submit Button */}
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          mt={3}
-          color="primary"
-          disabled={!isWordSubmitted}
-          sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
-        >
-          Save Word and Choices
-        </Button>
-
-        {message && (
-          <Typography mt={2} color={message.startsWith("Failed") ? "error" : "success"}>
-            {message}
-          </Typography>
-        )}
-
-        {/* List of Questions */}
-        <Typography variant="h6" mt={4} color="black">
-          Questions:
-        </Typography>
-        <List sx={{ width: "100%" }}>
-          {questions.map((question) => (
-            <Paper key={question.questionId} elevation={3} sx={{ mt: 2, p: 2, width: "100%" }}>
-              <ListItem alignItems="flex-start" sx={{ display: "flex", justifyContent: "space-between" }}>
-                {editingQuestionId === question.questionId ? (
-                  <TextField
-                    value={editedQuestionText}
-                    onChange={(e) => setEditedQuestionText(e.target.value)}
-                    fullWidth
-                  />
-                ) : (
-                  <ListItemText primary={`Word: ${question.questionText}`} />
-                )}
-                <Box>
-                  {editingQuestionId === question.questionId ? (
-                    <>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => saveEditedQuestion(question.questionId)}
-                        sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        variant="contained"
-                        color="error"
-                        onClick={() => setEditingQuestionId(null)}
-                        sx={{ bgcolor: "#E57373", color: "black", "&:hover": { bgcolor: "#F44336" } }}
-                      >
-                        Cancel
-                      </Button>
+        {/* Existing Questions */}
+        {questions.map((q, idx) => (
+          <Paper key={q.questionId} sx={{ bgcolor: '#232323', p: 4, borderRadius: 3, mb: 4 }} elevation={3}>
+            <Typography variant="h6" fontWeight="bold" color="#81D4FA" sx={{ mb: 2 }}>{idx + 1}.</Typography>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+              {/* Word Column */}
+              <Box sx={{ flex: 1 }}>
+                <Typography color="#B3E5FC" mb={1}>Word</Typography>
+                <TextField
+                  fullWidth
+                  variant={editingId === q.questionId ? 'outlined' : 'standard'}
+                  InputProps={{
+                    readOnly: editingId !== q.questionId,
+                    disableUnderline: editingId !== q.questionId,
+                    style: { color: '#fff' }
+                  }}
+                  value={editingId === q.questionId ? editWord : q.questionText}
+                  onChange={e => setEditWord(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: '#616161' },
+                      '&:hover fieldset': { borderColor: '#81D4FA' },
+                      '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
+                    }
+                  }}
+                />
+              </Box>
+              {/* Choices Column */}
+              <Box sx={{ flex: 2 }}>
+                <Typography color="#B3E5FC" mb={1}>Choices</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {(editingId === q.questionId ? editChoices : q.choices).map((c, i) => {
+                    const text = editingId === q.questionId ? c.choiceText : c.choiceText;
+                    const isCorrect = editingId === q.questionId ? (editCorrect === c.choiceText) : c.correct;
+                    return (
+                      <Chip
+                        key={i}
+                        label={editingId === q.questionId ? (
+                          <TextField
+                            value={c.choiceText}
+                            variant="standard"
+                            onChange={e => handleChoiceEdit(i, e.target.value)}
+                            InputProps={{ disableUnderline: true, style: { color: '#fff' } }}
+                          />) : text}
+                        onClick={() => editingId === q.questionId ? setEditCorrect(c.choiceText) : null}
+                        onDelete={() => editingId === q.questionId ? setEditChoices(editChoices.filter((_, j) => j !== i)) : null}
+                        sx={{
+                          bgcolor: isCorrect ? '#4CAF50' : '#232323',
+                          color: '#fff',
+                          border: isCorrect ? '2px solid #4CAF50' : '1px solid #616161',
+                          fontWeight: isCorrect ? 'bold' : 'normal'
+                        }}
+                      />
+                    );
+                  })}
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                  {editingId === q.questionId ? (
+                    <>  
+                      <Button variant="contained" onClick={handleSaveEdit} sx={{ bgcolor: '#4CAF50', fontWeight: 'bold' }}>Save</Button>
+                      <Button variant="contained" color="error" onClick={() => setEditingId(null)} sx={{ bgcolor: '#E57373', fontWeight: 'bold' }}>Cancel</Button>
                     </>
                   ) : (
-                    <>
-                      {/*<IconButton
-                        edge="end"
-                        aria-label="edit"
-                        onClick={() => startEditingQuestion(question.questionId, question.questionText)}
-                      >
-                        <EditIcon />
-                      </IconButton>*/}
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        onClick={() => startEditingChoices(question)}
-                        sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
-                      >
-                        Edit Choices
-                      </Button>
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        color="error"
-                        onClick={() => deleteQuestion(question.questionId)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                    <>  
+                      <Button variant="contained" onClick={() => startEdit(q)} sx={{ bgcolor: '#81D4FA', color: '#000', fontWeight: 'bold' }}>Edit</Button>
+                      <IconButton onClick={() => handleDelete(q.questionId)} sx={{ bgcolor: '#E57373', color: '#fff' }}><DeleteIcon /></IconButton>
                     </>
                   )}
                 </Box>
-              </ListItem>
-            </Paper>
-          ))}
-        </List>
+                {msgMap[q.questionId] && (
+                  <Typography color={msgMap[q.questionId].includes('failed') ? '#E57373' : '#81C784'} sx={{ mt: 1, textAlign: 'center' }}>
+                    {msgMap[q.questionId]}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          </Paper>
+        ))}
 
-        {editingChoicesQuestionId && (
-          <Box mt={4}>
-            <Typography variant="h6" color="black" mb={2}>
-              Edit Choices for Question
-            </Typography>
-            <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
-              <List>
-                {editingChoices.map((choice, index) => (
-                  <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
-                    <TextField
-                      label={`Choice ${index + 1}`}
-                      variant="outlined"
-                      value={choice.choiceText}
-                      onChange={(e) => handleChoiceChange(index, e.target.value)}
-                      fullWidth
+        {/* Add New Question */}
+        <Paper sx={{ bgcolor: '#232323', p: 4, borderRadius: 3 }} elevation={3}>
+          <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>{questions.length + 1}.</Typography>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+            <Box flex={1}>
+              <Typography color="#B3E5FC" mb={1}>Word</Typography>
+              <TextField
+                fullWidth
+                variant="outlined"
+                value={newWord}
+                onChange={e => setNewWord(e.target.value)}
+                sx={{
+                  bgcolor: '#232323',
+                  input: { color: '#fff' },
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: '#616161' },
+                    '&:hover fieldset': { borderColor: '#81D4FA' },
+                    '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
+                  }
+                }}
+              />
+            </Box>
+            <Box flex={2}>
+              <Typography color="#B3E5FC" mb={1}>Choices ({newChoices.length}/5)</Typography>
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <TextField
+                  label="Add Choice"
+                  size="small"
+                  variant="outlined"
+                  value={inputChoice}
+                  onChange={e => setInputChoice(e.target.value)}
+                  disabled={newChoices.length >= 5}
+                  sx={{ flex: 1,
+                    bgcolor: '#232323', input: { color: '#fff' },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: '#616161' },
+                      '&:hover fieldset': { borderColor: '#81D4FA' },
+                      '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
+                    }
+                  }}
+                />
+                <Button variant="contained" onClick={handleAddChoice} disabled={!inputChoice.trim() || newChoices.length>=5} sx={{ bgcolor: '#81D4FA', color: '#000' }}>Add</Button>
+              </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {newChoices.map((c,i) => {
+                  const isCorr = c === correctAnswer;
+                  return (
+                    <Chip
+                      key={i}
+                      label={c}
+                      onClick={() => setCorrectAnswer(c)}
+                      onDelete={() => handleRemoveChoice(c)}
                       sx={{
-                        bgcolor: "white",
+                        bgcolor: isCorr ? '#4CAF50' : '#232323',
+                        color: '#fff',
+                        border: isCorr ? '2px solid #4CAF50' : '1px solid #616161',
+                        fontWeight: isCorr ? 'bold' : 'normal'
                       }}
                     />
-                  </ListItem>
-                ))}
-              </List>
-              <Box mt={2} sx={{ display: "flex", gap: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => saveEditedChoices(editingChoicesQuestionId)}
-                  sx={{ bgcolor: "#81D4FA", color: "black", "&:hover": { bgcolor: "#4FC3F7" } }}
-                >
-                  Save Choices
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={() => setEditingChoicesQuestionId(null)}
-                  sx={{ bgcolor: "#E57373", color: "black", "&:hover": { bgcolor: "#F44336" } }}
-                >
-                  Cancel
-                </Button>
+                  );
+                })}
               </Box>
-            </Paper>
+              <Typography color="#B3E5FC" mb={2}>
+                {correctAnswer ? `Correct: ${correctAnswer}` : 'Click a choice to set correct answer'}
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                <Button variant="contained" color="error" onClick={() => { setNewWord(''); setNewChoices([]); setInputChoice(''); setCorrectAnswer(''); setNewMessage(''); }} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
+                <Button variant="contained" onClick={handleSaveNew} disabled={!newWord.trim()||newChoices.length<3||!correctAnswer} sx={{ bgcolor: '#4CAF50' }}>Save</Button>
+              </Box>
+            </Box>
           </Box>
-        )}
+          {newMessage && (
+            <Typography color={newMessage.includes('failed') ? '#E57373' : '#81C784'} sx={{ mt: 3, textAlign: 'center' }}>{newMessage}</Typography>
+          )}
+        </Paper>
       </Box>
     </Grid>
   );
 }
-
-export default WordTranslation;
