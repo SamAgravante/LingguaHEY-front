@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import DeleteIcon from "@mui/icons-material/Delete";
+import Classroom from "./Classroom";
 
 const TeacherDashboard = () => {
   const [classroomName, setClassroomName] = useState(""); // State for new classroom name
@@ -219,6 +220,40 @@ const TeacherDashboard = () => {
     navigate(`/classroom/${classroomId}`);
   };
 
+  const handleAddStudent = async (classroomId) => {
+    console.log("Adding student to classroom with ID:", classroomId);
+    if (!classroomId) {
+      alert("Classroom ID is invalid.");
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      // Prompt the user for the student's ID
+      const studentId = prompt("Enter the student's ID:");
+      if (!studentId) {
+        alert("Student ID is required.");
+        return;
+      }
+
+      // Make the API call to add the student to the classroom
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroomId}/students/${studentId}`,
+        {}, // Empty body for POST request
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Student added to classroom:", response.data);
+      alert("Student added to classroom successfully!");
+    } catch (error) {
+      console.error("Failed to add student to classroom:", error);
+      alert("Failed to add student to classroom. Please try again.");
+    }
+  };
+
   return (
     <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E1F5FE", p: 2 }}>
       <Typography variant="h4" sx={{ mb: 4, color: "#4E342E" }}>
@@ -273,6 +308,13 @@ const TeacherDashboard = () => {
                   >
                     View Classroom
                   </Button>
+                  <Button
+                    variant="contained"
+                    sx={{ mt: 2, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
+                    onClick={() => handleAddStudent(classroom.id)} // Pass the classroom ID
+                  >
+                    Add Student
+                  </Button>
                 </Paper>
               </Grid>
             ))
@@ -305,7 +347,7 @@ const TeacherDashboard = () => {
               {students.map((student, index) => (
                 <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
                   <ListItemText
-                    primary={`${index + 1}. ${student.firstName} ${student.lastName}`}
+                    primary={`${index + 1}. ${student.firstName} ${student.lastName} - ID: ${student.userId}`}
                     secondary={`Email: ${student.email}`}
                   />
                 </ListItem>

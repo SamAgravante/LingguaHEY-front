@@ -5,6 +5,10 @@ import {
   Grid,
   Paper,
   Modal,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Button,
   IconButton,
   TextField,
@@ -17,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
+import API from "../../api";
 import { jwtDecode } from "jwt-decode";
 
 const Dashboard = () => {
@@ -40,6 +45,9 @@ const Dashboard = () => {
   const [registeredUsers, setRegisteredUsers] = useState(0);
   const [studentsRegistered, setStudentsRegistered] = useState(0);
   const [teachersRegistered, setTeachersRegistered] = useState(0);
+  const [classroomName, setClassroomName] = useState("");
+  const [classrooms, setClassrooms] = useState([]);
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
 
   // Fetch user data and role
   useEffect(() => {
@@ -106,50 +114,26 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token"); // Retrieve the token from local storage
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        const classroomsWithActivitiesCount = await Promise.all(
-          response.data.map(async (classroom) => {
-            try {
-              const activitiesResponse = await axios.get(
-                `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/activities/${classroom.classroomId}/activities`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
-              return {
-                ...classroom, // Keep all existing classroom properties
-                label: classroom.classroomName || "Unnamed Classroom",
-                count: activitiesResponse.data.length || 0,
-                color: "#FFEBEE",
-                id: classroom.classroomId,
-                activities: activitiesResponse.data, // Store the activities
-              };
-            } catch (error) {
-              console.error("Failed to fetch activities for classroom:", classroom.classroomId, error);
-              return {
-                ...classroom, // Keep all existing classroom properties
-                label: classroom.classroomName || "Unnamed Classroom",
-                count: 0,
-                color: "#FFEBEE",
-                id: classroom.classroomId,
-                activities: [], // Store an empty array if activities fetch fails
-              };
-            }
-          })
-        );
+        console.log("Classroom API response:", response.data);
 
-        setClassroomData(classroomsWithActivitiesCount);
+        // Map the response to ensure the name field is populated
+        setClassrooms(
+          response.data.map((classroom) => ({
+            ...classroom,
+            name: classroom.name || classroom.classroomName || "Unnamed Classroom", // Adjust field names as needed
+            id: classroom.classroomID,
+          }))
+        );
       } catch (error) {
         console.error("Failed to fetch classrooms:", error);
-        setClassroomData([]);
+        setClassrooms([]); // Fallback to an empty array in case of an error
       }
     };
 
@@ -163,7 +147,6 @@ const Dashboard = () => {
     { label: "Teachers Registered", count: teachersRegistered, color: "#E8F5E9" },
   ];
 
-
   const handleClassroomClick = async (classroom) => {
     setSelectedClassroom(classroom);
     setOpen(true);
@@ -171,17 +154,17 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroom.id}/activities`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/activities/${classroom.id}/activities`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      setSelectedClassroom({ ...classroom, activities: response.data }); 
+      setSelectedClassroom({ ...classroom, activities: response.data });
     } catch (error) {
       console.error("Failed to fetch activities:", error);
-      setSelectedClassroom({ ...classroom, activities: [] }); 
+      setSelectedClassroom({ ...classroom, activities: [] });
     }
   };
 
@@ -200,7 +183,7 @@ const Dashboard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setClassroomData((prev) => prev.filter((classroom) => classroom.id !== classroomId)); // Remove the classroom from the state
+      setClassroomData((prev) => prev.filter((classroom) => classroom.classroomId !== classroomId));
       alert("Classroom deleted successfully.");
     } catch (error) {
       console.error("Failed to delete classroom:", error);
@@ -227,14 +210,11 @@ const Dashboard = () => {
   const handleDeleteActivity = async (activityId) => {
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${selectedClassroom.id}/activities/${activityId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/activities/${activityId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setSelectedClassroom((prev) => ({
         ...prev,
         activities: prev.activities.filter((activity) => activity.activityId !== activityId),
@@ -269,6 +249,53 @@ const Dashboard = () => {
     }
   };
 
+  const handleCreateClassroom = async () => {
+    try {
+      const token = localStorage.getItem("token"); // Retrieve the token from local storage
+      // Ensure classroomName is not empty before making the API call
+      if (!classroomName.trim()) {
+        console.warn("Classroom name cannot be empty.");
+        return;
+      }
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`,
+        { classroomName: classroomName },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Classroom created:", response.data);
+      // Instead of adding the entire response, only add the classroomName and classroomID to the state
+      setClassrooms((prev) => [
+        ...prev,
+        { name: response.data.classroomName, id: response.data.classroomID },
+      ]);
+      setClassroomName(""); // Clear the input field
+
+      // Navigate to the classroom page after creating the classroom
+      navigate(`/classroom/${response.data.classroomID}`);
+    } catch (error) {
+      console.error("Failed to create classroom:", error);
+    }
+  };
+
+  const handleViewClassroom = (classroomId) => {
+    console.log("Navigating to classroom with ID:", classroomId);
+    if (!classroomId) {
+      alert("Classroom ID is invalid.");
+      return;
+    }
+    navigate(`/classroom/${classroomId}`);
+  };
+
+  const handleOpenDialog = () => setOpenCreateDialog(true);
+  const handleCloseDialog = () => setOpenCreateDialog(false);
+
   return (
     <Grid
       container
@@ -289,9 +316,11 @@ const Dashboard = () => {
           <Typography color="#4E342E" mb={2} variant="h6">
             Classroom Data
           </Typography>
+          <Box mt={4} sx={{ maxHeight: "340px", width: "100%", maxWidth: 800, overflowY: "auto" }}>
+          <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
           <Grid container spacing={2}>
-            {classroomData.length > 0 ? (
-              classroomData.map((classroom, i) => (
+            {classrooms.length > 0 ? (
+              classrooms.map((classroom, i) => (
                 <Grid item xs={12} sm={4} key={i}>
                   <Paper
                     sx={{
@@ -309,29 +338,30 @@ const Dashboard = () => {
                       {classroom.count}
                     </Typography>
                     <Typography variant="body2" color="#6D4C41">
-                      Activities in {classroom.label}
+                      Activities in {classroom.name}
                     </Typography>
                     <Box mt={2}>
                       <Button
                         variant="contained"
-                        color="primary"
-                        sx={{ mr: 1 }}
-                        onClick={() => {
-                          const newName = prompt("Enter new classroom name:", classroom.label);
-                          if (newName) {
-                            handleEditClassroom(classroom.id, newName);
-                          }
-                        }}
+                        sx={{ mt: 2, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
+                        onClick={() => handleViewClassroom(classroom.id)}
                       >
-                        Edit
+                        View Classroom
                       </Button>
                       <Button
                         variant="contained"
+                        sx={{ mt: 2, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
+                        onClick={() => handleClassroomClick(classroom)}
+                      >
+                        View Classroom
+                      </Button>
+                      {/*<Button
+                        variant="contained"
                         color="error"
-                        onClick={() => handleDeleteClassroom(classroom.id)}
+                        onClick={() => handleDeleteClassroom(classroom.classroomId)}
                       >
                         Delete
-                      </Button>
+                      </Button>*/}
                     </Box>
                   </Paper>
                 </Grid>
@@ -342,6 +372,8 @@ const Dashboard = () => {
               </Typography>
             )}
           </Grid>
+          </Paper>
+          </Box>
         </Grid>
 
         {/* Users Data */}
@@ -377,7 +409,48 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Recent Users */}
+      {/* Trigger Button */}
+      <Box sx={{ mt: 6 }}>
+        <Button
+          variant="contained"
+          sx={{ backgroundColor: "#FFCCBC", "&:hover": { backgroundColor: "#FFAB91" } }}
+          onClick={handleOpenDialog}
+        >
+          Create a Classroom
+        </Button>
+      </Box>
+
+      {/* 🪟 Create Classroom Dialog */}
+      <Dialog open={openCreateDialog} onClose={handleCloseDialog}>
+        <DialogTitle>Create a New Classroom</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Classroom Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={classroomName}
+            onChange={(e) => setClassroomName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button
+            onClick={() => {
+              handleCreateClassroom();
+              handleCloseDialog();
+            }}
+            sx={{ backgroundColor: "#FFCCBC", "&:hover": { backgroundColor: "#FFAB91" } }}
+            variant="contained"
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Users List */}
       <Box mt={4} sx={{ width: "100%", maxWidth: 800 }}>
         <Typography variant="h6" color="black" mb={2}>
           List of Users
@@ -388,12 +461,7 @@ const Dashboard = () => {
           </Typography>
         )}
         <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
-          <Box
-            sx={{
-              maxHeight: "300px",
-              overflowY: "auto",
-            }}
-          >
+          <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
             <List>
               {users.map((user, index) => (
                 <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
@@ -405,9 +473,6 @@ const Dashboard = () => {
                     <IconButton edge="end" color="error" onClick={() => handleDelete(user.userId)}>
                       <DeleteIcon />
                     </IconButton>
-                    {/*<IconButton edge="end" color="error" onClick={() => handleDelete(activity.activityId)}>
-                      <DeleteIcon />
-                    </IconButton>*/}
                   </ListItemSecondaryAction>
                 </ListItem>
               ))}
@@ -416,7 +481,7 @@ const Dashboard = () => {
         </Paper>
       </Box>
 
-      {/* Modal for Activities */}
+      {/* Activities Modal */}
       <Modal open={open} onClose={handleCloseModal}>
         <Paper
           sx={{
@@ -430,7 +495,7 @@ const Dashboard = () => {
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" color="#4E342E">
-              Activities for {selectedClassroom?.label}
+              Activities for {selectedClassroom?.name}
             </Typography>
             <IconButton onClick={handleCloseModal}>
               <CloseIcon />
@@ -439,7 +504,10 @@ const Dashboard = () => {
           <List>
             {selectedClassroom?.activities?.map((activity) => (
               <ListItem key={activity.activityId}>
-                <ListItemText primary={activity.activityName} secondary={`Game Type: ${activity.gameType}`} />
+                <ListItemText
+                  primary={activity.activityName}
+                  secondary={`Game Type: ${activity.gameType}`}
+                />
                 <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteActivity(activity.activityId)}>
                   <DeleteIcon />
                 </IconButton>

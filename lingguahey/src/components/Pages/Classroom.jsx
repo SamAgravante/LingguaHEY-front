@@ -32,6 +32,7 @@ const Classroom = () => {
   const [classroom, setClassroom] = useState(null); // State to store classroom data
   const [loading, setLoading] = useState(true); // State to track loading
   const [userRole, setUserRole] = useState(null); // State to store user role
+  const [students, setStudents] = useState([]); // State to store students
 
   // Fetch user role
   useEffect(() => {
@@ -90,6 +91,20 @@ const Classroom = () => {
     };
 
     fetchActivities();
+  }, [classroomId]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await API.get(`/api/lingguahey/classrooms/${classroomId}/students`);
+        setStudents(response.data);
+      } catch (err) {
+        console.error("Error fetching students:", err.response?.data || err.message);
+        setError("Failed to fetch students. Please try again later.");
+      }
+    };
+
+    fetchStudents();
   }, [classroomId]);
 
   const createActivity = async () => {
@@ -259,6 +274,37 @@ const Classroom = () => {
           </List>
         </Box>
       </Paper>
+
+      {/* View Students Section */}
+      <Box mt={4} sx={{ width: "100%", maxWidth: 800 }}>
+        <Typography variant="h6" color="black" mb={2}>
+          List of Students
+        </Typography>
+        {error && (
+          <Typography color="error" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
+        <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
+          <Box
+            sx={{
+              maxHeight: "300px",
+              overflowY: "auto",
+            }}
+          >
+            <List>
+              {students.map((student, index) => (
+                <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
+                  <ListItemText
+                    primary={`${index + 1}. ${student.firstName} ${student.lastName}`}
+                    secondary={`Email: ${student.email}`}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        </Paper>
+      </Box>
     </Grid>
   );
 };
