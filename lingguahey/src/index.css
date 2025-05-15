@@ -1,5 +1,27 @@
+@font-face {
+  font-family: 'ABeeZee';
+  src: url('./assets/font/ABeeZee-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'ABeeZee';
+  src: url('./assets/font/ABeeZee-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LittleBubble';
+  src: url('./assets/font/LittleBubble‑Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'ABeeZee', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -28,11 +50,16 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  font-family: 'ABeeZee', system-ui, sans-serif;
 }
 
-h1 {
+h1, h2, h3, h4, h5, h6 {
   font-size: 3.2em;
   line-height: 1.1;
+  font-family: 'LittleBubble', cursive;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  /* optional: tweak sizes */
 }
 
 button {
