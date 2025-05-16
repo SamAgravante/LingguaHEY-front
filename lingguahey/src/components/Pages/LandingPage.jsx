@@ -1,25 +1,29 @@
-import { Box, Button, Grid, Stack, TextField, Typography } from "@mui/material";
+import React, { useEffect, useContext } from "react";
+import { Box, Button, Grid, Stack, Typography, IconButton } from "@mui/material";
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import { useNavigate } from "react-router-dom";
 import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
-import { useEffect, useRef, useContext, useState } from "react";
-import introMusic from "../../assets/music/LingguaHEY-Intro.mp3";
 import { MusicContext } from "../../contexts/MusicContext";
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const primaryBtn = "#FFCC80";
+  const textColor = "#5D4037";
 
-    const navigate = useNavigate();
-    const primaryBtn = "#FFCC80";
-    const textColor = "#5D4037"; 
-    const { setIntroMode, toggleMusic } = useContext(MusicContext);
-    const [musicOn, setMusicOn] = useState(true); // Start with music off
+  // Pull music state and controls from context
+  const { setIntroMode, toggleMusic, musicOn } = useContext(MusicContext);
 
+  useEffect(() => {
+    // Start intro music when this page mounts
+    setIntroMode(true);
+    // On unmount, switch back to default bgm
+    return () => {
+      setIntroMode(false);
+    };
+  }, [setIntroMode]);
 
-    useEffect(() => {
-        setIntroMode(true); // Play intro music
-        return () => setIntroMode(true); // Switch to default when leaving
-    }, []);
-
-    return (
+  return (
         <Grid
             container
             sx={{
@@ -66,27 +70,25 @@ export default function LandingPage() {
                     No Account? Register Now!
                 </Typography>
                     </Stack>
-                {musicOn && (
-                <button
-                        style={{
-                          position: "fixed",
-                          bottom: 24,
-                          right: 24,
-                          zIndex: 2000,
-                          background: "#FFCC80",
-                          color: "#5D4037",
-                          border: "none",
-                          borderRadius: 8,
-                          padding: "0.6em 1.2em",
-                          fontSize: "1em",
-                          fontWeight: 500,
-                          cursor: "pointer"
-                        }}
-                        onClick={toggleMusic}
-                      >
-                        {musicOn ? "🎵 Mute Music" : "🔇 Play Music"}
-                </button>
-            )}
-        </Grid>
-    );
+        <button
+                style={{
+                position: 'fixed',
+                bottom: 24,
+                right: 24,
+                zIndex: 2000,
+                background: primaryBtn,
+                color: textColor,
+                border: 'none',
+                borderRadius: 8,
+                padding: '0.6em 1.2em',
+                fontSize: '1em',
+                fontWeight: 500,
+                cursor: 'pointer',
+                }}
+                onClick={toggleMusic}
+            >
+            {musicOn ? '🎵 Mute Music' : '🔇 Play Music'}
+        </button>
+    </Grid>
+  );
 }
