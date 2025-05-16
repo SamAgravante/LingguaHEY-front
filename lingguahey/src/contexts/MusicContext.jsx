@@ -1,5 +1,5 @@
 import React, { createContext, useState, useRef, useEffect } from "react";
-import defaultBgm from "../assets/music/LingguaHEY-live.mp3";
+import defaultBgm from "../assets/music/LingguaHEY-Live.mp3";
 import activityBgm from "../assets/music/LingguaHEY-Mini.mp3";
 import introBgm from "../assets/music/LingguaHEY-Intro.mp3"; // <-- Add this
 
