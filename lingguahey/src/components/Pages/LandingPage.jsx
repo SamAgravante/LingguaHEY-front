@@ -12,9 +12,7 @@ export default function LandingPage() {
   const { musicOn, toggleMusic, setIntroMode } = useContext(MusicContext);
 
   useEffect(() => {
-    // Start intro music when component mounts
     setIntroMode(true);
-    // Cleanup: revert to default background music on unmount
     return () => setIntroMode(false);
   }, [setIntroMode]);
 
@@ -82,7 +80,6 @@ export default function LandingPage() {
         </Stack>
       </Grid>
 
-      {/* Music toggle button matching Homepage style */}
       <button
         style={{
           position: 'fixed',
@@ -100,7 +97,8 @@ export default function LandingPage() {
         }}
         onClick={toggleMusic}
       >
-        {musicOn ? '🎵 Mute Music' : '🔇 Play Music'}
+        {musicOn ? '🎵 Mute Music' : '🔇 Play Music'}
+    
       </button>
     </>
   );
