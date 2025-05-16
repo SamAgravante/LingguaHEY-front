@@ -47,9 +47,10 @@ export default function LandingPage() {
               style={{ width: 340, height: 450, paddingTop: 50 }}
             />
           </Box>
-
+            { /* Uncomment the following line to add a background image */}
+            
           <Typography variant="h4" pt={2} color={textColor}>
-            LinnguaHEY
+            LingguaHEY
           </Typography>
           <Typography variant="subtitle1" pb={3} color={textColor}>
             A Filipino Language Learning App
