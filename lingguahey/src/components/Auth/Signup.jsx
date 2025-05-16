@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
@@ -13,6 +13,7 @@ import {
   IconButton
 } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { MusicContext } from "../../contexts/MusicContext";
 
 // Axios instance
 const API2 = axios.create({
@@ -43,6 +44,12 @@ export default function Signup() {
 
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
+  const { setIntroMode } = useContext(MusicContext);
+
+  useEffect(() => {
+    setIntroMode(true); // Switch to default/background music
+  }, []);
+
 
   // Redirect to role select if no role is passed
   useEffect(() => {

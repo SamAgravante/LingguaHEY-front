@@ -1,6 +1,8 @@
 import { Grid, Stack, Box, Typography, IconButton } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from "react-router-dom";
+import { MusicContext } from "../../contexts/MusicContext";
+import { useState, useEffect,useContext } from "react";
 
 export default function RoleSelect() {
   const navigate = useNavigate();
@@ -8,6 +10,11 @@ export default function RoleSelect() {
   const panelBg = "#FFF3E0";
   const optionBg = "#E3F2FD";
   const textColor = "#5D4037";
+  const { setIntroMode } = useContext(MusicContext);
+
+  useEffect(() => {
+    setIntroMode(true); // Switch to default/background music
+  }, []);
 
   const roles = [
     { label: "Student", value: "USER" },

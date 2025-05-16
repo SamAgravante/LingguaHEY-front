@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect,useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -15,6 +15,7 @@ import {
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../../contexts/AuthContext";
+import { MusicContext } from "../../contexts/MusicContext";
 
 // Axios instance
 const API = axios.create({
@@ -33,6 +34,11 @@ export default function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { setToken } = useAuth();
+  const { setIntroMode } = useContext(MusicContext);
+
+  useEffect(() => {
+    setIntroMode(true); // Switch to default/background music
+  }, []);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });

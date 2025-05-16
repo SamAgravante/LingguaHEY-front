@@ -25,6 +25,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
 
+import { useContext } from "react";
+import { MusicContext } from "../../contexts/MusicContext";
+
 export default function Homepage() {
   const { token } = useAuth();
   const [user, setUser] = useState(null);
@@ -35,6 +38,9 @@ export default function Homepage() {
   const [classroom, setClassroom] = useState('');
   const [userDetails, setUserDetails] = useState({});
   const [userActivities, setUserActivities] = useState([]);
+  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+
+  
 
   // Decode token → user
   useEffect(() => {
@@ -110,8 +116,12 @@ export default function Homepage() {
     setOpen(false);
     setSection('');
     setCurrent(null);
+    setActivityMode(false); // Switch back to default music
   };
-  const startActivity = act => setCurrent(act);
+  const startActivity = act => {
+    setActivityMode(true); // Switch to activity music
+    setCurrent(act);
+  };
 
   // when arrow back is clicked:
   const handleBackClick = () => {
@@ -124,11 +134,12 @@ export default function Homepage() {
     }
   };
 
-  // 📌 new: combine fetch + go-back
   const backToList = () => {
     fetchUserActivities();
     setCurrent(null);
+    setActivityMode(false); // Switch back to default music
   };
+
 
   const renderBody = () => {
     if (!current) {
@@ -291,6 +302,25 @@ export default function Homepage() {
           </Box>
         </Fade>
       </Modal>
+      <button
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          zIndex: 2000,
+          background: "#FFCC80",
+          color: "#5D4037",
+          border: "none",
+          borderRadius: 8,
+          padding: "0.6em 1.2em",
+          fontSize: "1em",
+          fontWeight: 500,
+          cursor: "pointer"
+        }}
+        onClick={toggleMusic}
+      >
+        {musicOn ? "🎵 Mute Music" : "🔇 Play Music"}
+      </button>
     </Grid>
   );
 }

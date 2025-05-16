@@ -8,6 +8,7 @@ import App from "./App";
 import theme from './theme';
 import "./index.css";
 import { GlobalStyles } from '@mui/material';
+import { MusicProvider } from "./contexts/MusicContext"; // <-- Add this import
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -18,7 +19,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       }} />
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <MusicProvider>
+            <App />
+          </MusicProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

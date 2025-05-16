@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Drawer,
   Divider,
@@ -15,6 +15,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import API from "../../api";
 import { jwtDecode } from "jwt-decode";
+import { MusicContext } from "../../contexts/MusicContext";
 
 const drawerWidth = 240;
 const pastelBackground = "#FFE0B2";
@@ -45,6 +46,12 @@ const Layout = () => {
     role: null,
   });
   const [totalPoints, setTotalPoints] = useState(0);
+
+  const { setIntroMode } = useContext(MusicContext);
+
+  useEffect(() => {
+    setIntroMode(false); // Switch to default/background music
+  }, []);
 
   // Fetch user info and points whenever token changes
   useEffect(() => {

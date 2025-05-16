@@ -1,12 +1,23 @@
 import { Box, Button, Grid, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
+import { useEffect, useRef, useContext, useState } from "react";
+import introMusic from "../../assets/music/LingguaHEY-Intro.mp3";
+import { MusicContext } from "../../contexts/MusicContext";
 
 export default function LandingPage() {
 
     const navigate = useNavigate();
     const primaryBtn = "#FFCC80";
     const textColor = "#5D4037"; 
+    const { setIntroMode, toggleMusic } = useContext(MusicContext);
+    const [musicOn, setMusicOn] = useState(true); // Start with music off
+
+
+    useEffect(() => {
+        setIntroMode(true); // Play intro music
+        return () => setIntroMode(true); // Switch to default when leaving
+    }, []);
 
     return (
         <Grid
@@ -55,6 +66,27 @@ export default function LandingPage() {
                     No Account? Register Now!
                 </Typography>
                     </Stack>
+                {musicOn && (
+                <button
+                        style={{
+                          position: "fixed",
+                          bottom: 24,
+                          right: 24,
+                          zIndex: 2000,
+                          background: "#FFCC80",
+                          color: "#5D4037",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "0.6em 1.2em",
+                          fontSize: "1em",
+                          fontWeight: 500,
+                          cursor: "pointer"
+                        }}
+                        onClick={toggleMusic}
+                      >
+                        {musicOn ? "🎵 Mute Music" : "🔇 Play Music"}
+                </button>
+            )}
         </Grid>
     );
 }
