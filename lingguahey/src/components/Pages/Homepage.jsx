@@ -62,6 +62,9 @@ export default function Homepage() {
         const userClass = classResp.data;
         if (userClass) setClassroom(userClass.classroomID);
 
+        const response = await API.get(`/users/${user.userId}`);
+        setUserDetails(response.data);
+
         // initial load of userActivities
         await fetchUserActivities();
       } catch (err) {
@@ -246,7 +249,7 @@ export default function Homepage() {
             Choose a section to start learning:
           </Typography>
         </Grid>
-        <img src={bunnyWave} alt="Bunny Wave" style={{ width: 100, height: 120 }} />
+        <img src={bunnyWave} alt="Bunny Wave" style={{ width: 80, height: 120 }} />
       </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
         {sections.map(s => (
@@ -269,7 +272,7 @@ export default function Homepage() {
             }}
           >
             {s.icon}
-            <Typography variant="subtitle1" sx={{ mt: 1, color: '#4E342E' }}>
+            <Typography variant="h3" sx={{ mt: 1, color: '#4E342E',fontSize: 30}}>
               {s.key}
             </Typography>
           </Box>

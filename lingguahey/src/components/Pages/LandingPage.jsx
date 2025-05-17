@@ -39,15 +39,15 @@ export default function LandingPage() {
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
+              padding: 5,
             }}
           >
             <img
               src={bunnyWave}
               alt="Bunny Wave"
-              style={{ width: 340, height: 450, paddingTop: 50 }}
+              style={{ width: 290, height: 450, paddingTop: 10 }}
             />
           </Box>
-            { /* Uncomment the following line to add a background image */}
             
           <Typography variant="h4" pt={2} color={textColor}>
             LingguaHEY
