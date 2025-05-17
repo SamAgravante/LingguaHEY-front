@@ -30,7 +30,8 @@ const allRoutes = [
   { label: "Contact Us", path: "/contact", roles: ["USER", "TEACHER", "ADMIN"] },
   { label: "Admin DB", path: "/admindashboard", roles: ["ADMIN"] },
   { label: "Teacher DB", path: "/teacherdashboard", roles: ["TEACHER", "ADMIN"] },
-  { label: "Logout", path: "/logout", roles: ["USER", "TEACHER", "ADMIN"] },
+  //{ label: "Logout", path: "/logout", roles: ["USER", "TEACHER", "ADMIN"] },
+  { label: "Logout", path: "/landingpage", roles: ["USER", "TEACHER", "ADMIN"] },
 ];
 
 const Layout = () => {
@@ -100,7 +101,7 @@ const Layout = () => {
   const handleRoute = (route) => {
     if (route.label === "Logout") {
       logout();
-      navigate("/login");
+      navigate("/");
     } else {
       navigate(route.path);
     }
