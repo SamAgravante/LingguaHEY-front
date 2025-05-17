@@ -19,20 +19,20 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { jwtDecode } from "jwt-decode";
-import API from "../../api";
+//import API from "../../api";
 
-const Classroom = () => {
+const LiveActClassroom = () => {
   const navigate = useNavigate();
-  const { classroomId } = useParams(); // Get classroomId from URL
+  const { classroomId } = useParams(); 
   const [activities, setActivities] = useState([]);
   const [newActivityName, setNewActivityName] = useState("");
-  const [selectedActivityType, setSelectedActivityType] = useState(""); // State for selected activity type
+  const [selectedActivityType, setSelectedActivityType] = useState(""); 
   const [error, setError] = useState("");
   const [touched, setTouched] = useState(false);
-  const [classroom, setClassroom] = useState(null); // State to store classroom data
-  const [loading, setLoading] = useState(true); // State to track loading
-  const [userRole, setUserRole] = useState(null); // State to store user role
-  const [students, setStudents] = useState([]); // State to store students
+  const [classroom, setClassroom] = useState(null); 
+  const [loading, setLoading] = useState(true); 
+  const [userRole, setUserRole] = useState(null);
+  const [students, setStudents] = useState([]);
 
   // Fetch user role
   useEffect(() => {
@@ -76,14 +76,33 @@ const Classroom = () => {
 
       fetchClassroom();
     }
-  }, [classroomId]);
+  }, [classroomId,API]);
 
   useEffect(() => {
     const fetchActivities = async () => {
       try {
-        // Use the correct API endpoint to get all activities for a classroom
-        const response = await API.get(`/api/lingguahey/activities/${classroomId}/activities`);
-        setActivities(response.data);
+        const response = await API.get(`/api/lingguahey/live-activities/${classroomId}/live-activities`);
+        const activitiesWithGameType = response.data.map((activity) => {
+        let mappedGameType = null;
+        switch (activity.activity_ActivityName) {
+          case "One Pic Four Words":
+            mappedGameType = "GAME1";
+            break;
+          case "Phrase Translation":
+            mappedGameType = "GAME2";
+            break;
+          case "Word Translation":
+            mappedGameType = "GAME3";
+            break;
+          default:
+            mappedGameType = activity.gameType || null;
+        }
+        return {
+          ...activity,
+          gameType: activity.gameType || mappedGameType,
+        };
+      });
+        setActivities(activitiesWithGameType);
       } catch (err) {
         console.error("Error fetching activities:", err.response?.data || err.message);
         setError("Failed to fetch activities. Please try again later.");
@@ -91,7 +110,7 @@ const Classroom = () => {
     };
 
     fetchActivities();
-  }, [classroomId]);
+  }, [classroomId, API]);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -121,21 +140,21 @@ const Classroom = () => {
           gameType = "GAME3";
           break;
         default:
-          gameType = null; // Or handle the default case as needed
+          gameType = null;
       }
-
-      // Use the correct API endpoint to create a new activity
-      const response = await API.post(`/api/lingguahey/activities/classrooms/${classroomId}`, {
+      const response = await API.post(`/api/lingguahey/live-activities/classrooms/${classroomId}`, {
         activityName: selectedActivityType,
         gameType: gameType,
         completed: false,
+        questions: [],
       });
       console.log("Activity created:", response.data);
-      setActivities((prevActivities) => [...prevActivities, response.data]);
+        const newActivity = {
+        ...response.data,
+        gameType: gameType,
+      };
+      setActivities((prevActivities) => [...prevActivities, newActivity]);
       setSelectedActivityType("");
-
-      // Redirect to the newly created activity
-      //navigate(`/classroom/${classroomId}/activities/${response.data.id}`);
     } catch (err) {
       console.error("Error creating activity:", err.response?.data || err.message);
       alert("Failed to create activity. Please try again.");
@@ -145,12 +164,12 @@ const Classroom = () => {
   const handleDelete = async (activityId) => {
     try {
       // Use the correct API endpoint to delete an activity
-      await API.delete(`/api/lingguahey/activities/${activityId}`,{
+      await API.delete(`/api/lingguahey/live-activities/${activityId}`,{
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setActivities(activities.filter((activity) => activity.activityId !== activityId));
+      setActivities(activities.filter((activity) => activity.activity_ActivityId !== activityId));
       //alert("Activity deleted successfully.");
     } catch (err) {
       console.error("Error deleting activity:", err.response?.data || err.message);
@@ -161,16 +180,23 @@ const Classroom = () => {
   const handleGoToActivity = (activity) => {
     console.log("activity:", activity); // ADDED
     let gameRoute = "";
-  
+
+    console.log("activity.gameType:", activity.gameType); // ADDED
+
+    if (!activity.gameType) {
+      console.warn("Game type is undefined for activity:", activity);
+      return;
+    }
+
     switch (activity.gameType) {
       case "GAME1":
-        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/one-pic-four-words`;
+        gameRoute = `/classroom/${classroomId}/live-activities/${activity.activity_ActivityId}/live-act-one-pic-four-words`;
         break;
       case "GAME2":
-        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/phrase-translation`;
+        gameRoute = `/classroom/${classroomId}/live-activities/${activity.activity_ActivityId}/live-act-phrase-translation`;
         break;
       case "GAME3":
-        gameRoute = `/classroom/${classroomId}/activities/${activity.activityId}/word-translation`;
+        gameRoute = `/classroom/${classroomId}/live-activities/${activity.activity_ActivityId}/live-act-word-translation`;
         break;
       default:
         console.warn("Unknown game type:", activity.gameType);
@@ -194,7 +220,7 @@ const Classroom = () => {
   return (
     <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E1F5FE", p: 2 }}>
       <Typography variant="h5" fontWeight="bold" color="black" mb={3}>
-        Activity Lessons for Classroom {classroomId}
+        Live Activities for Classroom {classroomId}
       </Typography>
       {error && (
         <Typography color="error" sx={{ mb: 2 }}>
@@ -251,9 +277,9 @@ const Classroom = () => {
                         ? "Phrase Translation"
                         : activity.gameType === "GAME3"
                         ? "Word Translation"
-                        : activity.activityName // Default to activityName if gameType doesn't match
+                        : activity.activity_ActivityName 
                     }`}
-                    secondary={`Activity ID: ${activity.activityId}`}
+                    secondary={`Activity ID: ${activity.activity_ActivityId}`}
                   />
                   <ListItemSecondaryAction>
                     <Button
@@ -264,7 +290,7 @@ const Classroom = () => {
                     >
                       Go To Activity
                     </Button>
-                    <IconButton edge="end" color="error" onClick={() => handleDelete(activity.activityId)}>
+                    <IconButton edge="end" color="error" onClick={() => handleDelete(activity.activity_ActivityId)}>
                       <DeleteIcon />
                     </IconButton>
                   </ListItemSecondaryAction>
@@ -309,4 +335,4 @@ const Classroom = () => {
   );
 };
 
-export default Classroom;
+export default LiveActClassroom;

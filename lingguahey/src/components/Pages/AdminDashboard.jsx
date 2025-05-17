@@ -353,7 +353,7 @@ const Dashboard = () => {
                         sx={{ mt: 2, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
                         onClick={() => handleClassroomClick(classroom)}
                       >
-                        View Classroom
+                        View Lessons
                       </Button>
                       {/*<Button
                         variant="contained"
@@ -495,7 +495,7 @@ const Dashboard = () => {
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" color="#4E342E">
-              Activities for {selectedClassroom?.name}
+              Lessons for {selectedClassroom?.name}
             </Typography>
             <IconButton onClick={handleCloseModal}>
               <CloseIcon />
@@ -506,7 +506,15 @@ const Dashboard = () => {
               <ListItem key={activity.activityId}>
                 <ListItemText
                   primary={activity.activityName}
-                  secondary={`Game Type: ${activity.gameType}`}
+                  secondary={`Game Type: ${
+                      activity.gameType === "GAME1"
+                        ? "One Pic Four Words"
+                        : activity.gameType === "GAME2"
+                        ? "Phrase Translation"
+                        : activity.gameType === "GAME3"
+                        ? "Word Translation"
+                        : activity.activityName // Default to activityName if gameType doesn't match
+                    }`}
                 />
                 <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteActivity(activity.activityId)}>
                   <DeleteIcon />

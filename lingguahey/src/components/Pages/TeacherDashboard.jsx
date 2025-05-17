@@ -17,6 +17,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Classroom from "./Classroom";
+import LiveActClassroom from "./Live-Activity-Classroom/L'AClassroom";
 
 const TeacherDashboard = () => {
   const [classroomName, setClassroomName] = useState(""); // State for new classroom name
@@ -201,10 +202,8 @@ const TeacherDashboard = () => {
         ...prev,
         { name: response.data.classroomName, id: response.data.classroomID },
       ]);
-      setClassroomName(""); // Clear the input field
-
-      // Navigate to the classroom page after creating the classroom
-      navigate(`/classroom/${response.data.classroomID}`);
+      setClassroomName(""); 
+      navigate(`/classroom/${response.data.classroomID}/`);
     } catch (error) {
       console.error("Failed to create classroom:", error);
     }
@@ -217,7 +216,7 @@ const TeacherDashboard = () => {
       alert("Classroom ID is invalid.");
       return;
     }
-    navigate(`/classroom/${classroomId}`);
+    navigate(`/classroom/${classroomId}/live-activities`);
   };
 
   const handleAddStudent = async (classroomId) => {
