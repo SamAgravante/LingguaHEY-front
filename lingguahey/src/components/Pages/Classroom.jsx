@@ -125,10 +125,16 @@ const Classroom = () => {
       }
 
       // Use the correct API endpoint to create a new activity
-      const response = await API.post(`/api/lingguahey/activities/classrooms/${classroomId}`, {
+      const response = await API.post(`/api/lingguahey/activities`, {
         activityName: selectedActivityType,
         gameType: gameType,
         completed: false,
+      }, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": `application/json`
+        }
       });
       console.log("Activity created:", response.data);
       setActivities((prevActivities) => [...prevActivities, response.data]);

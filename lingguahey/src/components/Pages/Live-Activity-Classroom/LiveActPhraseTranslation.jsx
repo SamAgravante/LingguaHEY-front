@@ -38,7 +38,7 @@ function PhraseTranslation() {
   const fetchQuestions = async () => {
     try {
       const res = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${activityId}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       setQuestions(res.data);
@@ -117,10 +117,16 @@ function PhraseTranslation() {
       // store the full choice sequence as the translation
       form.append("questionText", newChoices.join(" "));
       form.append("image", null);
+      form.append("gameType", "GAME2");
       const qRes = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/activities/${activityId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${activityId}`,
         form,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+        { headers: 
+          { 
+            "Authorization": `Bearer ${token}`, 
+            "Content-Type": `multipart/form-data` 
+          } 
+        }
       );
       const qId = qRes.data.questionId;
 
@@ -131,8 +137,18 @@ function PhraseTranslation() {
         const isCorr = correctChoices.includes(ch);
         await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${qId}`,
-          { choiceText: ch, choiceOrder: isCorr ? i + 1 : null, correct: isCorr },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { 
+            choiceText: ch, 
+            choiceOrder: isCorr ? i + 1 : null, 
+            correct: isCorr 
+          },
+          { 
+            headers: 
+            { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}` 
+            } 
+          }
         );
         if (isCorr) score++;
       }
@@ -140,7 +156,14 @@ function PhraseTranslation() {
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}`,
         null,
-        { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
+        { 
+          params: { scoreValue: score }, 
+          headers: 
+          { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}` 
+          } 
+        }
       );
 
       setNewMessage("Saved successfully!");

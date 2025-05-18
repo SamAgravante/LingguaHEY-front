@@ -8,13 +8,18 @@ import {
   Grid,
   Chip,
   IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
 export default function WordTranslation() {
-  const { liveActivityId, classroomId } = useParams();
+  const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
 
   // New question state
@@ -32,6 +37,11 @@ export default function WordTranslation() {
   const [editCorrect, setEditCorrect] = useState("");
   const [msgMap, setMsgMap] = useState({});
 
+  // Dialog state
+  const [openDialog, setOpenDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [selectedQuestionId, setSelectedQuestionId] = useState(null);
+
   const token = localStorage.getItem("token");
   const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -42,14 +52,14 @@ export default function WordTranslation() {
     async function fetchData() {
       if (!activityId) return;
       try {
-        const res = await api.get(`/api/lingguahey/questions/liveactivities/${liveActivityId}`);
+        const res = await api.get(`/api/lingguahey/questions/liveactivities/${activityId}`);
         setQuestions(res.data);
       } catch {
         setNewMessage("Failed to load questions.");
       }
     }
     fetchData();
-  }, [liveActivityId]);
+  }, [activityId]);
 
   // Add choice for new question
   const handleAddChoice = () => {
@@ -76,39 +86,54 @@ export default function WordTranslation() {
     setNewMessage("Saving new question...");
     try {
       const form = new FormData();
-      //form.append("liveActivityId", activityId);
       form.append("questionText", newWord);
       form.append("questionDescription", "");
       form.append("image", null);
       form.append("gameType", "GAME3");
       const { data } = await api.post(`/api/lingguahey/questions/liveactivities/${activityId}`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: 
+        { 
+          "Content-Type": "multipart/form-data",
+          "Authorization": `Bearer ${token}`  
+        },
       });
       const qId = data.questionId;
       let score = 0;
-      for (let c of newChoices) {
-        try {
-          const isCorr = c === correctAnswer;
-
-          await api.post(`/api/lingguahey/choices/questions/${qId}`, JSON.stringify({ choiceText: c, correct: isCorr }), {
+      for (let i = 0; i < newChoices.length; i++) {
+        const c = newChoices[i];
+        const isCorr = c === correctAnswer;
+        await api.post(
+          `/api/lingguahey/choices/questions/${qId}`,
+          {
+            choiceText: c,
+            choiceOrder: i,
+            questionId: qId,
+            correct: isCorr,
+          },
+          {
             headers: {
-              'Content-Type': 'application/json' // Specify JSON content type
-            }
-          });
-          if (isCorr) score = 1;
-        } catch (choiceError) {
-          console.error("Error saving choice:", c, choiceError);
-          setNewMessage(`Failed to save choice: ${c}`);
-          return; // Stop saving if one choice fails
-        }
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+          }
+        );
+        if (isCorr) score = 1;
       }
-      await api.post(`/api/lingguahey/scores/questions/${qId}`, null, { params: { scoreValue: score }, 
-        headers: {
-          'Content-Type': 'application/json' // Specify JSON content type
+      await api.post(
+        `/api/lingguahey/scores/questions/${qId}`,
+        null,
+        {
+          params: { scoreValue: score },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }
         }
-       });
+      );
       setNewMessage("Saved successfully!");
-      setNewWord(""); setNewChoices([]); setCorrectAnswer("");
+      setNewWord("");
+      setNewChoices([]);
+      setCorrectAnswer("");
       const res = await api.get(`/api/lingguahey/questions/liveactivities/${activityId}`);
       setQuestions(res.data);
     } catch (error) {
@@ -154,21 +179,39 @@ export default function WordTranslation() {
     }
   };
 
-  const handleDelete = async id => {
-    if (!window.confirm("Delete this question?")) return;
-    setMsgMap(m => ({ ...m, [id]: "Deleting..." }));
+  // Delete existing question
+  const openDeleteConfirmation = (id) => {
+    setSelectedQuestionId(id);
+    setDialogMessage("Are you sure you want to delete this question?");
+    setOpenDialog(true);
+  };
+
+  const closeDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedQuestionId) return;
+
+    setMsgMap(m => ({ ...m, [selectedQuestionId]: "Deleting..." }));
     try {
-      await api.delete(`/api/lingguahey/questions/${id}`);
-      setQuestions(questions.filter(q => q.questionId !== id));
-      setMsgMap(m => ({ ...m, [id]: "Deleted." }));
+      await api.delete(`/api/lingguahey/questions/${selectedQuestionId}`);
+      setQuestions(questions.filter(q => q.questionId !== selectedQuestionId));
+      setMsgMap(m => ({ ...m, [selectedQuestionId]: "Deleted." }));
     } catch {
-      setMsgMap(m => ({ ...m, [id]: "Delete failed." }));
+      setMsgMap(m => ({ ...m, [selectedQuestionId]: "Delete failed." }));
+    } finally {
+      closeDialog();
+      setSelectedQuestionId(null);
     }
   };
 
+  console.log("Frontend token:", token);
+  console.log("Decoded:", JSON.parse(atob(token.split('.')[1])));
+
   return (
     <Grid container justifyContent="center" sx={{ minHeight: '100vh', bgcolor: '#18191B', p: 2 }}>
-      <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto' }}>
+      <Box sx={{ width: '100%', maxWidth: 999, mx: 'auto', overflowY: 'auto', maxHeight: '90vh', p: 4, borderRadius: 3, bgcolor: '#121212' }}>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" fontWeight="bold" color="#B3E5FC">Word Translation</Typography>
@@ -233,14 +276,14 @@ export default function WordTranslation() {
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                   {editingId === q.questionId ? (
-                    <>  
+                    <>
                       <Button variant="contained" onClick={handleSaveEdit} sx={{ bgcolor: '#4CAF50', fontWeight: 'bold' }}>Save</Button>
                       <Button variant="contained" color="error" onClick={() => setEditingId(null)} sx={{ bgcolor: '#E57373', fontWeight: 'bold' }}>Cancel</Button>
                     </>
                   ) : (
-                    <>  
+                    <>
                       <Button variant="contained" onClick={() => startEdit(q)} sx={{ bgcolor: '#81D4FA', color: '#000', fontWeight: 'bold' }}>Edit</Button>
-                      <IconButton onClick={() => handleDelete(q.questionId)} sx={{ bgcolor: '#E57373', color: '#fff' }}><DeleteIcon /></IconButton>
+                      <IconButton onClick={() => openDeleteConfirmation(q.questionId)} sx={{ bgcolor: '#E57373', color: '#fff' }}><DeleteIcon /></IconButton>
                     </>
                   )}
                 </Box>
@@ -330,6 +373,29 @@ export default function WordTranslation() {
           )}
         </Paper>
       </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={closeDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Confirm Delete"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            {dialogMessage}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} color="primary" autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 }
