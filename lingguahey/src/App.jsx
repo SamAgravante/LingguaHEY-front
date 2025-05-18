@@ -21,6 +21,7 @@ import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/L'AClas
 import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
 import LiveActPhraseTranslation from "./components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
 import LiveActWordTranslation from "./components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
+import LiveActivityGame from "./components/Pages/LiveActivityGame";
 
 function App() {
   const { token } = useAuth();
@@ -34,6 +35,7 @@ function App() {
 
       {/* Protected routes */}
       <Route element={token ? <Layout /> : <Navigate to="/login" replace />}>
+        <Route path = "/liveactivity" element={<LiveActivityGame />} />
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/profilepage" element={<ProfilePage />} />
         <Route path="/contact" element={<Contact />} />
