@@ -9,6 +9,7 @@ import {
   Fade,
   Backdrop,
   IconButton,
+  LinearProgress,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -26,6 +27,17 @@ import { useAuth } from '../../contexts/AuthContext';
 import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
 import { MusicContext } from '../../contexts/MusicContext';
+import { styled } from '@mui/system';
+
+const PastelProgress = styled(LinearProgress)(() => ({
+  height: '12px',
+  borderRadius: '8px',
+  backgroundColor: '#EAEAEA',
+  '& .MuiLinearProgress-bar': {
+    background: 'linear-gradient(to right, #BAFFC9, #FFB3BA)',
+    borderRadius: '8px',
+  },
+}));
 
 
 export default function Homepage() {
@@ -39,6 +51,8 @@ export default function Homepage() {
   const [userDetails, setUserDetails] = useState({});
   const [userActivities, setUserActivities] = useState([]);
   const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const [progressVocab, setProgressVocab] = useState(0);
+  const [progressGrammar, setProgressGrammar] = useState(0);
 
   // Decode token → user
   useEffect(() => {
@@ -58,6 +72,9 @@ export default function Homepage() {
         setClassroom(classResp.data.classroomID);
         const resp = await API.get(`/users/${user.userId}`);
         setUserDetails(resp.data);
+        const prog = await API.get(`/activities/${user.userId}/progress`);
+        setProgressVocab(prog.data.gameSet1Progress * 100);
+        setProgressGrammar(prog.data.gameSet2Progress * 100);
         await fetchUserActivities();
       } catch (err) {
         console.error(err);
@@ -139,7 +156,7 @@ export default function Homepage() {
         : [];
 
       return (
-        <Stack spacing={3} sx={{ mt: 4, px: 2 }}>
+        <Stack spacing={3} sx={{ mt: 4, px: 2, justifyContent: 'center', alignItems: 'center' }}>
           {list.map(a => {
             const isCompleted = userActivities.some(
               ua => ua.activity_ActivityId === a.activityId && ua.completed
@@ -152,7 +169,7 @@ export default function Homepage() {
                   backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
                   borderRadius: 4,
                   p: 3,
-                  width: '95%',
+                  width: '20%',
                   boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                   cursor: 'pointer',
                   '&:hover': { transform: 'scale(1.02)' }
@@ -194,9 +211,9 @@ export default function Homepage() {
   };
 
   const sections = [
-    { key: 'Vocabulary', icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />, bg: '#FFEBEE' },
-    { key: 'Grammar',    icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />, bg: '#E3F2FD' },
-    { key: 'Activity',   icon: <SportsEsportsIcon sx={{ fontSize: 48, color: '#388E3C' }} />, bg: '#E8F5E9' },
+    { key: 'Vocabulary', icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />, bg: '#FFEBEE', progress: progressVocab },
+    { key: 'Grammar',    icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />, bg: '#E3F2FD', progress: progressGrammar },
+    { key: 'Activity',   icon: <SportsEsportsIcon sx={{ fontSize: 48, color: '#388E3C' }} />, bg: '#E8F5E9', progress: 0 },
   ];
 
   return (
@@ -239,6 +256,20 @@ export default function Homepage() {
             <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
               {s.key}
             </Typography>
+            {s.key !== 'Activity' && (
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <PastelProgress 
+                  variant="determinate" 
+                  value={s.progress} 
+                  sx={{width:'100%'}}
+                  />
+                  <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
+                    {s.progress.toFixed(0)}% Completed
+                  </Typography>
+              </Box>
+            </Box>
+            )}
           </Box>
         ))}
       </Stack>
