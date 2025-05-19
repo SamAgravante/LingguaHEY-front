@@ -22,6 +22,7 @@ import API from '../../api';
 import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
 import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
 import speechBubble from '../../assets/images/objects/speech-bubble.png';
+import CloseIcon from '@mui/icons-material/Close';
 
 // Pastel color palette
 const pastels = [
@@ -268,13 +269,29 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
             <Chip
               key={id}
               label={choice.choiceText}
+              onDelete={() => handleRemove(id)}
               onClick={() => handleRemove(id)}
-              sx={{ m: 0.5, 
-                backgroundColor: '#FFECB3', 
-                color: '#2E2E34', 
-                fontSize: '3rem',
+              deleteIcon={
+                <CloseIcon
+                  sx={{
+                    color: '#bb998f',
+                    fontSize: 28,
+                    '&:hover': { color: '#E6bbad' },
+                  }}
+                />
+              }
+              sx={{
+                m: 0.5,
+                backgroundColor: '#FFECB3',
+                color: '#2E2E34',
+                fontSize: '2rem',
                 minHeight: 70,
-                minWidth: 50, 
+                minWidth: 50,
+                paddingRight: '8px',
+                '& .MuiChip-label': {
+                  fontSize: '2rem',
+                  paddingRight: '6px',
+                },
               }}
             />
           );
