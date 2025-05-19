@@ -24,10 +24,11 @@ import speechBubble from '../../assets/images/objects/speech-bubble.png';
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
-  backgroundSize: 'cover',
+  backgroundSize: 'contain',
+  backgroundRepeat: 'no-repeat',
   backgroundPosition: 'center',
   padding: '24px',
-  minHeight: '800px',
+  minHeight: '720px',
   fontFamily: 'Comic Sans MS, sans-serif',
   borderRadius: '20px',
 
@@ -175,8 +176,8 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
           }} />
 
           <Box sx={{
-            height: '190px',
-            width: '300px',     // explicitly halved height
+            height: '180px',
+            width: '250px',
             minWidth: 100,
             maxWidth: 400,
             backgroundImage: `url(${speechBubble})`,
@@ -194,6 +195,7 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
                     textAlign: 'center',
                     color: '#2E2E34',
                     maxWidth: '80%',
+                    marginBottom: 4,
                   }}
                 >
                   Can you tell me what is this?

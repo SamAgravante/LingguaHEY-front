@@ -53,6 +53,7 @@ export default function Homepage() {
   const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
   const [progressVocab, setProgressVocab] = useState(0);
   const [progressGrammar, setProgressGrammar] = useState(0);
+  const [secVisibility, setSecVisibility] = useState(true);
 
   // Decode token → user
   useEffect(() => {
@@ -98,7 +99,7 @@ export default function Homepage() {
           setActivities([]);
         });
     } else {
-      API.get(`/activities/${classroom}/activities`)
+      API.get(`/activities`)
         .then(res => setActivities(res.data))
         .catch(() => {
           setActivities(
@@ -123,6 +124,7 @@ export default function Homepage() {
     try {
       const resp = await API.get(`activities/users/${user.userId}`);
       setUserActivities(resp.data);
+      setSecVisibility(true);
     } catch (err) {
       console.error('Failed to fetch user activities:', err);
     }
@@ -143,6 +145,7 @@ export default function Homepage() {
   };
 
   const startActivity = act => {
+    setSecVisibility(false);
     setActivityMode(true);
     setCurrent(act);
   };
@@ -240,7 +243,8 @@ export default function Homepage() {
                         backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
                         borderRadius: 4,
                         p: 3,
-                        width: '150%',           // narrower so it’s centered neat
+                        width: '80%',
+                        paddingBottom: 2,
                         boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                         cursor: 'pointer',
                         '&:hover': { transform: 'scale(1.02)' },
@@ -404,6 +408,7 @@ export default function Homepage() {
               width: '98vw',
               height: '100vh',
               backgroundImage: `url(${modalBg})`,
+              backroundRepeat: 'no-repeat',
               p: 3,
               overflowY: 'auto',
             }}
@@ -416,15 +421,35 @@ export default function Homepage() {
                 <CloseIcon />
               </IconButton>
             </Stack>
-            <Typography variant="h2" sx={{ textAlign: 'center',}}>
+            <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
               {section} Activities!
             </Typography>
             <Box
               sx={{
                 flexGrow: 1,
+                maxHeight: '80vh',
                 overflowY: 'auto',
-                display: 'flex',
+                // Center contents horizontally
+                //display: 'flex',
                 justifyContent: 'center',
+                // WebKit scrollbar styling
+                '&::-webkit-scrollbar': {
+                  width: '25px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#FFF0F5', // pastel lavender track
+                  borderRadius: '8px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#F5C0E7', // pastel pink thumb
+                  borderRadius: '8px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: '#E79FD9', // slightly darker on hover
+                },
+                // Firefox scrollbar styling
+                scrollbarColor: '#F5C0E7 #FFF0F5',
+                scrollbarWidth: 'thick',
               }}
             >
               {renderBody()}
