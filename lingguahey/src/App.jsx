@@ -14,9 +14,14 @@ import Subscription from "./components/Pages/Subscription";
 import AdminDashboard from "./components/Pages/AdminDashboard";
 import TeacherDashboard from "./components/Pages/TeacherDashboard";
 import Classroom from "./components/Pages/Classroom";
-import OnePicFourWords from "./components/Pages/Games/Activities/OnePicFourWords";
-import PhraseTranslation from "./components/Pages/Games/Activities/PhraseTranslation";
-import WordTranslation from "./components/Pages/Games/Activities/WordTranslation";
+import OnePicFourWords from "./components/Pages/Games/GameCreation/OnePicFourWords";
+import PhraseTranslation from "./components/Pages/Games/GameCreation/PhraseTranslation";
+import WordTranslation from "./components/Pages/Games/GameCreation/WordTranslation";
+import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/L'AClassroom";
+import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
+import LiveActPhraseTranslation from "./components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
+import LiveActWordTranslation from "./components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
+import LiveActivityGame from "./components/Pages/LiveActivityGame";
 
 function App() {
   const { token } = useAuth();
@@ -30,6 +35,7 @@ function App() {
 
       {/* Protected routes */}
       <Route element={token ? <Layout /> : <Navigate to="/login" replace />}>
+        <Route path = "/liveactivity" element={<LiveActivityGame />} />
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/profilepage" element={<ProfilePage />} />
         <Route path="/contact" element={<Contact />} />
@@ -48,6 +54,25 @@ function App() {
         <Route
           path="/classroom/:classroomId/activities/:activityId/word-translation"
           element={<WordTranslation />}
+        />
+
+
+        {/* Live Activities */}
+        <Route
+          path="/classroom/:classroomId/live-activities"
+          element={<LiveActClassroom />}
+        />
+        <Route
+          path="/classroom/:classroomId/live-activities/:activityId/live-act-one-pic-four-words"
+          element={<LiveActOnePicFourWords />}
+        />
+        <Route
+          path="/classroom/:classroomId/live-activities/:activityId/live-act-phrase-translation"
+          element={<LiveActPhraseTranslation />}
+        />
+        <Route
+          path="/classroom/:classroomId/live-activities/:activityId/live-act-word-translation"
+          element={<LiveActWordTranslation />}
         />
       </Route>
     </Routes>

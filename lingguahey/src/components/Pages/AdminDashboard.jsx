@@ -197,6 +197,7 @@ const Dashboard = () => {
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": `application/json`
         },
       });
       setUsers((prev) => prev.filter((user) => user.userId !== userId)); // Remove the classroom from the state
@@ -316,7 +317,7 @@ const Dashboard = () => {
           <Typography color="#4E342E" mb={2} variant="h6">
             Classroom Data
           </Typography>
-          <Box mt={4} sx={{ maxHeight: "340px", width: "100%", maxWidth: 800, overflowY: "auto" }}>
+          <Box mt={4} sx={{ maxHeight: "340px", width: "100%", maxWidth: 670, overflowY: "auto" }}>
           <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
           <Grid container spacing={2}>
             {classrooms.length > 0 ? (
@@ -335,7 +336,7 @@ const Dashboard = () => {
                       There are
                     </Typography>
                     <Typography fontWeight="bold" variant="h5" color="#4E342E">
-                      {classroom.count}
+                      {classroom.activities ? classroom.activities.length : 0}
                     </Typography>
                     <Typography variant="body2" color="#6D4C41">
                       Activities in {classroom.name}
@@ -353,7 +354,7 @@ const Dashboard = () => {
                         sx={{ mt: 2, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
                         onClick={() => handleClassroomClick(classroom)}
                       >
-                        View Classroom
+                        View Lessons
                       </Button>
                       {/*<Button
                         variant="contained"
@@ -471,7 +472,7 @@ const Dashboard = () => {
                   />
                   <ListItemSecondaryAction>
                     <IconButton edge="end" color="error" onClick={() => handleDelete(user.userId)}>
-                      <DeleteIcon />
+                      <CloseIcon />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
@@ -495,7 +496,7 @@ const Dashboard = () => {
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" color="#4E342E">
-              Activities for {selectedClassroom?.name}
+              Lessons for {selectedClassroom?.name}
             </Typography>
             <IconButton onClick={handleCloseModal}>
               <CloseIcon />
@@ -506,7 +507,15 @@ const Dashboard = () => {
               <ListItem key={activity.activityId}>
                 <ListItemText
                   primary={activity.activityName}
-                  secondary={`Game Type: ${activity.gameType}`}
+                  secondary={`Game Type: ${
+                      activity.gameType === "GAME1"
+                        ? "One Pic Four Words"
+                        : activity.gameType === "GAME2"
+                        ? "Phrase Translation"
+                        : activity.gameType === "GAME3"
+                        ? "Word Translation"
+                        : activity.activityName // Default to activityName if gameType doesn't match
+                    }`}
                 />
                 <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteActivity(activity.activityId)}>
                   <DeleteIcon />

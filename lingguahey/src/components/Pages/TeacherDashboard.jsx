@@ -11,12 +11,19 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CloseIcon from "@mui/icons-material/Close";
 import Classroom from "./Classroom";
+import LiveActClassroom from "./Live-Activity-Classroom/L'AClassroom";
 
 const TeacherDashboard = () => {
   const [classroomName, setClassroomName] = useState(""); // State for new classroom name
@@ -34,6 +41,81 @@ const TeacherDashboard = () => {
   const [username, setUsername] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState("");
+
+  // State for dialogs
+  const [openDialog, setOpenDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [selectedClassroomId, setSelectedClassroomId] = useState(null);
+  const [studentId, setStudentId] = useState(""); // State for student ID input
+
+  // Function to open the dialog for adding a student
+  const openAddStudentDialog = (classroomId) => {
+    setSelectedClassroomId(classroomId);
+    setDialogMessage("Enter the student's ID:");
+    setOpenDialog(true);
+  };
+
+  // Function to close the dialog
+  const closeDialog = () => {
+    setOpenDialog(false);
+    setDialogMessage("");
+    setStudentId(""); // Clear the student ID input
+  };
+
+  // Function to handle the confirmation of adding a student
+  const handleConfirmAddStudent = async () => {
+    if (!studentId) {
+      setDialogMessage("Student ID is required.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${selectedClassroomId}/students/${studentId}`,
+        {}, // Empty body for POST request
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Student added to classroom:", response.data);
+      setDialogMessage("Student added to classroom successfully!");
+    } catch (error) {
+      console.error("Failed to add student to classroom:", error);
+      setDialogMessage("Failed to add student to classroom. Please try again.");
+    } finally {
+      closeDialog();
+    }
+  };
+
+  // Function to open the dialog for deleting a classroom
+  const openConfirmationDialog = (classroomId) => {
+    setSelectedClassroomId(classroomId);
+    setDialogMessage("Are you sure you want to delete this classroom?");
+    setOpenDialog(true);
+  };
+
+  // Function to handle the confirmation of classroom deletion
+  const handleConfirmDelete = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${selectedClassroomId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setClassrooms((prev) => prev.filter((classroom) => classroom.id !== selectedClassroomId)); // Remove the classroom from the state
+      setDialogMessage("Classroom deleted successfully.");
+    } catch (error) {
+      console.error("Failed to delete classroom:", error);
+      setDialogMessage("Failed to delete classroom. Please try again.");
+    } finally {
+      closeDialog();
+    }
+  };
 
   // Fetch user data and role
   useEffect(() => {
@@ -201,10 +283,8 @@ const TeacherDashboard = () => {
         ...prev,
         { name: response.data.classroomName, id: response.data.classroomID },
       ]);
-      setClassroomName(""); // Clear the input field
-
-      // Navigate to the classroom page after creating the classroom
-      navigate(`/classroom/${response.data.classroomID}`);
+      setClassroomName("");
+      navigate(`/classroom/${response.data.classroomID}/live-activities`); // Redirect to the classroom page
     } catch (error) {
       console.error("Failed to create classroom:", error);
     }
@@ -217,41 +297,15 @@ const TeacherDashboard = () => {
       alert("Classroom ID is invalid.");
       return;
     }
-    navigate(`/classroom/${classroomId}`);
+    navigate(`/classroom/${classroomId}/live-activities`);
   };
 
-  const handleAddStudent = async (classroomId) => {
-    console.log("Adding student to classroom with ID:", classroomId);
-    if (!classroomId) {
-      alert("Classroom ID is invalid.");
-      return;
-    }
-    try {
-      const token = localStorage.getItem("token");
-      // Prompt the user for the student's ID
-      const studentId = prompt("Enter the student's ID:");
-      if (!studentId) {
-        alert("Student ID is required.");
-        return;
-      }
+  const handleAddStudent = (classroomId) => {
+    openAddStudentDialog(classroomId);
+  };
 
-      // Make the API call to add the student to the classroom
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroomId}/students/${studentId}`,
-        {}, // Empty body for POST request
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      console.log("Student added to classroom:", response.data);
-      alert("Student added to classroom successfully!");
-    } catch (error) {
-      console.error("Failed to add student to classroom:", error);
-      alert("Failed to add student to classroom. Please try again.");
-    }
+  const handleDeleteClassroom = (classroomId) => {
+    openConfirmationDialog(classroomId);
   };
 
   return (
@@ -282,48 +336,60 @@ const TeacherDashboard = () => {
       </Box>
 
       {/* View Classrooms Section */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2, color: "#6D4C41" }}>
-          Your Classrooms
-        </Typography>
-        <Grid container spacing={2}>
-          {classrooms.length > 0 ? (
-            classrooms.map((classroom, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    textAlign: "center",
-                    borderRadius: 2,
-                    boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  <Typography variant="h6" color="#4E342E">
-                    {classroom.name || "Unnamed Classroom"}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 2, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
-                    onClick={() => handleViewClassroom(classroom.id)} // Pass the classroom ID
-                  >
-                    View Classroom
-                  </Button>
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 2, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
-                    onClick={() => handleAddStudent(classroom.id)} // Pass the classroom ID
-                  >
-                    Add Student
-                  </Button>
-                </Paper>
-              </Grid>
-            ))
-          ) : (
-            <Typography color="#4E342E" sx={{ mt: 2, textAlign: "center" }}>
-              No classrooms found.
+      <Box mt={4} sx={{ maxHeight: "340px", width: "100%", overflowY: "auto" }}>
+        <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2, color: "#6D4C41" }}>
+              Your Classrooms
             </Typography>
-          )}
-        </Grid>
+            <Grid container spacing={2}>
+              {classrooms.length > 0 ? (
+                classrooms.map((classroom, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Paper
+                      sx={{
+                        p: 2,
+                        textAlign: "center",
+                        borderRadius: 2,
+                        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                        position: "relative",
+                      }}
+                    >
+                      <IconButton
+                        aria-label="delete"
+                        onClick={() => handleDeleteClassroom(classroom.id)}
+                        sx={{ position: "absolute", top: 5, right: 5, color: `grey[500]` }}
+                      >
+                        <CloseIcon />
+                      </IconButton>
+                      <Typography variant="h6" color="#4E342E">
+                        {classroom.name || "Unnamed Classroom"}
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        sx={{ mt: 2, color: "black", marginRight: 1, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
+                        onClick={() => handleViewClassroom(classroom.id)} // Pass the classroom ID
+                      >
+                        View Classroom
+                      </Button>
+                      <Button
+                        variant="contained"
+                        sx={{ mt: 2, color: "black", backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
+                        onClick={() => handleAddStudent(classroom.id)} // Pass the classroom ID
+                      >
+                        Add Student
+                      </Button>
+                    </Paper>
+                  </Grid>
+                ))
+              ) : (
+                <Typography color="#4E342E" sx={{ mt: 2, textAlign: "center" }}>
+                  No classrooms found.
+                </Typography>
+              )}
+            </Grid>
+          </Box>
+        </Paper>
       </Box>
 
       {/* View Students Section */}
@@ -356,6 +422,40 @@ const TeacherDashboard = () => {
           </Box>
         </Paper>
       </Box>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={closeDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Add Student"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            {dialogMessage}
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="studentId"
+            label="Student ID"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmAddStudent} color="primary" autoFocus>
+            Add Student
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 };

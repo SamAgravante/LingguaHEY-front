@@ -125,10 +125,16 @@ const Classroom = () => {
       }
 
       // Use the correct API endpoint to create a new activity
-      const response = await API.post(`/api/lingguahey/activities/classrooms/${classroomId}`, {
+      const response = await API.post(`/api/lingguahey/activities`, {
         activityName: selectedActivityType,
         gameType: gameType,
         completed: false,
+      }, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": `application/json`
+        }
       });
       console.log("Activity created:", response.data);
       setActivities((prevActivities) => [...prevActivities, response.data]);
@@ -194,7 +200,7 @@ const Classroom = () => {
   return (
     <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E1F5FE", p: 2 }}>
       <Typography variant="h5" fontWeight="bold" color="black" mb={3}>
-        Activities for Classroom {classroomId}
+        Activity Lessons for Classroom {classroomId}
       </Typography>
       {error && (
         <Typography color="error" sx={{ mb: 2 }}>
