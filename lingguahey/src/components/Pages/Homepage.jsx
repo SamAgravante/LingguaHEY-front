@@ -1,4 +1,4 @@
-// src/components/Homepage.jsx
+// src/components/Pages/Homepage.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Grid,
@@ -29,6 +29,7 @@ import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png'
 import { MusicContext } from '../../contexts/MusicContext';
 import { styled } from '@mui/system';
 
+
 const PastelProgress = styled(LinearProgress)(() => ({
   height: '12px',
   borderRadius: '8px',
@@ -38,7 +39,6 @@ const PastelProgress = styled(LinearProgress)(() => ({
     borderRadius: '8px',
   },
 }));
-
 
 export default function Homepage() {
   const { token } = useAuth();
@@ -57,58 +57,78 @@ export default function Homepage() {
   // Decode token → user
   useEffect(() => {
     if (!token) return;
-    const decoded = getUserFromToken();
+    const decoded = getUserFromToken(token);
     if (decoded?.userId) setUser(decoded);
   }, [token]);
 
-  // Fetch classroom & initial activities
+  // Fetch classroom, user details, progress
   useEffect(() => {
     if (!user) return;
     let isMounted = true;
-    const fetchClassAndActivities = async () => {
+    (async () => {
       try {
         const classResp = await API.get(`classrooms/user/${user.userId}`);
         if (!isMounted) return;
         setClassroom(classResp.data.classroomID);
-        const resp = await API.get(`/users/${user.userId}`);
-        setUserDetails(resp.data);
+
+        const userResp = await API.get(`/users/${user.userId}`);
+        setUserDetails(userResp.data);
+
         const prog = await API.get(`/activities/${user.userId}/progress`);
         setProgressVocab(prog.data.gameSet1Progress * 100);
         setProgressGrammar(prog.data.gameSet2Progress * 100);
+
         await fetchUserActivities();
       } catch (err) {
         console.error(err);
       }
-    };
-    fetchClassAndActivities();
+    })();
     return () => { isMounted = false; };
   }, [user]);
 
-  // Load activities for classroom
+  // Load activities whenever section changes
   useEffect(() => {
-    if (!classroom) return;
-    API.get(`activities/${classroom}/activities`)
-      .then(res => setActivities(res.data))
-      .catch(() => {
-        setActivities(mockQuestions.map(q => ({
-          activityId: q.questionId,
-          activityName: q.questionDescription || q.questionText,
-          gameType: q.questionDescription ? 'GAME2' : q.questionImage ? 'GAME1' : 'GAME3'
-        })));
-      });
-  }, [classroom]);
+    if (!classroom || !section) return;
+
+    if (section === 'Activity') {
+      API.get(`/live-activities/${classroom}/live-activities`)
+        .then(res => setActivities(res.data))
+        .catch(err => {
+          console.error('Failed to fetch live activities:', err);
+          setActivities([]);
+        });
+    } else {
+      API.get(`/activities/${classroom}/activities`)
+        .then(res => setActivities(res.data))
+        .catch(() => {
+          setActivities(
+            mockQuestions.map(q => ({
+              activityId: q.questionId,
+              topicNumber: q.topicNumber || 0,
+              lessonNumber: q.lessonNumber || 0,
+              lessonName: q.lessonName || '',
+              activityName: q.questionDescription || q.questionText,
+              gameType: q.questionDescription
+                ? 'GAME2'
+                : q.questionImage
+                  ? 'GAME1'
+                  : 'GAME3',
+            }))
+          );
+        });
+    }
+  }, [classroom, section]);
 
   const fetchUserActivities = async () => {
     try {
-      const actResp = await API.get(`activities/users/${user.userId}`);
-      setUserActivities(actResp.data);
+      const resp = await API.get(`activities/users/${user.userId}`);
+      setUserActivities(resp.data);
     } catch (err) {
       console.error('Failed to fetch user activities:', err);
     }
   };
 
   const openModal = async key => {
-    // Always open modal, even for Activity
     await fetchUserActivities();
     setSection(key);
     setCurrent(null);
@@ -133,87 +153,180 @@ export default function Homepage() {
     setActivityMode(false);
   };
 
-  const handleBackClick = () => {
-    return current ? backToList() : closeModal();
-  };
+  const handleBackClick = () => (current ? backToList() : closeModal());
 
-  const renderBody = () => {
-    // If no specific game instance selected
+  // ---------------- renderBody ----------------
+  function renderBody() {
+    // 1) Before selecting any item
     if (!current) {
+      // If in Activity section → multiplayer lobby
       if (section === 'Activity') {
         return (
-          <Box sx={{ mt: 4, px: 2 }}>
-            <LiveActivityGame />
-          </Box>
+          <LiveActivityGame
+            activityId={classroom}
+            userId={user?.userId}
+            onStarted={closeModal}
+          />
         );
       }
-      // Vocabulary / Grammar lists
-      const list =
+
+      // Otherwise, Vocabulary/Grammar lists
+      const flatList =
         section === 'Vocabulary'
-          ? activities.filter(a => ['GAME1','GAME3'].includes(a.gameType))
-        : section === 'Grammar'
-          ? activities.filter(a => a.gameType === 'GAME2')
-        : [];
+          ? activities.filter(a => ['GAME1', 'GAME3'].includes(a.gameType))
+          : activities.filter(a => a.gameType === 'GAME2');
+
+      // Group by lessonNumber + lessonName
+      const lessonsMap = flatList.reduce((acc, act) => {
+        const key = `${act.lessonNumber}__${act.lessonName}`;
+        if (!acc[key]) {
+          acc[key] = {
+            lessonNumber: act.lessonNumber,
+            lessonName: act.lessonName,
+            topics: [],
+          };
+        }
+        acc[key].topics.push(act);
+        return acc;
+      }, {});
+
+      // Convert to array and sort by lessonNumber
+      const groupedLessons = Object.values(lessonsMap)
+        .sort((a, b) => a.lessonNumber - b.lessonNumber)
+        .map(lesson => ({
+          ...lesson,
+          topics: lesson.topics.sort((x, y) => x.topicNumber - y.topicNumber),
+        }));
 
       return (
-        <Stack spacing={3} sx={{ mt: 4, px: 2, justifyContent: 'center', alignItems: 'center' }}>
-          {list.map(a => {
-            const isCompleted = userActivities.some(
-              ua => ua.activity_ActivityId === a.activityId && ua.completed
-            );
-            return (
-              <Box
-                key={a.activityId}
-                onClick={() => startActivity(a)}
-                sx={{
-                  backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
-                  borderRadius: 4,
-                  p: 3,
-                  width: '20%',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                  '&:hover': { transform: 'scale(1.02)' }
-                }}
+        <Stack
+          spacing={3}
+          sx={{
+            mt: 4,
+            px: 2,
+            justifyContent: 'center',
+            alignItems: 'center', // center each lesson horizontally
+          }}
+        >
+          {groupedLessons.map(lesson => (
+            <Box 
+              key={`${lesson.lessonNumber}-${lesson.lessonName}`} 
+              sx={{ width: '100%', maxWidth: 800 }} // limit width, center via Stack
+            >
+              {/* Lesson Header */}
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 'bold', mb: 1, textAlign: 'center' }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {a.activityName}
-                </Typography>
-                <Typography variant="body2">
-                  {a.gameType === 'GAME1'
-                    ? 'One Pic Four Words'
-                    : a.gameType === 'GAME2'
-                    ? 'Phrase Translation'
-                    : 'Word Translation'}
-                </Typography>
-              </Box>
-            );
-          })}
+                Lesson {lesson.lessonNumber}: {lesson.lessonName}
+              </Typography>
+
+              {/* Vertical list of activity cards, centered */}
+              <Stack
+                direction="column"
+                spacing={2}
+                sx={{ alignItems: 'center' }}
+              >
+                {lesson.topics.map(act => {
+                  const isCompleted = userActivities.some(
+                    ua =>
+                      ua.activity_ActivityId === act.activityId && ua.completed
+                  );
+                  return (
+                    <Box
+                      key={act.activityId}
+                      onClick={() => startActivity(act)}
+                      sx={{
+                        backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
+                        borderRadius: 4,
+                        p: 3,
+                        width: '100%',           // narrower so it’s centered neat
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                        cursor: 'pointer',
+                        '&:hover': { transform: 'scale(1.02)' },
+                      }}
+                    >
+                      {/* Display activityName & game mode */}
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {act.activityName}
+                      </Typography>
+                      <Typography variant="body2">
+                        {act.gameType === 'GAME1'
+                          ? 'One Pic Four Words'
+                          : act.gameType === 'GAME2'
+                          ? 'Phrase Translation'
+                          : 'Word Translation'}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Box>
+          ))}
         </Stack>
       );
     }
 
-    // If inside a specific activity
+    // 2) Once an item is selected
     const isCompleted = userActivities.some(
       ua => ua.activity_ActivityId === current.activityId && ua.completed
     );
 
-    if (section === 'Grammar') {
-      return <PhraseTranslation activityId={current.activityId} onBack={backToList} isCompleted={isCompleted} />;
-    }
-
-    if (section === 'Vocabulary') {
-      return current.gameType === 'GAME1'
-        ? <OnePicFourWord activityId={current.activityId} onBack={backToList} isCompleted={isCompleted} />
-        : <WordTranslation activityId={current.activityId} onBack={backToList} isCompleted={isCompleted} />;
+    if (section === 'Activity') {
+      return (
+        <LiveActivityGame
+          activityId={current.activityId}
+          userId={user?.userId}
+          onStarted={closeModal}
+        />
+      );
+    } else if (section === 'Grammar') {
+      return (
+        <PhraseTranslation
+          activityId={current.activityId}
+          onBack={backToList}
+          isCompleted={isCompleted}
+        />
+      );
+    } else if (section === 'Vocabulary') {
+      return current.gameType === 'GAME1' ? (
+        <OnePicFourWord
+          activityId={current.activityId}
+          onBack={backToList}
+          isCompleted={isCompleted}
+        />
+      ) : (
+        <WordTranslation
+          activityId={current.activityId}
+          onBack={backToList}
+          isCompleted={isCompleted}
+        />
+      );
     }
 
     return null;
-  };
+  }
+  // ---------------------------------------------
 
   const sections = [
-    { key: 'Vocabulary', icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />, bg: '#FFEBEE', progress: progressVocab },
-    { key: 'Grammar',    icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />, bg: '#E3F2FD', progress: progressGrammar },
-    { key: 'Activity',   icon: <SportsEsportsIcon sx={{ fontSize: 48, color: '#388E3C' }} />, bg: '#E8F5E9', progress: 0 },
+    {
+      key: 'Vocabulary',
+      icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />,
+      bg: '#FFEBEE',
+      progress: progressVocab,
+    },
+    {
+      key: 'Grammar',
+      icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />,
+      bg: '#E3F2FD',
+      progress: progressGrammar,
+    },
+    {
+      key: 'Activity',
+      icon: <SportsEsportsIcon sx={{ fontSize: 48, color: '#388E3C' }} />,
+      bg: '#E8F5E9',
+      progress: 0,
+    },
   ];
 
   return (
@@ -249,7 +362,7 @@ export default function Homepage() {
               boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
               cursor: 'pointer',
               transition: 'transform 0.2s',
-              '&:hover': { transform: 'scale(1.05)' }
+              '&:hover': { transform: 'scale(1.05)' },
             }}
           >
             {s.icon}
@@ -257,32 +370,62 @@ export default function Homepage() {
               {s.key}
             </Typography>
             {s.key !== 'Activity' && (
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ flexGrow: 1 }}>
-                <PastelProgress 
-                  variant="determinate" 
-                  value={s.progress} 
-                  sx={{width:'100%'}}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <PastelProgress
+                    variant="determinate"
+                    value={s.progress}
+                    sx={{ width: '100%' }}
                   />
                   <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
                     {s.progress.toFixed(0)}% Completed
                   </Typography>
+                </Box>
               </Box>
-            </Box>
             )}
           </Box>
         ))}
       </Stack>
 
       {/* Modal */}
-      <Modal open={open} onClose={closeModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
+      <Modal
+        open={open}
+        onClose={closeModal}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{ timeout: 500 }}
+      >
         <Fade in={open}>
-          <Box sx={{ position: 'fixed', top: 0, left: 0, width: '98vw', height: '100vh', backgroundImage: `url(${modalBg})`, p: 3 }}>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '98vw',
+              height: '100vh',
+              backgroundImage: `url(${modalBg})`,
+              p: 3,
+              overflowY: 'auto',
+            }}
+          >
             <Stack direction="row" justifyContent="space-between">
-              <IconButton onClick={handleBackClick}><ArrowBackIcon /></IconButton>
-              <IconButton onClick={closeModal}><CloseIcon /></IconButton>
+              <IconButton onClick={handleBackClick}>
+                <ArrowBackIcon />
+              </IconButton>
+              <IconButton onClick={closeModal}>
+                <CloseIcon />
+              </IconButton>
             </Stack>
-            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+
+            {/* Center the renderBody output */}
+            <Box
+              sx={{
+                flexGrow: 1,
+                overflowY: 'auto',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
               {renderBody()}
             </Box>
           </Box>
