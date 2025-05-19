@@ -22,8 +22,13 @@ export default function RoleSelect() {
   ];
 
   return (
-    <Grid container sx={{ width: '100vw', height: '100vh', background, p: 0 }}>
-      <Box sx={{ width: '100%', height: '100%', backgroundColor: panelBg, p: 4 }}>
+    <Grid container sx={{ width: '100vw', height: '100vh', background, p: 0, justifyContent: 'center', alignItems: 'center' }}>
+      <Box sx={{ width: '60%', height: '70%', backgroundColor: panelBg, p: 4 }}>
+        <Box sx={{top: 16, left: 16 }}>
+          <IconButton onClick={()=>navigate('/')}><ArrowBackIcon sx={{ color:textColor }}/>
+          <Typography sx={{ cursor:'pointer', color: textColor }} onClick={()=>navigate('/')}>Back</Typography>
+          </IconButton>
+        </Box>
         <Stack spacing={4} sx={{ height: '100%' }} justifyContent="center" alignItems="center">
           <Typography variant="h4" sx={{ color: textColor }}>Select Your Role</Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} justifyContent="center">
@@ -35,7 +40,7 @@ export default function RoleSelect() {
                   backgroundColor: optionBg,
                   minHeight: '50vh',
                   minWidth: '20vw',
-                  maxHeight: '60vh',
+                  maxHeight: '20vh',
                   maxWidth: '50vw',
                   display: 'flex',
                   justifyContent: 'center',
@@ -52,9 +57,6 @@ export default function RoleSelect() {
               </Box>
             ))}
           </Stack>
-          <Box sx={{ position: 'absolute', top: 16, left: 16 }}>
-            <IconButton onClick={() => navigate('/')}><ArrowBackIcon sx={{ color: textColor }} /></IconButton>
-          </Box>
         </Stack>
       </Box>
     </Grid>

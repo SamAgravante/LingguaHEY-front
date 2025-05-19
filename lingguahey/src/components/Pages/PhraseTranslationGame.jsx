@@ -35,12 +35,14 @@ const pastels = [
 // 🎨 Styled components
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
-  backgroundSize: 'cover',
+  backgroundSize: 'contain',
+  backgroundRepeat: 'no-repeat',
   backgroundPosition: 'center',
-  padding: '24px',
-  minHeight: '800px',
+  padding: '18px',
+  maxHeight: '900px',
   fontFamily: 'Comic Sans MS, sans-serif',
   borderRadius: '20px',
+
 }));
 
 const ChoiceButton = styled(Button)(() => ({
@@ -224,12 +226,12 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
             backgroundRepeat: 'no-repeat',
             justifyItems: 'center',}}>
             <Grid>
-              <Stack direction="column" alignItems="center">
+              <Stack direction="column" alignItems="center" sx={{ padding: 2 }}>
                 <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-                  What is
+                  What does
                 </Typography>
                 <Stack direction="row" alignItems="center" sx={{flexWrap: 'wrap'}}>
-                  <Typography variant="h3" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+                  <Typography variant="h3" sx={{ textAlign: 'center', color: '#E6bbad', textShadow: '-1px -1px 0 #bb998f, 1px -1px 0 #bb998f, -1px 1px 0 #bb998f, 1px 1px 0 #bb998f', }}>
                     {q.questionDescription}
                   </Typography>
                   <IconButton onClick={() => synthesizeSpeech(q.questionDescription)}>
@@ -237,7 +239,7 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
                   </IconButton>
                 </Stack>
                 <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-                  in Tagalog?
+                  mean?
                 </Typography>
 
               </Stack>

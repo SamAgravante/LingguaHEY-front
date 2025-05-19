@@ -33,12 +33,14 @@ const pastels = [
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
-  backgroundSize: 'cover',
+  backgroundSize: 'contain',
+  backgroundRepeat: 'no-repeat',
   backgroundPosition: 'center',
   padding: '24px',
-  minHeight: '800px',
+  minHeight: '720px',
   fontFamily: 'Comic Sans MS, sans-serif',
   borderRadius: '20px',
+
 }));
 
 const ChoiceButton = styled(Button)(() => ({
@@ -216,21 +218,18 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
             backgroundRepeat: 'no-repeat',
             justifyItems: 'center',}}>
             <Grid>
-              <Stack direction="column" alignItems="center">
+              <Stack direction="column" alignItems="center" sx={{ paddingTop: 5 }}>
                 <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-                  What is
+                  What does this mean?
                 </Typography>
                 <Stack direction="row" alignItems="center">
-                  <Typography variant="h3" sx={{ textAlign: 'center', color: '#2E2E34' }}>
+                  <Typography variant="h3" sx={{ textAlign: 'center', color: '#E6bbad', textShadow: '-1px -1px 0 #bb998f, 1px -1px 0 #bb998f, -1px 1px 0 #bb998f, 1px 1px 0 #bb998f', }}>
                     {q.questionText}
                   </Typography>
                   <IconButton onClick={() => synthesizeSpeech(q.questionText)}>
                     <VolumeUpIcon sx={{ fontSize: 32, color: '#2E2E34' }} />
                   </IconButton>
                 </Stack>
-                <Typography variant="h4" sx={{ textAlign: 'cnter', color: '#2E2E34' }}>
-                  in English?
-                </Typography>
 
               </Stack>
             </Grid>

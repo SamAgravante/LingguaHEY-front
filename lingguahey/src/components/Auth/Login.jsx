@@ -17,6 +17,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../../contexts/AuthContext";
 import { MusicContext } from "../../contexts/MusicContext";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 // Axios instance
 const API = axios.create({
@@ -85,6 +86,9 @@ export default function Login() {
     <>
       <Grid container sx={{ minHeight: '100vh', minWidth: '100vw', background: pageBg, p: 2 }} alignItems="center" justifyContent="center">
         <Box component="form" onSubmit={handleLogin} sx={{ width: '100%', maxWidth: 400, backgroundColor: panelBg, borderRadius: 2, p: 4, boxShadow: 3 }}>
+          <IconButton onClick={()=>navigate('/')}><ArrowBackIcon sx={{ color:textColor }}/>
+          <Typography sx={{ cursor:'pointer', color: textColor }} onClick={()=>navigate('/')}>Back</Typography>
+          </IconButton>
           <Stack spacing={3}>
             <Typography variant="h4" align="center" sx={{ color: textColor }}>Log In</Typography>
 
