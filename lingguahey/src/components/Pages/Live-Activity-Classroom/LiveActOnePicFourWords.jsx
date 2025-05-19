@@ -46,18 +46,18 @@ function OnePicFourWords() {
   const [questionMessages, setQuestionMessages] = useState({});
 
   // General state
-  const { liveActivityId, classroomId } = useParams();
+  const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
 
   // Fetch questions on mount
   useEffect(() => {
     fetchQuestions();
-  }, [liveActivityId]);
+  }, [activityId]);
 
   const fetchQuestions = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${liveActivityId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${activityId}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       setQuestions(response.data);
@@ -115,12 +115,17 @@ function OnePicFourWords() {
       formData.append("questionDescription", "");
       formData.append("questionText", "");
       formData.append("image", newQuestionImage);
-      formData.append("gameType", newQuestionGameType);
+      formData.append("gameType", "GAME1");
 
       const { data: { questionId } } = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${liveActivityId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${activityId}`,
         formData,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+        { headers: 
+          { 
+            "Authorization": `Bearer ${token}`, 
+            "Content-Type": "multipart/form-data" 
+          } 
+        }
       );
 
       let score = 0;
@@ -128,8 +133,16 @@ function OnePicFourWords() {
         const correct = choice === newQuestionCorrectAnswer;
         await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${questionId}`,
-          { choiceText: choice, correct },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { 
+            choiceText: choice, correct 
+          },
+          { 
+            headers: 
+            { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}` 
+            } 
+          }
         );
         if (correct) score = 1;
       }
@@ -137,7 +150,14 @@ function OnePicFourWords() {
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${questionId}`,
         null,
-        { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
+        { 
+          params: { scoreValue: score }, 
+          headers: 
+          { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}` 
+          } 
+        }
       );
 
       setNewQuestionMessage("Saved successfully!");
