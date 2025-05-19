@@ -240,7 +240,7 @@ export default function Homepage() {
                         backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
                         borderRadius: 4,
                         p: 3,
-                        width: '100%',           // narrower so it’s centered neat
+                        width: '150%',           // narrower so it’s centered neat
                         boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                         cursor: 'pointer',
                         '&:hover': { transform: 'scale(1.02)' },
@@ -416,8 +416,9 @@ export default function Homepage() {
                 <CloseIcon />
               </IconButton>
             </Stack>
-
-            {/* Center the renderBody output */}
+            <Typography variant="h2" sx={{ textAlign: 'center',}}>
+              {section} Activities!
+            </Typography>
             <Box
               sx={{
                 flexGrow: 1,
