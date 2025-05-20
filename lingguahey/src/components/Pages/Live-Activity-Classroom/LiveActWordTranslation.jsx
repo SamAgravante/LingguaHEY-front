@@ -18,8 +18,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-export default function WordTranslation() {
-  const { activityId, classroomId } = useParams();
+export default function WordTranslation({ activityId, classroomId, onGameCreated }) {
   const navigate = useNavigate();
 
   // New question state
@@ -136,6 +135,12 @@ export default function WordTranslation() {
       setCorrectAnswer("");
       const res = await api.get(`/api/lingguahey/questions/liveactivities/${activityId}`);
       setQuestions(res.data);
+
+      // Call the callback function after the game is created
+      if (onGameCreated) {
+        onGameCreated();
+      }
+
     } catch (error) {
       setNewMessage("Save failed.");
     }
@@ -205,97 +210,14 @@ export default function WordTranslation() {
       setSelectedQuestionId(null);
     }
   };
-
-  console.log("Frontend token:", token);
-  console.log("Decoded:", JSON.parse(atob(token.split('.')[1])));
-
+  
   return (
     <Grid container justifyContent="center" sx={{ minHeight: '100vh', bgcolor: '#18191B', p: 2 }}>
       <Box sx={{ width: '100%', maxWidth: 999, mx: 'auto', overflowY: 'auto', maxHeight: '90vh', p: 4, borderRadius: 3, bgcolor: '#121212' }}>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" fontWeight="bold" color="#B3E5FC">Word Translation</Typography>
-          <Button variant="text" onClick={() => navigate(`/classroom/${classroomId}/live-activities`)} sx={{ color: '#81D4FA' }}>← Back</Button>
         </Box>
-
-        {/* Existing Questions */}
-        {questions.map((q, idx) => (
-          <Paper key={q.questionId} sx={{ bgcolor: '#232323', p: 4, borderRadius: 3, mb: 4 }} elevation={3}>
-            <Typography variant="h6" fontWeight="bold" color="#81D4FA" sx={{ mb: 2 }}>{idx + 1}.</Typography>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
-              {/* Word Column */}
-              <Box sx={{ flex: 1 }}>
-                <Typography color="#B3E5FC" mb={1}>Word</Typography>
-                <TextField
-                  fullWidth
-                  variant={editingId === q.questionId ? 'outlined' : 'standard'}
-                  InputProps={{
-                    readOnly: editingId !== q.questionId,
-                    disableUnderline: editingId !== q.questionId,
-                    style: { color: '#fff' }
-                  }}
-                  value={editingId === q.questionId ? editWord : q.questionText}
-                  onChange={e => setEditWord(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: '#616161' },
-                      '&:hover fieldset': { borderColor: '#81D4FA' },
-                      '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
-                    }
-                  }}
-                />
-              </Box>
-              {/* Choices Column */}
-              <Box sx={{ flex: 2 }}>
-                <Typography color="#B3E5FC" mb={1}>Choices</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {(editingId === q.questionId ? editChoices : q.choices).map((c, i) => {
-                    const text = editingId === q.questionId ? c.choiceText : c.choiceText;
-                    const isCorrect = editingId === q.questionId ? (editCorrect === c.choiceText) : c.correct;
-                    return (
-                      <Chip
-                        key={i}
-                        label={editingId === q.questionId ? (
-                          <TextField
-                            value={c.choiceText}
-                            variant="standard"
-                            onChange={e => handleChoiceEdit(i, e.target.value)}
-                            InputProps={{ disableUnderline: true, style: { color: '#fff' } }}
-                          />) : text}
-                        onClick={() => editingId === q.questionId ? setEditCorrect(c.choiceText) : null}
-                        onDelete={() => editingId === q.questionId ? setEditChoices(editChoices.filter((_, j) => j !== i)) : null}
-                        sx={{
-                          bgcolor: isCorrect ? '#4CAF50' : '#232323',
-                          color: '#fff',
-                          border: isCorrect ? '2px solid #4CAF50' : '1px solid #616161',
-                          fontWeight: isCorrect ? 'bold' : 'normal'
-                        }}
-                      />
-                    );
-                  })}
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                  {editingId === q.questionId ? (
-                    <>
-                      <Button variant="contained" onClick={handleSaveEdit} sx={{ bgcolor: '#4CAF50', fontWeight: 'bold' }}>Save</Button>
-                      <Button variant="contained" color="error" onClick={() => setEditingId(null)} sx={{ bgcolor: '#E57373', fontWeight: 'bold' }}>Cancel</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="contained" onClick={() => startEdit(q)} sx={{ bgcolor: '#81D4FA', color: '#000', fontWeight: 'bold' }}>Edit</Button>
-                      <IconButton onClick={() => openDeleteConfirmation(q.questionId)} sx={{ bgcolor: '#E57373', color: '#fff' }}><DeleteIcon /></IconButton>
-                    </>
-                  )}
-                </Box>
-                {msgMap[q.questionId] && (
-                  <Typography color={msgMap[q.questionId].includes('failed') ? '#E57373' : '#81C784'} sx={{ mt: 1, textAlign: 'center' }}>
-                    {msgMap[q.questionId]}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-          </Paper>
-        ))}
 
         {/* Add New Question */}
         <Paper sx={{ bgcolor: '#232323', p: 4, borderRadius: 3 }} elevation={3}>

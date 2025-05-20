@@ -11,7 +11,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-function PhraseTranslation() {
+function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
   // State for adding a new phrase question
   const [newPhrase, setNewPhrase] = useState("");
   const [translation, setTranslation] = useState("");
@@ -28,7 +28,6 @@ function PhraseTranslation() {
   const [editCorrect, setEditCorrect] = useState([]);
   const [questionMessages, setQuestionMessages] = useState({});
 
-  const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -173,6 +172,12 @@ function PhraseTranslation() {
       setNewChoices([]);
       setCorrectChoices([]);
       fetchQuestions();
+
+      // Call the callback function after the game is created
+      if (onGameCreated) {
+        onGameCreated();
+      }
+
     } catch (err) {
       console.error(err);
       setNewMessage("Save failed.");
@@ -282,86 +287,9 @@ function PhraseTranslation() {
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" fontWeight="bold">Phrase Translation</Typography>
-          <Button variant="text" onClick={goBack} sx={{ color: '#388e3c' }}>&larr; Back to Class</Button>
         </Box>
 
         {/* Existing Questions */}
-        {questions.map((q, i) => (
-          <Paper key={q.questionId} sx={{ bgcolor: '#18191B', color: '#fff', p: 4, mb: 4, borderRadius: 3 }}>
-            <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>{i+1}.</Typography>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
-              {/* Phrase & Translation */}
-              <Box sx={{ flex: 1 }}>
-                <Typography color="#B3E5FC" mb={1} fontWeight="bold">Phrase</Typography>
-                {editingId === q.questionId ? (
-                  <TextField
-                    fullWidth variant="standard" value={editPhrase}
-                    onChange={(e) => setEditPhrase(e.target.value)}
-                    sx={{ input: { color: '#fff' }, bgcolor: '#232323', borderRadius: 1, p:1 }}
-                  />
-                ) : (
-                  <Typography>{q.questionDescription}</Typography>
-                )}
-                <Typography color="#B3E5FC" mt={2} mb={1} fontWeight="bold">Translation</Typography>
-                {editingId === q.questionId ? (
-                  <Typography sx={{ color: '#fff', bgcolor:'#232323', p:1, borderRadius:1 }}>
-                    {editChoices.map((c) => c.choiceText).join(' ')}
-                  </Typography>
-                ) : (
-                  <Typography>{q.questionText}</Typography>
-                )}
-              </Box>
-              {/* Choices */}
-              <Box sx={{ flex: 2 }}>
-                <Typography color="#B3E5FC" mb={1} fontWeight="bold">Choices</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {(editingId === q.questionId ? editChoices : q.choices).map((c, idx) => {
-                    const text = c.choiceText;
-                    const selected = editingId === q.questionId
-                      ? editCorrect.includes(text)
-                      : c.correct;
-                    return (
-                      <Chip
-                        key={idx}
-                        label={editingId === q.questionId ? (
-                          <TextField
-                            variant="standard" value={text}
-                            onChange={(e) => changeEditChoice(idx, e.target.value)}
-                            InputProps={{ disableUnderline:true, sx:{ color: selected ? '#fff':'#B3E5FC'} }}
-                          />
-                        ) : text}
-                        onClick={editingId === q.questionId ? () => toggleEditCorrect(text) : undefined}
-                        sx={{
-                          bgcolor: selected ? '#4CAF50':'#232323',
-                          color: selected ? '#fff':'#B3E5FC',
-                          border: selected ? '2px solid #4CAF50':'1px solid #616161'
-                        }}
-                      />
-                    );
-                  })}
-                </Box>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                  {editingId === q.questionId ? (
-                    <>
-                      <Button variant="contained" onClick={saveEdit} sx={{ bgcolor: '#4CAF50' }}>Save</Button>
-                      <Button variant="contained" color="error" onClick={cancelEdit} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="contained" sx={{ bgcolor: '#81D4FA' }} onClick={() => startEdit(q)}>Edit</Button>
-                      <Button variant="contained" color="error" onClick={() => deleteQuestion(q.questionId)} sx={{ bgcolor: '#E57373' }}>Delete</Button>
-                    </>
-                  )}
-                </Box>
-              </Box>
-            </Box>
-            {questionMessages[q.questionId] && (
-              <Typography color={questionMessages[q.questionId].includes('failed') ? '#E57373':'#81C784'} sx={{ mt:2, textAlign:'center' }}>
-                {questionMessages[q.questionId]}
-              </Typography>
-            )}
-          </Paper>
-        ))}
 
         {/* Add New Phrase */}
         <Paper sx={{ bgcolor: '#18191B', color: '#fff', p:4, borderRadius:3, mb:4 }}>

@@ -19,18 +19,25 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  TextField, // Import TextField
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import { jwtDecode } from "jwt-decode";
 //import API from "../../api";
+
+// Import game components
+import LiveActOnePicFourWords from "./LiveActOnePicFourWords";
+import LiveActPhraseTranslation from "./LiveActPhraseTranslation";
+import LiveActWordTranslation from "./LiveActWordTranslation";
 
 const LiveActClassroom = () => {
   const navigate = useNavigate();
   const { classroomId, classroomName } = useParams();
   const [activities, setActivities] = useState([]);
-  const [newActivityName, setNewActivityName] = useState("");
+  const [newActivityName, setNewActivityName] = useState(""); // Use newActivityName
   const [selectedActivityType, setSelectedActivityType] = useState("");
   const [error, setError] = useState("");
   const [touched, setTouched] = useState(false);
@@ -49,14 +56,23 @@ const LiveActClassroom = () => {
   const [deleteDialogMessage, setDeleteDialogMessage] = useState("");
   const [activityToDelete, setActivityToDelete] = useState(null);
 
-  // Function to open the dialog for removing a student
+  // New state for "Go To Activity" dialog
+  const [openActivityDialog, setOpenActivityDialog] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [selectedQuestionType, setSelectedQuestionType] = useState(null); // Changed from gameType to questionType
+  const [questionText, setQuestionText] = useState("");
+  const [activityQuestions, setActivityQuestions] = useState([]);
+
+  // New state for edit question dialog
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [questionToEdit, setQuestionToEdit] = useState(null);
+
   const openRemoveStudentDialog = (student) => {
     setSelectedStudent(student);
     setDialogMessage(`Are you sure you want to remove ${student.firstName} ${student.lastName}?`);
     setOpenDialog(true);
   };
 
-  // Function to close the dialog
   const closeDialog = () => {
     setOpenDialog(false);
     setDialogMessage("");
@@ -75,7 +91,6 @@ const LiveActClassroom = () => {
     setActivityToDelete(null);
   };
 
-  // Function to handle the confirmation of removing a student
   const handleConfirmRemoveStudent = async () => {
     try {
       await API.delete(`/api/lingguahey/classrooms/${classroomId}/students/${selectedStudent.userId}`, {
@@ -91,7 +106,7 @@ const LiveActClassroom = () => {
     } finally {
       closeDialog();
     }
-  }; 
+  };
 
   const handleConfirmDeleteActivity = async () => {
     try {
@@ -108,9 +123,8 @@ const LiveActClassroom = () => {
     } finally {
       closeDeleteDialog();
     }
-};
+  };
 
-  // Fetch user role
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -158,27 +172,7 @@ const LiveActClassroom = () => {
     const fetchActivities = async () => {
       try {
         const response = await API.get(`/api/lingguahey/live-activities/${classroomId}/live-activities`);
-        const activitiesWithGameType = response.data.map((activity) => {
-          let mappedGameType = null;
-          switch (activity.activity_ActivityName) {
-            case "One Pic Four Words":
-              mappedGameType = "GAME1";
-              break;
-            case "Phrase Translation":
-              mappedGameType = "GAME2";
-              break;
-            case "Word Translation":
-              mappedGameType = "GAME3";
-              break;
-            default:
-              mappedGameType = activity.gameType || null;
-          }
-          return {
-            ...activity,
-            gameType: activity.gameType || mappedGameType,
-          };
-        });
-        setActivities(activitiesWithGameType);
+        setActivities(response.data);
       } catch (err) {
         console.error("Error fetching activities:", err.response?.data || err.message);
         setError("Failed to fetch activities. Please try again later.");
@@ -204,31 +198,15 @@ const LiveActClassroom = () => {
 
   const createActivity = async () => {
     try {
-      let gameType;
-      switch (selectedActivityType) {
-        case "One Pic Four Words":
-          gameType = "GAME1";
-          break;
-        case "Phrase Translation":
-          gameType = "GAME2";
-          break;
-        case "Word Translation":
-          gameType = "GAME3";
-          break;
-        default:
-          gameType = null;
-      }
       const response = await API.post(`/api/lingguahey/live-activities/classrooms/${classroomId}`, {
         activityIdd: "",
-        activityName: selectedActivityType,
-        gameType: gameType,
+        activityName: newActivityName, // Use newActivityName
         completed: false,
         questions: [],
       });
       console.log("Activity created:", response.data);
       const newActivity = {
         ...response.data,
-        gameType: gameType,
         activity_ActivityId:
           response.data.activity_ActivityId ||
           response.data.activityID ||
@@ -237,10 +215,10 @@ const LiveActClassroom = () => {
         activity_ActivityName:
           response.data.activity_ActivityName ||
           response.data.activityName ||
-          selectedActivityType,
+          newActivityName, // Use newActivityName
       };
       setActivities((prevActivities) => [...prevActivities, newActivity]);
-      setSelectedActivityType("");
+      setNewActivityName(""); // Clear the input field
     } catch (err) {
       console.error("Error creating activity:", err.response?.data || err.message);
       alert("Failed to create activity. Please try again.");
@@ -251,37 +229,95 @@ const LiveActClassroom = () => {
     openDeleteActivityDialog(activity);
   };
 
+  // Function to open the "Go To Activity" dialog
   const handleGoToActivity = (activity) => {
-    console.log("activity:", activity); // ADDED
-    let gameRoute = "";
+    setSelectedActivity(activity);
+    setOpenActivityDialog(true);
+    fetchActivityQuestions(activity.activity_ActivityId); // Fetch questions when dialog opens
+  };
 
-    console.log("activity.gameType:", activity.gameType); // ADDED
-
-    if (!activity.gameType) {
-      console.warn("Game type is undefined for activity:", activity);
-      return;
-    }
-
-    switch (activity.gameType) {
-      case "GAME1":
-        gameRoute = `/classroom/${classroomId}/live-activities/${activity.activity_ActivityId}/live-act-one-pic-four-words`;
-        break;
-      case "GAME2":
-        gameRoute = `/classroom/${classroomId}/live-activities/${activity.activity_ActivityId}/live-act-phrase-translation`;
-        break;
-      case "GAME3":
-        gameRoute = `/classroom/${classroomId}/live-activities/${activity.activity_ActivityId}/live-act-word-translation`;
-        break;
-      default:
-        console.warn("Unknown game type:", activity.gameType);
-        return;
-    }
-
-    navigate(gameRoute);
+  // Function to close the "Go To Activity" dialog
+  const closeActivityDialog = () => {
+    setOpenActivityDialog(false);
+    setSelectedActivity(null);
+    setSelectedQuestionType(null); // Reset selected question type
+    setActivityQuestions([]); // Clear questions when dialog closes
   };
 
   const handleRemoveStudent = (student) => {
     openRemoveStudentDialog(student);
+  };
+
+  // Function to handle question type selection
+  const handleQuestionTypeSelect = (questionType) => {
+    setSelectedQuestionType(questionType);
+  };
+
+  // Callback function to reset selectedQuestionType
+  const resetSelectedQuestionType = () => {
+    setSelectedQuestionType(null);
+  };
+
+  // Function to fetch questions for the selected activity
+  const fetchActivityQuestions = async (activityId) => {
+    try {
+      const response = await API.get(`/api/lingguahey/questions/liveactivities/${activityId}`);
+      setActivityQuestions(response.data);
+    } catch (err) {
+      console.error("Error fetching activity questions:", err.response?.data || err.message);
+      setError("Failed to fetch activity questions. Please try again later.");
+      setActivityQuestions([]);
+    }
+  };
+
+  // Function to open the edit question dialog
+  const handleEditQuestion = (question) => {
+    setQuestionToEdit(question);
+    setOpenEditDialog(true);
+  };
+
+  // Function to close the edit question dialog
+  const closeEditDialog = () => {
+    setOpenEditDialog(false);
+    setQuestionToEdit(null);
+  };
+
+  // Function to handle saving the edited question
+  const handleSaveQuestion = async () => {
+    try {
+      await API.put(`/api/lingguahey/questions/${questionToEdit.questionId}`, questionToEdit, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      // Update the question in the local state
+      setActivityQuestions((prevQuestions) =>
+        prevQuestions.map((question) =>
+          question.questionId === questionToEdit.questionId ? questionToEdit : question
+        )
+      );
+      closeEditDialog();
+    } catch (err) {
+      console.error("Error updating question:", err.response?.data || err.message);
+      setError("Failed to update question. Please try again later.");
+    }
+  };
+
+  // Function to handle deleting a question
+  const handleDeleteQuestion = async (questionId) => {
+    try {
+      await API.delete(`/api/lingguahey/questions/${questionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setActivityQuestions((prevQuestions) =>
+        prevQuestions.filter((question) => question.questionId !== questionId)
+      );
+    } catch (err) {
+      console.error("Error deleting question:", err.response?.data || err.message);
+      setError("Failed to delete question. Please try again later.");
+    }
   };
 
   if (loading) {
@@ -310,25 +346,18 @@ const LiveActClassroom = () => {
         <Typography variant="h6" color="black" mb={2}>
           Create a New Activity
         </Typography>
-        <FormControl variant="outlined" sx={{ mr: 2, width: "300px" }}>
-          <InputLabel id="activity-type-label">Activity Type</InputLabel>
-          <Select
-            labelId="activity-type-label"
-            id="activity-type"
-            value={selectedActivityType}
-            onChange={(e) => setSelectedActivityType(e.target.value)}
-            label="Activity Type"
-          >
-            <MenuItem value="One Pic Four Words">One Pic Four Words</MenuItem>
-            <MenuItem value="Phrase Translation">Phrase Translation</MenuItem>
-            <MenuItem value="Word Translation">Word Translation</MenuItem>
-          </Select>
-        </FormControl>
+        <TextField
+          label="Activity Name"
+          variant="outlined"
+          value={newActivityName}
+          onChange={(e) => setNewActivityName(e.target.value)}
+          sx={{ mr: 2, width: "300px" }}
+        />
         <Button
           variant="contained"
           sx={{ backgroundColor: "#FFCCBC", "&:hover": { backgroundColor: "#FFAB91" } }}
           onClick={createActivity}
-          disabled={!selectedActivityType}
+          disabled={!newActivityName} // Disable if activity name is empty
         >
           Create Activity
         </Button>
@@ -347,15 +376,7 @@ const LiveActClassroom = () => {
               return (
                 <ListItem key={activity.activity_ActivityId} sx={{ borderBottom: "1px solid #444" }}>
                   <ListItemText
-                    primary={`${index + 1}: ${
-                      activity.gameType === "GAME1"
-                        ? "One Pic Four Words"
-                        : activity.gameType === "GAME2"
-                          ? "Phrase Translation"
-                          : activity.gameType === "GAME3"
-                            ? "Word Translation"
-                            : activity.activity_ActivityName
-                    }`}
+                    primary={`${index + 1}: ${activity.activity_ActivityName}`} // Display activity name
                     secondary={`Activity ID: ${activity.activity_ActivityId}`}
                   />
                   <ListItemSecondaryAction>
@@ -457,6 +478,181 @@ const LiveActClassroom = () => {
           </Button>
           <Button onClick={handleConfirmDeleteActivity} color="error" autoFocus>
             Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* "Go To Activity" Dialog */}
+      <Dialog
+        open={openActivityDialog}
+        onClose={closeActivityDialog}
+        aria-labelledby="activity-dialog-title"
+        aria-describedby="activity-dialog-description"
+        maxWidth="md"
+        fullWidth="true"
+        overflowY="auto"
+        sx={{
+          "& .MuiDialog-paper": {
+            maxHeight: "80vh", // Set the maximum height of the dialog
+            overflowY: "auto", // Enable vertical scrolling if content exceeds max height
+          },
+        }}
+      >
+        <DialogTitle id="activity-dialog-title">
+          {selectedActivity ? `Configure ${selectedActivity.activity_ActivityName}` : "Configure Activity"}
+        </DialogTitle>
+        <DialogContent>
+          {/* List of Questions */}
+          {activityQuestions.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" color="black" fontWeight="bold">
+                Existing Questions:
+              </Typography>
+              <List>
+                {activityQuestions.map((question, index) => (
+                  <ListItem key={question.questionId}>
+                    <ListItemText
+                      primary={`Question ${index + 1}: ${question.questionText || question.questionDescription}`}
+                      secondary={`Game Type: 
+                        ${question.gameType === "GAME1" ? "One Pic Four Words" 
+                          : question.gameType === "GAME2" ? "Phrase Translation"
+                          : question.gameType === "GAME3" ? "Word Translation"
+                          : question.activityName
+                    }`}
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        aria-label="edit"
+                        onClick={() => handleEditQuestion(question)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleDeleteQuestion(question.questionId)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+          <DialogContentText id="activity-dialog-description">
+            Select the game type to configure the activity.
+          </DialogContentText>
+          {/* Game type selection */}
+          {!selectedQuestionType && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, justifyContent: "center", mt: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel id="game-type-select-label">Game Type</InputLabel>
+                <Select
+                  labelId="game-type-select-label"
+                  id="game-type-select"
+                  value={selectedQuestionType || ""}
+                  label="Game Type"
+                  onChange={(e) => handleQuestionTypeSelect(e.target.value)}
+                >
+                  <MenuItem value="GAME1">One Pic Four Words</MenuItem>
+                  <MenuItem value="GAME2">Phrase Translation</MenuItem>
+                  <MenuItem value="GAME3">Word Translation</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          )}
+          {/* Render the appropriate game component based on the selected game type */}
+          {selectedQuestionType === "GAME1" && (
+            <LiveActOnePicFourWords
+              activityId={selectedActivity.activity_ActivityId}
+              classroomId={classroomId}
+              onGameCreated={resetSelectedQuestionType} // Pass the callback function
+            />
+          )}
+          {selectedQuestionType === "GAME2" && (
+            <LiveActPhraseTranslation
+              activityId={selectedActivity.activity_ActivityId}
+              classroomId={classroomId}
+              onGameCreated={resetSelectedQuestionType} // Pass the callback function
+            />
+          )}
+          {selectedQuestionType === "GAME3" && (
+            <LiveActWordTranslation
+              activityId={selectedActivity.activity_ActivityId}
+              classroomId={classroomId}
+              onGameCreated={resetSelectedQuestionType} // Pass the callback function
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeActivityDialog} color="primary">
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Question Dialog */}
+      <Dialog
+        open={openEditDialog}
+        onClose={closeEditDialog}
+        aria-labelledby="edit-dialog-title"
+        aria-describedby="edit-dialog-description"
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle id="edit-dialog-title">Edit Question</DialogTitle>
+        <DialogContent>
+          {questionToEdit && questionToEdit.gameType === "GAME1" && (
+            <TextField
+              autoFocus
+              margin="dense"
+              id="question-text"
+              label="Question Text"
+              type="text"
+              fullWidth
+              value={questionToEdit.questionText || ""}
+              onChange={(e) =>
+                setQuestionToEdit({ ...questionToEdit, questionText: e.target.value })
+              }
+            />
+          )}
+          {questionToEdit && questionToEdit.gameType === "GAME2" && (
+            <TextField
+              autoFocus
+              margin="dense"
+              id="question-description"
+              label="Question Description"
+              type="text"
+              fullWidth
+              value={questionToEdit.questionDescription || ""}
+              onChange={(e) =>
+                setQuestionToEdit({ ...questionToEdit, questionDescription: e.target.value })
+              }
+            />
+          )}
+          {questionToEdit && questionToEdit.gameType === "GAME3" && (
+            <TextField
+              autoFocus
+              margin="dense"
+              id="question-text"
+              label="Question Text"
+              type="text"
+              fullWidth
+              value={questionToEdit.questionText || ""}
+              onChange={(e) =>
+                setQuestionToEdit({ ...questionToEdit, questionText: e.target.value })
+              }
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeEditDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleSaveQuestion} color="primary">
+            Save
           </Button>
         </DialogActions>
       </Dialog>

@@ -22,7 +22,7 @@ import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-function OnePicFourWords() {
+function OnePicFourWords({ activityId, classroomId, onGameCreated }) {
   // Helper to choose between URL or base64 payload
   const getImageSrc = (img) =>
     img.startsWith("http") ? img : `data:image/png;base64,${img}`;
@@ -46,7 +46,6 @@ function OnePicFourWords() {
   const [questionMessages, setQuestionMessages] = useState({});
 
   // General state
-  const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
 
   // Fetch questions on mount
@@ -168,6 +167,12 @@ function OnePicFourWords() {
       setNewQuestionInputChoice("");
 
       fetchQuestions();
+
+      // Call the callback function after the game is created
+      if (onGameCreated) {
+        onGameCreated();
+      }
+
     } catch (err) {
       console.error(err);
       setNewQuestionMessage("Failed to save new question.");
@@ -238,7 +243,7 @@ function OnePicFourWords() {
       for (const c of editingChoices) {
         const correct = c.choiceText === editingCorrectAnswer;
         await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${c.choiceId}`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${c.choiceId}`,
           { choiceText: c.choiceText, correct },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -298,288 +303,10 @@ function OnePicFourWords() {
           <Typography variant="h5" fontWeight="bold" color="#232323">
             Activity Name (One Pic Four Words)
           </Typography>
-          <Button
-            variant="text"
-            onClick={goBackToActivities}
-            sx={{ color: "#388e3c", "&:hover": { color: "#2e7031" } }}
-          >
-            ← Back to Class
-          </Button>
         </Box>
 
         {/* Existing Questions */}
         <Box>
-          {questions.length > 0 &&
-            questions.map((question, index) => (
-              <Paper
-                key={question.questionId}
-                sx={{
-                  bgcolor: "#18191B",
-                  p: 4,
-                  color: "#fff",
-                  borderRadius: 3,
-                  mb: 4,
-                  boxShadow: 3,
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  fontWeight="bold"
-                  color="#B3E5FC"
-                  sx={{ mb: 2 }}
-                >
-                  {index + 1}.
-                </Typography>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: { xs: "column", md: "row" },
-                    gap: 4,
-                    alignItems: "flex-start",
-                  }}
-                >
-                  {/* Image */}
-                  <Box sx={{ flex: 1, minWidth: 220 }}>
-                    {editingChoicesQuestionId === question.questionId ? (
-                      <Box sx={{ position: "relative", width: 120, height: 120, mx: "auto"}}>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          style={{ display: "none" }}
-                          id={`edit-image-input-${question.questionId}`}
-                          onChange={handleEditingImageUpload}
-                        />
-                        <label htmlFor={`edit-image-input-${question.questionId}`}>
-                          <img
-                            src={editingImagePreview}
-                            alt={`Question ${index + 1}`}
-                            style={{
-                              width: 120,
-                              height: 120,
-                              objectFit: "contain",
-                              marginBottom: "10px",
-                              borderRadius: "8px",
-                              background: "#fff",
-                              border: "1px solid #333",
-                              cursor: "pointer",
-                              opacity: 0.85,
-                            }}
-                            title="Click to change image"
-                          />
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              bottom: 8,
-                              left: 0,
-                              width: "100%",
-                              textAlign: "center",
-                              color: "#B3E5FC",
-                              fontSize: 12,
-                              pointerEvents: "none",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 0.5,
-                            }}
-                          >
-                            <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
-                            Click to change
-                          </Box>
-                        </label>
-                      </Box>
-                    ) : (
-                      question.questionImage && (
-                        <img
-                          src={getImageSrc(question.questionImage || "")}
-                          alt={`Question ${index + 1}`}
-                          style={{
-                            width: 120,
-                            height: 120,
-                            objectFit: "contain",
-                            marginBottom: "10px",
-                            borderRadius: "8px",
-                            background: "#fff",
-                            border: "1px solid #333",
-                          }}
-                        />
-                      )
-
-                    )}
-                    {/* Show correct answer label */}
-                    <Typography
-                      variant="body2"
-                      color="#B3E5FC"
-                      sx={{ mt: 1, textAlign: "center" }}
-                    >
-                      {editingChoicesQuestionId === question.questionId
-                        ? editingCorrectAnswer || <span style={{ color: "#616161" }}>No label</span>
-                        : (question.choices?.find(c => c.correct)?.choiceText || <span style={{ color: "#616161" }}>No label</span>)
-                      }
-                    </Typography>
-                  </Box>
-
-                  {/* Choices */}
-                  <Box sx={{ flex: 2 }}>
-                    <Typography color="#B3E5FC" mb={1} fontWeight="bold">
-                      Enter Choices
-                    </Typography>
-                    {editingChoicesQuestionId === question.questionId ? (
-                      <>
-                        {/* Editing mode: show chips for choices, editable */}
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
-                          {editingChoices.map((choice, idx) => (
-                            <Chip
-                              key={choice.choiceId}
-                              label={
-                                <TextField
-                                  value={choice.choiceText}
-                                  onChange={e =>
-                                    handleEditingChoiceChange(idx, e.target.value)
-                                  }
-                                  variant="standard"
-                                  sx={{
-                                    input: { color: "#fff", minWidth: 60 },
-                                    "& .MuiInput-underline:before": { borderBottom: "none" },
-                                    "& .MuiInput-underline:after": { borderBottom: "none" },
-                                    bgcolor: "transparent",
-                                  }}
-                                />
-                              }
-                              onClick={() => setEditingCorrectAnswer(choice.choiceText)}
-                              onDelete={() => {
-                                // Remove choice from editingChoices
-                                setEditingChoices(editingChoices.filter((_, i) => i !== idx));
-                                if (editingCorrectAnswer === choice.choiceText) {
-                                  setEditingCorrectAnswer("");
-                                }
-                              }}
-                              sx={{
-                                bgcolor:
-                                  editingCorrectAnswer === choice.choiceText
-                                    ? "#4CAF50"
-                                    : "#232323",
-                                color:
-                                  editingCorrectAnswer === choice.choiceText
-                                    ? "white"
-                                    : "#B3E5FC",
-                                border:
-                                  editingCorrectAnswer === choice.choiceText
-                                    ? "2px solid #4CAF50"
-                                    : "1px solid #616161",
-                                fontWeight:
-                                  editingCorrectAnswer === choice.choiceText
-                                    ? "bold"
-                                    : "normal",
-                                cursor: "pointer",
-                                "& .MuiChip-deleteIcon": {
-                                  color: "#E57373",
-                                  "&:hover": { color: "#EF5350" },
-                                },
-                              }}
-                            />
-                          ))}
-                        </Box>
-                        <Typography color="#B3E5FC" mb={1}>
-                          {editingCorrectAnswer
-                            ? `Correct Answer: ${editingCorrectAnswer}`
-                            : "Click a choice to set as correct answer"}
-                        </Typography>
-                        <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mt: 2 }}>
-                          <Button
-                            variant="contained"
-                            onClick={saveEditedChoices}
-                            sx={{
-                              bgcolor: "#4CAF50",
-                              color: "white",
-                              "&:hover": { bgcolor: "#81C784" },
-                              minWidth: 120,
-                              fontWeight: "bold",
-                              borderRadius: 3,
-                            }}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            variant="contained"
-                            color="error"
-                            onClick={cancelEditingChoices}
-                            sx={{
-                              bgcolor: "#E57373",
-                              "&:hover": { bgcolor: "#EF5350" },
-                              minWidth: 100,
-                              fontWeight: "bold",
-                              borderRadius: 3,
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </Box>
-                      </>
-                    ) : (
-                      <>
-                        {/* View mode: show chips for choices */}
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
-                          {(question.choices || []).map((choice, idx) => (
-                            <Chip
-                              key={choice.choiceId || idx}
-                              label={choice.choiceText}
-                              sx={{
-                                bgcolor: choice.correct ? "#4CAF50" : "#232323",
-                                color: choice.correct ? "white" : "#B3E5FC",
-                                border: choice.correct
-                                  ? "2px solid #4CAF50"
-                                  : "1px solid #616161",
-                                fontWeight: choice.correct ? "bold" : "normal",
-                              }}
-                            />
-                          ))}
-                        </Box>
-                        <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
-                          <Button
-                            variant="contained"
-                            onClick={() => startEditingChoices(question)}
-                            sx={{
-                              bgcolor: "#81D4FA",
-                              color: "black",
-                              "&:hover": { bgcolor: "#4FC3F7" },
-                              minWidth: 120,
-                              fontWeight: "bold",
-                              borderRadius: 3,
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="contained"
-                            color="error"
-                            onClick={() => deleteQuestion(question.questionId)}
-                            sx={{
-                              bgcolor: "#E57373",
-                              "&:hover": { bgcolor: "#EF5350" },
-                              minWidth: 100,
-                              fontWeight: "bold",
-                              borderRadius: 3,
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </Box>
-                      </>
-                    )}
-                  </Box>
-                </Box>
-                {/* Error message for this question */}
-                {editingChoicesQuestionId === question.questionId && questionMessages[question.questionId] && (
-                  <Typography
-                    color={questionMessages[question.questionId].includes("success") ? "#81C784" : "#E57373"}
-                    sx={{ mt: 2, textAlign: "center" }}
-                  >
-                    {questionMessages[question.questionId]}
-                  </Typography>
-                )}
-              </Paper>
-            ))}
-
           {/* Add New Question Card */}
           <Paper
             elevation={3}
