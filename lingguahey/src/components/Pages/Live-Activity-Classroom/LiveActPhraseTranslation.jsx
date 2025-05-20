@@ -8,10 +8,10 @@ import {
   Chip,
   Grid,
 } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
+function PhraseTranslation({ activityId, classroomId, onGameCreated, question, onClose }) {
   // State for adding a new phrase question
   const [newPhrase, setNewPhrase] = useState("");
   const [translation, setTranslation] = useState("");
@@ -22,6 +22,8 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
 
   // State for existing questions
   const [questions, setQuestions] = useState([]);
+
+  // --- Edit state ---
   const [editingId, setEditingId] = useState(null);
   const [editPhrase, setEditPhrase] = useState("");
   const [editChoices, setEditChoices] = useState([]);
@@ -120,12 +122,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
       const qRes = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${activityId}`,
         form,
-        { headers: 
-          { 
-            "Authorization": `Bearer ${token}`, 
-            "Content-Type": `multipart/form-data` 
-          } 
-        }
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
       );
       const qId = qRes.data.questionId;
 
@@ -136,18 +133,8 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
         const isCorr = correctChoices.includes(ch);
         await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${qId}`,
-          { 
-            choiceText: ch, 
-            choiceOrder: isCorr ? i + 1 : null, 
-            correct: isCorr 
-          },
-          { 
-            headers: 
-            { 
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}` 
-            } 
-          }
+          { choiceText: ch, choiceOrder: isCorr ? i + 1 : null, correct: isCorr },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         if (isCorr) score++;
       }
@@ -155,14 +142,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}`,
         null,
-        { 
-          params: { scoreValue: score }, 
-          headers: 
-          { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}` 
-          } 
-        }
+        { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
       );
 
       setNewMessage("Saved successfully!");
@@ -219,29 +199,42 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
       return;
     }
     const token = localStorage.getItem("token");
-    if (!token) { navigate("/login"); return; }
+    if (!token) {
+      console.warn("No token found, redirecting to login.");
+      navigate("/login");
+      return;
+    }
     setQuestionMessages((p) => ({ ...p, [id]: "Saving..." }));
     try {
       // update question: update description and choice sequence as translation
+      const form = new FormData();
+      form.append("questionDescription", editPhrase);
+      form.append("questionText", editChoices.map((c) => c.choiceText).join(" "));
+      form.append("image", null);
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
-        {
-          questionDescription: editPhrase,
-          questionText: editChoices.map((c) => c.choiceText).join(" "),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        form,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
       );
+
       // update choices and score
       let score = 0;
-      for (let c of editChoices) {
+      for (let i = 0; i < editChoices.length; i++) {
+        const c = editChoices[i];
         const isCorr = editCorrect.includes(c.choiceText);
+        let choiceOrder = null;
+        if (isCorr) {
+          choiceOrder = editCorrect.indexOf(c.choiceText) + 1; // Assign order based on selection sequence
+        }
+        // Update choice with correct order
         await axios.put(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${c.choiceId}`,
-          { choiceText: c.choiceText, correct: isCorr },
+          { choiceText: c.choiceText, correct: isCorr, choiceOrder: choiceOrder },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (isCorr) score++;
       }
+
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${id}/score`,
         null,
@@ -252,7 +245,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
       setEditingId(null);
       fetchQuestions();
     } catch (err) {
-      console.error(err);
+      console.error("Update failed:", err); // Log the entire error object
       setQuestionMessages((p) => ({ ...p, [id]: "Update failed." }));
     }
   };
@@ -279,8 +272,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
     }
   };
 
-  const goBack = () => navigate(`/classroom/${classroomId}/live-activities`);
-
+  // --- UI ---
   return (
     <Grid container justifyContent="center" sx={{ minHeight: '100vh', backgroundColor: '#c8e6c9', p: 2 }}>
       <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', color: '#232323' }}>
@@ -290,6 +282,82 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated }) {
         </Box>
 
         {/* Existing Questions */}
+        {questions.map((q, i) => (
+          <Paper key={q.questionId} sx={{ bgcolor: '#18191B', color: '#fff', p: 4, mb: 4, borderRadius: 3 }}>
+            <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>{i+1}.</Typography>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+              {/* Phrase & Translation */}
+              <Box sx={{ flex: 1 }}>
+                <Typography color="#B3E5FC" mb={1} fontWeight="bold">Phrase</Typography>
+                {editingId === q.questionId ? (
+                  <TextField
+                    fullWidth variant="standard" value={editPhrase}
+                    onChange={(e) => setEditPhrase(e.target.value)}
+                    sx={{ input: { color: '#fff' }, bgcolor: '#232323', borderRadius: 1, p:1 }}
+                  />
+                ) : (
+                  <Typography>{q.questionDescription}</Typography>
+                )}
+                <Typography color="#B3E5FC" mt={2} mb={1} fontWeight="bold">Translation</Typography>
+                {editingId === q.questionId ? (
+                  <Typography sx={{ color: '#fff', bgcolor:'#232323', p:1, borderRadius:1 }}>
+                    {editChoices.map((c) => c.choiceText).join(' ')}
+                  </Typography>
+                ) : (
+                  <Typography>{q.questionText}</Typography>
+                )}
+              </Box>
+              {/* Choices */}
+              <Box sx={{ flex: 2 }}>
+                <Typography color="#B3E5FC" mb={1} fontWeight="bold">Choices</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {(editingId === q.questionId ? editChoices : q.choices).map((c, idx) => {
+                    const text = c.choiceText;
+                    const selected = editingId === q.questionId
+                      ? editCorrect.includes(text)
+                      : c.correct;
+                    return (
+                      <Chip
+                        key={idx}
+                        label={editingId === q.questionId ? (
+                          <TextField
+                            variant="standard" value={text}
+                            onChange={(e) => changeEditChoice(idx, e.target.value)}
+                            InputProps={{ disableUnderline:true, sx:{ color: selected ? '#fff':'#B3E5FC'} }}
+                          />
+                        ) : text}
+                        onClick={editingId === q.questionId ? () => toggleEditCorrect(text) : undefined}
+                        sx={{
+                          bgcolor: selected ? '#4CAF50':'#232323',
+                          color: selected ? '#fff':'#B3E5FC',
+                          border: selected ? '2px solid #4CAF50':'1px solid #616161'
+                        }}
+                      />
+                    );
+                  })}
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  {editingId === q.questionId ? (
+                    <>
+                      <Button variant="contained" onClick={saveEdit} sx={{ bgcolor: '#4CAF50' }}>Save</Button>
+                      <Button variant="contained" color="error" onClick={cancelEdit} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="contained" sx={{ bgcolor: '#81D4FA' }} onClick={() => startEdit(q)}>Edit</Button>
+                      <Button variant="contained" color="error" onClick={() => deleteQuestion(q.questionId)} sx={{ bgcolor: '#E57373' }}>Delete</Button>
+                    </>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+            {questionMessages[q.questionId] && (
+              <Typography color={questionMessages[q.questionId].includes('failed') ? '#E57373':'#81C784'} sx={{ mt:2, textAlign:'center' }}>
+                {questionMessages[q.questionId]}
+              </Typography>
+            )}
+          </Paper>
+        ))}
 
         {/* Add New Phrase */}
         <Paper sx={{ bgcolor: '#18191B', color: '#fff', p:4, borderRadius:3, mb:4 }}>

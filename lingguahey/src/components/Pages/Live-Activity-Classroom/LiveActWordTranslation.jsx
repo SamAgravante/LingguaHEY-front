@@ -18,8 +18,12 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-export default function WordTranslation({ activityId, classroomId, onGameCreated }) {
+export default function WordTranslation({ activityId, classroomId, onGameCreated,  question, onClose }) {
   const navigate = useNavigate();
+
+  // Use question prop to initialize state if editing
+  const [word, setWord] = useState(question ? question.word : "");
+  const [choices, setChoices] = useState(question ? question.choices || [] : []);
 
   // New question state
   const [newWord, setNewWord] = useState("");
@@ -47,6 +51,14 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
     headers: { Authorization: `Bearer ${token}` },
   });
 
+   useEffect(() => {
+    if (question) {
+      setWord(question.word || "");
+      setChoices(question.choices || []);
+      setCorrectAnswer(question.correctAnswer || null);
+    }
+  }, [question]);
+  
   useEffect(() => {
     async function fetchData() {
       if (!activityId) return;
@@ -59,6 +71,25 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
     }
     fetchData();
   }, [activityId]);
+
+  // Add this useEffect to initialize edit fields when editing
+  useEffect(() => {
+    if (question) {
+      setEditWord(question.word || question.questionText || "");
+      setEditChoices(question.choices || []);
+      setEditCorrect(
+        (question.choices && question.choices.find(c => c.correct)?.choiceText) ||
+        question.correctAnswer ||
+        ""
+      );
+      setEditingId(question.questionId);
+    } else {
+      setEditWord("");
+      setEditChoices([]);
+      setEditCorrect("");
+      setEditingId(null);
+    }
+  }, [question]);
 
   // Add choice for new question
   const handleAddChoice = () => {
@@ -141,6 +172,10 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
         onGameCreated();
       }
 
+      if (onClose) {
+        onClose();
+      }
+
     } catch (error) {
       setNewMessage("Save failed.");
     }
@@ -167,7 +202,17 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
 
     setMsgMap(m => ({ ...m, [editingId]: "Saving changes..." }));
     try {
-      await api.put(`/api/lingguahey/questions/${editingId}`, { questionText: editWord, questionDescription: "", image: null });
+      const form = new FormData();
+      form.append("questionText", editWord);
+      form.append("questionDescription", "");
+      form.append("image", null);
+
+      // Update the question
+      await api.put(`/api/lingguahey/questions/${editingId}`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // Update choices and score
       let score = 0;
       for (let c of editChoices) {
         const isCorr = c.choiceText === editCorrect;
@@ -175,11 +220,18 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
         if (isCorr) score = 1;
       }
       await api.put(`/api/lingguahey/scores/questions/${editingId}/score`, null, { params: { scoreValue: score } });
+
       setMsgMap(m => ({ ...m, [editingId]: "Updated successfully!" }));
       setEditingId(null);
       const res = await api.get(`/api/lingguahey/questions/liveactivities/${activityId}`);
       setQuestions(res.data);
-    } catch {
+
+      if (onClose) {
+        onClose();
+      }
+
+    } catch (error) {
+      console.error("Update failed:", error);
       setMsgMap(m => ({ ...m, [editingId]: "Update failed." }));
     }
   };
@@ -219,40 +271,21 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
           <Typography variant="h5" fontWeight="bold" color="#B3E5FC">Word Translation</Typography>
         </Box>
 
-        {/* Add New Question */}
-        <Paper sx={{ bgcolor: '#232323', p: 4, borderRadius: 3 }} elevation={3}>
-          <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>{questions.length + 1}.</Typography>
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
-            <Box flex={1}>
-              <Typography color="#B3E5FC" mb={1}>Word</Typography>
-              <TextField
-                fullWidth
-                variant="outlined"
-                value={newWord}
-                onChange={e => setNewWord(e.target.value)}
-                sx={{
-                  bgcolor: '#232323',
-                  input: { color: '#fff' },
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: '#616161' },
-                    '&:hover fieldset': { borderColor: '#81D4FA' },
-                    '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
-                  }
-                }}
-              />
-            </Box>
-            <Box flex={2}>
-              <Typography color="#B3E5FC" mb={1}>Choices ({newChoices.length}/5)</Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        {/* EDIT MODE */}
+        {question ? (
+          <Paper sx={{ bgcolor: '#232323', p: 4, borderRadius: 3 }} elevation={3}>
+            <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>Edit Question</Typography>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+              <Box flex={1}>
+                <Typography color="#B3E5FC" mb={1}>Word</Typography>
                 <TextField
-                  label="Add Choice"
-                  size="small"
+                  fullWidth
                   variant="outlined"
-                  value={inputChoice}
-                  onChange={e => setInputChoice(e.target.value)}
-                  disabled={newChoices.length >= 5}
-                  sx={{ flex: 1,
-                    bgcolor: '#232323', input: { color: '#fff' },
+                  value={editWord}
+                  onChange={e => setEditWord(e.target.value)}
+                  sx={{
+                    bgcolor: '#232323',
+                    input: { color: '#fff' },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': { borderColor: '#616161' },
                       '&:hover fieldset': { borderColor: '#81D4FA' },
@@ -260,40 +293,118 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                     }
                   }}
                 />
-                <Button variant="contained" onClick={handleAddChoice} disabled={!inputChoice.trim() || newChoices.length>=5} sx={{ bgcolor: '#81D4FA', color: '#000' }}>Add</Button>
               </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {newChoices.map((c,i) => {
-                  const isCorr = c === correctAnswer;
-                  return (
-                    <Chip
-                      key={i}
-                      label={c}
-                      onClick={() => setCorrectAnswer(c)}
-                      onDelete={() => handleRemoveChoice(c)}
-                      sx={{
-                        bgcolor: isCorr ? '#4CAF50' : '#232323',
-                        color: '#fff',
-                        border: isCorr ? '2px solid #4CAF50' : '1px solid #616161',
-                        fontWeight: isCorr ? 'bold' : 'normal'
-                      }}
-                    />
-                  );
-                })}
-              </Box>
-              <Typography color="#B3E5FC" mb={2}>
-                {correctAnswer ? `Correct: ${correctAnswer}` : 'Click a choice to set correct answer'}
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button variant="contained" color="error" onClick={() => { setNewWord(''); setNewChoices([]); setInputChoice(''); setCorrectAnswer(''); setNewMessage(''); }} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
-                <Button variant="contained" onClick={handleSaveNew} disabled={!newWord.trim()||newChoices.length<3||!correctAnswer} sx={{ bgcolor: '#4CAF50' }}>Save</Button>
+              <Box flex={2}>
+                <Typography color="#B3E5FC" mb={1}>Choices ({editChoices.length}/5)</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {editChoices.map((c, i) => {
+                    const isCorr = c.choiceText === editCorrect;
+                    return (
+                      <Chip
+                        key={i}
+                        label={c.choiceText}
+                        onClick={() => setEditCorrect(c.choiceText)}
+                        sx={{
+                          bgcolor: isCorr ? '#4CAF50' : '#232323',
+                          color: '#fff',
+                          border: isCorr ? '2px solid #4CAF50' : '1px solid #616161',
+                          fontWeight: isCorr ? 'bold' : 'normal'
+                        }}
+                      />
+                    );
+                  })}
+                </Box>
+                <Typography color="#B3E5FC" mb={2}>
+                  {editCorrect ? `Correct: ${editCorrect}` : 'Click a choice to set correct answer'}
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                  <Button variant="contained" color="error" onClick={onClose} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
+                  <Button variant="contained" onClick={handleSaveEdit} disabled={!editWord.trim()||editChoices.length<3||!editCorrect} sx={{ bgcolor: '#4CAF50' }}>Save</Button>
+                </Box>
+                {msgMap[editingId] && (
+                  <Typography color={msgMap[editingId].includes('failed') ? '#E57373' : '#81C784'} sx={{ mt: 2, textAlign: 'center' }}>{msgMap[editingId]}</Typography>
+                )}
               </Box>
             </Box>
-          </Box>
-          {newMessage && (
-            <Typography color={newMessage.includes('failed') ? '#E57373' : '#81C784'} sx={{ mt: 3, textAlign: 'center' }}>{newMessage}</Typography>
-          )}
-        </Paper>
+          </Paper>
+        ) : (
+        // CREATE MODE
+          <Paper sx={{ bgcolor: '#232323', p: 4, borderRadius: 3 }} elevation={3}>
+            <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>{questions.length + 1}.</Typography>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+              <Box flex={1}>
+                <Typography color="#B3E5FC" mb={1}>Word</Typography>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  value={newWord}
+                  onChange={e => setNewWord(e.target.value)}
+                  sx={{
+                    bgcolor: '#232323',
+                    input: { color: '#fff' },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: '#616161' },
+                      '&:hover fieldset': { borderColor: '#81D4FA' },
+                      '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
+                    }
+                  }}
+                />
+              </Box>
+              <Box flex={2}>
+                <Typography color="#B3E5FC" mb={1}>Choices ({newChoices.length}/5)</Typography>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <TextField
+                    label="Add Choice"
+                    size="small"
+                    variant="outlined"
+                    value={inputChoice}
+                    onChange={e => setInputChoice(e.target.value)}
+                    disabled={newChoices.length >= 5}
+                    sx={{ flex: 1,
+                      bgcolor: '#232323', input: { color: '#fff' },
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': { borderColor: '#616161' },
+                        '&:hover fieldset': { borderColor: '#81D4FA' },
+                        '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
+                      }
+                    }}
+                  />
+                  <Button variant="contained" onClick={handleAddChoice} disabled={!inputChoice.trim() || newChoices.length>=5} sx={{ bgcolor: '#81D4FA', color: '#000' }}>Add</Button>
+                </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {newChoices.map((c,i) => {
+                    const isCorr = c === correctAnswer;
+                    return (
+                      <Chip
+                        key={i}
+                        label={c}
+                        onClick={() => setCorrectAnswer(c)}
+                        onDelete={() => handleRemoveChoice(c)}
+                        sx={{
+                          bgcolor: isCorr ? '#4CAF50' : '#232323',
+                          color: '#fff',
+                          border: isCorr ? '2px solid #4CAF50' : '1px solid #616161',
+                          fontWeight: isCorr ? 'bold' : 'normal'
+                        }}
+                      />
+                    );
+                  })}
+                </Box>
+                <Typography color="#B3E5FC" mb={2}>
+                  {correctAnswer ? `Correct: ${correctAnswer}` : 'Click a choice to set correct answer'}
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                  <Button variant="contained" color="error" onClick={() => { setNewWord(''); setNewChoices([]); setInputChoice(''); setCorrectAnswer(''); setNewMessage(''); }} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
+                  <Button variant="contained" onClick={handleSaveNew} disabled={!newWord.trim()||newChoices.length<3||!correctAnswer} sx={{ bgcolor: '#4CAF50' }}>Save</Button>
+                </Box>
+              </Box>
+            </Box>
+            {newMessage && (
+              <Typography color={newMessage.includes('failed') ? '#E57373' : '#81C784'} sx={{ mt: 3, textAlign: 'center' }}>{newMessage}</Typography>
+            )}
+          </Paper>
+        )}
+
       </Box>
 
       {/* Delete Confirmation Dialog */}

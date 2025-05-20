@@ -67,6 +67,11 @@ const LiveActClassroom = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [questionToEdit, setQuestionToEdit] = useState(null);
 
+  // New state for game-specific edit dialogs
+  const [openGame1EditDialog, setOpenGame1EditDialog] = useState(false);
+  const [openGame2EditDialog, setOpenGame2EditDialog] = useState(false);
+  const [openGame3EditDialog, setOpenGame3EditDialog] = useState(false);
+
   const openRemoveStudentDialog = (student) => {
     setSelectedStudent(student);
     setDialogMessage(`Are you sure you want to remove ${student.firstName} ${student.lastName}?`);
@@ -93,11 +98,11 @@ const LiveActClassroom = () => {
 
   const handleConfirmRemoveStudent = async () => {
     try {
-      await API.delete(`/api/lingguahey/classrooms/${classroomId}/students/${selectedStudent.userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      //await API.delete(`/api/lingguahey/classrooms/${classroomId}/students/${selectedStudent.userId}`, {
+      //  headers: {
+      //    Authorization: `Bearer ${token}`,
+      //  },
+      //});
       setStudents((prevStudents) => prevStudents.filter((s) => s.userId !== selectedStudent.userId));
       setDialogMessage("Student removed successfully.");
     } catch (err) {
@@ -110,11 +115,11 @@ const LiveActClassroom = () => {
 
   const handleConfirmDeleteActivity = async () => {
     try {
-      await API.delete(`/api/lingguahey/live-activities/${activityToDelete.activity_ActivityId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      //await API.delete(`/api/lingguahey/live-activities/${activityToDelete.activity_ActivityId}`, {
+      //  headers: {
+      //    Authorization: `Bearer ${token}`,
+      //  },
+      //});
       setActivities(activities.filter((activity) => activity.activity_ActivityId !== activityToDelete.activity_ActivityId));
       //alert("Activity deleted successfully.");
     } catch (err) {
@@ -273,7 +278,13 @@ const LiveActClassroom = () => {
   // Function to open the edit question dialog
   const handleEditQuestion = (question) => {
     setQuestionToEdit(question);
-    setOpenEditDialog(true);
+    if (question.gameType === "GAME1") {
+      setOpenGame1EditDialog(true);
+    } else if (question.gameType === "GAME2") {
+      setOpenGame2EditDialog(true);
+    } else if (question.gameType === "GAME3") {
+      setOpenGame3EditDialog(true);
+    }
   };
 
   // Function to close the edit question dialog
@@ -282,26 +293,10 @@ const LiveActClassroom = () => {
     setQuestionToEdit(null);
   };
 
-  // Function to handle saving the edited question
-  const handleSaveQuestion = async () => {
-    try {
-      await API.put(`/api/lingguahey/questions/${questionToEdit.questionId}`, questionToEdit, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      // Update the question in the local state
-      setActivityQuestions((prevQuestions) =>
-        prevQuestions.map((question) =>
-          question.questionId === questionToEdit.questionId ? questionToEdit : question
-        )
-      );
-      closeEditDialog();
-    } catch (err) {
-      console.error("Error updating question:", err.response?.data || err.message);
-      setError("Failed to update question. Please try again later.");
-    }
-  };
+  // Functions to close game-specific edit dialogs
+  const closeGame1EditDialog = () => setOpenGame1EditDialog(false);
+  const closeGame2EditDialog = () => setOpenGame2EditDialog(false);
+  const closeGame3EditDialog = () => setOpenGame3EditDialog(false);
 
   // Function to handle deleting a question
   const handleDeleteQuestion = async (questionId) => {
@@ -593,18 +588,90 @@ const LiveActClassroom = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Question Dialog */}
+      {/* Game 1 Edit Dialog */}
       <Dialog
+        open={openGame1EditDialog}
+        onClose={closeGame1EditDialog}
+        aria-labelledby="game1-edit-dialog-title"
+        aria-describedby="game1-edit-dialog-description"
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle id="game1-edit-dialog-title">Edit One Pic Four Words Question</DialogTitle>
+        <DialogContent>
+          <LiveActOnePicFourWords
+            activityId={selectedActivity?.activity_ActivityId}
+            classroomId={classroomId}
+            question={questionToEdit}
+            onClose={closeGame1EditDialog}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeGame1EditDialog} color="primary">
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Game 2 Edit Dialog */}
+      <Dialog
+        open={openGame2EditDialog}
+        onClose={closeGame2EditDialog}
+        aria-labelledby="game2-edit-dialog-title"
+        aria-describedby="game2-edit-dialog-description"
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle id="game2-edit-dialog-title">Edit Phrase Translation Question</DialogTitle>
+        <DialogContent>
+          <LiveActPhraseTranslation
+            activityId={selectedActivity?.activity_ActivityId}
+            classroomId={classroomId}
+            question={questionToEdit}
+            onClose={closeGame2EditDialog}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeGame2EditDialog} color="primary">
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Game 3 Edit Dialog */}
+      <Dialog
+        open={openGame3EditDialog}
+        onClose={closeGame3EditDialog}
+        aria-labelledby="game3-edit-dialog-title"
+        aria-describedby="game3-edit-dialog-description"
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle id="game3-edit-dialog-title">Edit Word Translation Question</DialogTitle>
+        <DialogContent>
+          <LiveActWordTranslation
+            activityId={selectedActivity?.activity_ActivityId}
+            classroomId={classroomId}
+            question={questionToEdit}
+            onClose={closeGame3EditDialog}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeGame3EditDialog} color="primary">
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+       {/* Edit Question Dialog */}
+       <Dialog
         open={openEditDialog}
         onClose={closeEditDialog}
         aria-labelledby="edit-dialog-title"
         aria-describedby="edit-dialog-description"
-        maxWidth="md"
-        fullWidth
       >
         <DialogTitle id="edit-dialog-title">Edit Question</DialogTitle>
         <DialogContent>
-          {questionToEdit && questionToEdit.gameType === "GAME1" && (
+          {questionToEdit && (
             <TextField
               autoFocus
               margin="dense"
@@ -612,35 +679,7 @@ const LiveActClassroom = () => {
               label="Question Text"
               type="text"
               fullWidth
-              value={questionToEdit.questionText || ""}
-              onChange={(e) =>
-                setQuestionToEdit({ ...questionToEdit, questionText: e.target.value })
-              }
-            />
-          )}
-          {questionToEdit && questionToEdit.gameType === "GAME2" && (
-            <TextField
-              autoFocus
-              margin="dense"
-              id="question-description"
-              label="Question Description"
-              type="text"
-              fullWidth
-              value={questionToEdit.questionDescription || ""}
-              onChange={(e) =>
-                setQuestionToEdit({ ...questionToEdit, questionDescription: e.target.value })
-              }
-            />
-          )}
-          {questionToEdit && questionToEdit.gameType === "GAME3" && (
-            <TextField
-              autoFocus
-              margin="dense"
-              id="question-text"
-              label="Question Text"
-              type="text"
-              fullWidth
-              value={questionToEdit.questionText || ""}
+              value={questionToEdit.questionText}
               onChange={(e) =>
                 setQuestionToEdit({ ...questionToEdit, questionText: e.target.value })
               }
@@ -651,7 +690,7 @@ const LiveActClassroom = () => {
           <Button onClick={closeEditDialog} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleSaveQuestion} color="primary">
+          <Button onClick={() => {}} color="primary">
             Save
           </Button>
         </DialogActions>
