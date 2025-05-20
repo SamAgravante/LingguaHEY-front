@@ -1,5 +1,5 @@
 // src/components/Pages/Homepage.jsx
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   Grid,
   Stack,
@@ -54,6 +54,7 @@ export default function Homepage() {
   const [progressVocab, setProgressVocab] = useState(0);
   const [progressGrammar, setProgressGrammar] = useState(0);
   const [secVisibility, setSecVisibility] = useState(true);
+  const liveActivityRef = useRef(null);
 
   // Decode token → user
   useEffect(() => {
@@ -156,7 +157,15 @@ export default function Homepage() {
     setActivityMode(false);
   };
 
-  const handleBackClick = () => (current ? backToList() : closeModal());
+  const handleBackClick = () => {
+    if (!current && section === 'Activity' && liveActivityRef.current && liveActivityRef.current.handleReturn) {
+      liveActivityRef.current.handleReturn();
+    } else if (current) {
+      backToList();
+    } else {
+      closeModal();
+    }
+  };
 
   // ---------------- renderBody ----------------
   function renderBody() {
@@ -166,9 +175,11 @@ export default function Homepage() {
       if (section === 'Activity') {
         return (
           <LiveActivityGame
+            ref={liveActivityRef}
             activityId={classroom}
             userId={user?.userId}
             onStarted={closeModal}
+            onReturn={closeModal}
           />
         );
       }
@@ -279,9 +290,11 @@ export default function Homepage() {
     if (section === 'Activity') {
       return (
         <LiveActivityGame
+          ref={liveActivityRef}
           activityId={current.activityId}
           userId={user?.userId}
           onStarted={closeModal}
+          onReturn={closeModal}
         />
       );
     } else if (section === 'Grammar') {
