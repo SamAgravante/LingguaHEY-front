@@ -47,7 +47,7 @@ export default function Homepage() {
   const [section, setSection] = useState('');
   const [activities, setActivities] = useState([]);
   const [current, setCurrent] = useState(null);
-  const [classroom, setClassroom] = useState('');
+  const [classroom, setClassroom] = useState(1);
   const [userDetails, setUserDetails] = useState({});
   const [userActivities, setUserActivities] = useState([]);
   const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
