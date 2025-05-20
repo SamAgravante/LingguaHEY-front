@@ -8,10 +8,10 @@ import {
   Chip,
   Grid,
 } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-function PhraseTranslation() {
+function PhraseTranslation({ activityId }) {
   // State for adding a new phrase question
   const [newPhrase, setNewPhrase] = useState("");
   const [translation, setTranslation] = useState("");
@@ -28,7 +28,6 @@ function PhraseTranslation() {
   const [editCorrect, setEditCorrect] = useState([]);
   const [questionMessages, setQuestionMessages] = useState({});
 
-  const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -191,29 +190,42 @@ function PhraseTranslation() {
       return;
     }
     const token = localStorage.getItem("token");
-    if (!token) { navigate("/login"); return; }
+    if (!token) {
+      console.warn("No token found, redirecting to login.");
+      navigate("/login");
+      return;
+    }
     setQuestionMessages((p) => ({ ...p, [id]: "Saving..." }));
     try {
       // update question: update description and choice sequence as translation
+      const form = new FormData();
+      form.append("questionDescription", editPhrase);
+      form.append("questionText", editChoices.map((c) => c.choiceText).join(" "));
+      form.append("image", null);
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${id}`,
-        {
-          questionDescription: editPhrase,
-          questionText: editChoices.map((c) => c.choiceText).join(" "),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        form,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
       );
+
       // update choices and score
       let score = 0;
-      for (let c of editChoices) {
+      for (let i = 0; i < editChoices.length; i++) {
+        const c = editChoices[i];
         const isCorr = editCorrect.includes(c.choiceText);
+        let choiceOrder = null;
+        if (isCorr) {
+          choiceOrder = editCorrect.indexOf(c.choiceText) + 1; // Assign order based on selection sequence
+        }
+        // Update choice with correct order
         await axios.put(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${c.choiceId}`,
-          { choiceText: c.choiceText, correct: isCorr },
+          { choiceText: c.choiceText, correct: isCorr, choiceOrder: choiceOrder },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (isCorr) score++;
       }
+
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${id}/score`,
         null,
@@ -224,7 +236,7 @@ function PhraseTranslation() {
       setEditingId(null);
       fetchQuestions();
     } catch (err) {
-      console.error(err);
+      console.error("Update failed:", err); // Log the entire error object
       setQuestionMessages((p) => ({ ...p, [id]: "Update failed." }));
     }
   };
@@ -251,7 +263,7 @@ function PhraseTranslation() {
     }
   };
 
-  const goBack = () => navigate(`/classroom/${classroomId}`);
+  const goBack = () => navigate(`/admindashboard`);
 
   return (
     <Grid container justifyContent="center" sx={{ minHeight: '100vh', backgroundColor: '#c8e6c9', p: 2 }}>
@@ -259,7 +271,9 @@ function PhraseTranslation() {
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" fontWeight="bold">Phrase Translation</Typography>
-          <Button variant="text" onClick={goBack} sx={{ color: '#388e3c' }}>&larr; Back to Class</Button>
+          {
+            //<Button variant="text" onClick={goBack} sx={{ color: '#388e3c' }}>&larr; Back to Class</Button>
+          }
         </Box>
 
         {/* Existing Questions */}

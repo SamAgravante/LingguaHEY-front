@@ -22,7 +22,7 @@ import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-function OnePicFourWords() {
+function OnePicFourWords({activityId}) {
   // Helper to choose between URL or base64 payload
   const getImageSrc = (img) =>
     img.startsWith("http") ? img : `data:image/png;base64,${img}`;
@@ -46,7 +46,7 @@ function OnePicFourWords() {
   const [questionMessages, setQuestionMessages] = useState({});
 
   // General state
-  const { activityId, classroomId } = useParams();
+  //const { activityId, classroomId } = useParams();
   const navigate = useNavigate();
 
   // Fetch questions on mount
@@ -86,7 +86,7 @@ function OnePicFourWords() {
     const choice = newQuestionInputChoice.trim();
     if (!choice) return setNewQuestionMessage("Choice cannot be empty.");
     if (newQuestionChoices.includes(choice)) return setNewQuestionMessage("Duplicate choice.");
-    if (newQuestionChoices.length >= 5) return setNewQuestionMessage("Max 5 choices.");
+    if (newQuestionChoices.length >= 4) return setNewQuestionMessage("Max 4 choices.");
     setNewQuestionChoices([...newQuestionChoices, choice]);
     setNewQuestionInputChoice("");
     setNewQuestionMessage("");
@@ -257,7 +257,7 @@ function OnePicFourWords() {
     }
   };
 
-  const goBackToActivities = () => navigate(`/classroom/${classroomId}`);
+  const goBackToActivities = () => navigate(`/admindashboard`);
 
   return (
     <Grid
@@ -278,13 +278,15 @@ function OnePicFourWords() {
           <Typography variant="h5" fontWeight="bold" color="#232323">
             Activity Name (One Pic Four Words)
           </Typography>
+          {/*
           <Button
             variant="text"
             onClick={goBackToActivities}
             sx={{ color: "#388e3c", "&:hover": { color: "#2e7031" } }}
           >
             ← Back to Class
-          </Button>
+          </Button>*/
+          }
         </Box>
 
         {/* Existing Questions */}
@@ -639,7 +641,7 @@ function OnePicFourWords() {
               {/* Choices */}
               <Box sx={{ flex: 2 }}>
                 <Typography color="#B3E5FC" mb={1} fontWeight="bold">
-                  Enter Choices ({newQuestionChoices.length}/5)
+                  Enter Choices ({newQuestionChoices.length}/4)
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
                   <TextField

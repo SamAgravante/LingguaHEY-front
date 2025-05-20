@@ -23,7 +23,7 @@ import { jwtDecode } from "jwt-decode";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import Classroom from "./Classroom";
-import LiveActClassroom from "./Live-Activity-Classroom/L'AClassroom";
+import LiveActClassroom from "./Live-Activity-Classroom/LiveActClassroom";
 
 const TeacherDashboard = () => {
   const [classroomName, setClassroomName] = useState(""); // State for new classroom name

@@ -245,12 +245,12 @@ const Dashboard = () => {
 
   const handleCloseModal = () => setOpen(false);
 
-  const handleSubjectSelect = (subject) => {
+  /*const handleSubjectSelect = (subject) => {
     navigate(`/activities/${selectedClassroom}/${subject}`);
     setOpen(false);
-  };
+  };*/
 
-  const handleDeleteClassroom = async (classroomId) => {
+  /*const handleDeleteClassroom = async (classroomId) => {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroomId}`, {
@@ -264,7 +264,7 @@ const Dashboard = () => {
       console.error("Failed to delete classroom:", error);
       alert("Failed to delete classroom. Please try again.");
     }
-  };
+  };*/
 
   const handleDelete = async (userId) => {
     try {
@@ -302,7 +302,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleEditClassroom = async (classroomId, newName) => {
+  /*const handleEditClassroom = async (classroomId, newName) => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
@@ -322,9 +322,9 @@ const Dashboard = () => {
       console.error("Failed to update classroom name:", error);
       alert("Failed to update classroom name. Please try again.");
     }
-  };
+  };*/
 
-  const handleCreateClassroom = async () => {
+  /*const handleCreateClassroom = async () => {
     try {
       const token = localStorage.getItem("token"); 
       if (!classroomName.trim()) {
@@ -353,16 +353,16 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Failed to create classroom:", error);
     }
-  };
+  };*/
 
-  const handleViewClassroom = (classroomId) => {
+  /*const handleViewClassroom = (classroomId) => {
     console.log("Navigating to classroom with ID:", classroomId);
     if (!classroomId) {
       alert("Classroom ID is invalid.");
       return;
     }
     navigate(`/classroom/${classroomId}`);
-  };
+  };*/
 
   const handleOpenDialog = () => setOpenCreateDialog(true);
   const handleCloseDialog = () => setOpenCreateDialog(false);
@@ -463,6 +463,12 @@ useEffect(() => {
             LinguaHey Learning Platform Management
           </Typography>
         </Box>
+
+        <Button sx={{borderRadius: 6, ml: "auto", backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/activities`)}>
+          <Typography variant="body1" sx={{ color: "white" }}>
+            Lesson Creation
+          </Typography>
+        </Button>
       </Box>
 
       <Box sx={{ maxWidth: 1600, mx: "auto", px: 3 }}>
@@ -576,7 +582,7 @@ useEffect(() => {
           </Grid>
 
           {/* Users List with Search */}
-            <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={4}>
     <Card elevation={2} sx={{ borderRadius: 2, overflow: "hidden", height: 532, display: "flex", flexDirection: "column" }}>
       <Box sx={{ px: 3, py: 2, backgroundColor: "#f44336", color: "#fff", display: "flex", alignItems: "center" }}>
         <PersonIcon sx={{ mr: 1 }} />
@@ -592,6 +598,7 @@ useEffect(() => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+
         {/* Replace dropdown with clickable chips */}
         <Box sx={{ display: "flex", gap: 1 }}>
           {[
@@ -702,9 +709,12 @@ useEffect(() => {
           </Grid>
         </Grid>
 
+
         {/* Main Content */}
         <Grid container spacing={3}>          {/* Classroom Data */}          
         </Grid>
+
+
          {/* Game Usage Pie Chart */}
          <Grid container spacing={3} mb={4}>
           <Grid item xs={12} md={4}>
@@ -736,7 +746,7 @@ useEffect(() => {
         </Grid>
       </Box>
 
-      {/* Create Classroom Dialog */}
+      {/* Create Classroom Dialog 
       <Dialog 
         open={openCreateDialog} 
         onClose={handleCloseDialog}
@@ -781,7 +791,7 @@ useEffect(() => {
             Create
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog>*/}
 
       {/* Activities Modal */}
       <Modal open={open} onClose={handleCloseModal}>
