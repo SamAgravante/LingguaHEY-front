@@ -153,9 +153,8 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
 
     if (!isCompleted && userId) {
       API.post(
-        `scores/award/translation/questions/${q.questionId}/users/${userId}`,
-        [choice.choiceId]
-      ).catch(err => console.error('Error awarding translation score:', err));
+        `scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${choice.choiceId}`
+      ).catch(err => console.error('Error awarding score:', err));
     }
 
     if (nextIndex < questions.length) {

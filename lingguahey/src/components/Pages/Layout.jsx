@@ -16,6 +16,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import API from "../../api";
 import { jwtDecode } from "jwt-decode";
 import { MusicContext } from "../../contexts/MusicContext";
+import { getUserFromToken } from "../../utils/auth";
 
 const drawerWidth = 240;
 const pastelBackground = "#FFE0B2";
@@ -58,7 +59,9 @@ const Layout = () => {
   useEffect(() => {
     if (!token) return;
 
-    const { userId } = jwtDecode(token);
+    const userObj = getUserFromToken();
+    const userId = userObj?.userId || userObj?.id;
+    if (!userId) return;
 
     const loadUser = async () => {
       try {
@@ -108,7 +111,6 @@ const Layout = () => {
   };
 
   const filteredRoutes = allRoutes.filter((r) => r.roles.includes(userData.role));
-
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
