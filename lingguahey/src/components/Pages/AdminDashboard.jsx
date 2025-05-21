@@ -460,7 +460,7 @@ useEffect(() => {
             Admin Dashboard
           </Typography>
           <Typography variant="body1" sx={{ color: "#757575" }}>
-            LinguaHey Learning Platform Management
+            LingguaHey Learning Platform Management
           </Typography>
         </Box>
       </Box>

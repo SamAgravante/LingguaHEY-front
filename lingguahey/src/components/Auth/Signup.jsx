@@ -44,7 +44,7 @@ export default function Signup() {
     password: '',
     confirmPassword: '',
     role,
-    subscriptionStatus: true,
+    subscriptionStatus: false,
     idNumber: ''
   });
   const [showPassword, setShowPassword] = useState(false);
