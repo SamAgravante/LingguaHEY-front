@@ -2,17 +2,20 @@ import { Grid, Box, Typography, Button, Paper, Divider, Stack } from "@mui/mater
 import axios from "axios";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckIcon from "@mui/icons-material/Check";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getUserFromToken } from "../../utils/auth";
 
 export default function Subscription() {
   const [paymentReference, setPaymentReference] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const userID = getUserFromToken().userId;
   const token = localStorage.getItem("token");
   const [subscriptionType, setSubscriptionType] = useState("");
   const [subscriptionEndDate, setSubscriptionEndDate] = useState(null);
 
+  const isMounted = useRef(false);
+  const hasVerified = useRef(false);
 
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users`,
@@ -23,32 +26,52 @@ export default function Subscription() {
       Authorization: `Bearer ${token}`,
     },
   });
+
   useEffect(() => {
     const checkSubscriptionStatus = async () => {
       try {
         const response = await API.get(`/${userID}`);
         console.log("Fetched user data:", response.data); 
-  
-        if (response.data) {
+
+        if (response.data && isMounted.current) {
           setIsSubscribed(response.data.subscriptionStatus);
           setSubscriptionType(response.data.subscriptionType || "");
           if (response.data.subscriptionEndDate) {
             const endDate = new Date(response.data.subscriptionEndDate);
-            console.log("Setting end date:", endDate); 
             setSubscriptionEndDate(endDate);
-          }
-          const storedReference = localStorage.getItem("paymentReference");
-          if (storedReference && !response.data.subscriptionStatus) {
-            await checkPaymentStatus(storedReference);
           }
         }
       } catch (error) {
         console.error("Error fetching subscription status:", error);
       }
     };
-  
+
+    isMounted.current = true;
     checkSubscriptionStatus();
+
+    return () => {
+      isMounted.current = false;
+    };
   }, [userID]);
+
+  useEffect(() => {
+    const verifyPayment = async () => {
+      const storedReference = localStorage.getItem("paymentReference");
+      if (storedReference && !isSubscribed && !isVerifying && !hasVerified.current) {
+        setIsVerifying(true);
+        hasVerified.current = true;
+        try {
+          await checkPaymentStatus(storedReference);
+        } finally {
+          if (isMounted.current) {
+            setIsVerifying(false);
+          }
+        }
+      }
+    };
+
+    verifyPayment();
+  }, [isSubscribed, isVerifying]);
 
   const checkPaymentStatus = async (referenceNumber) => {
     const options = {
@@ -68,56 +91,48 @@ export default function Subscription() {
         throw new Error('Failed to fetch payment status');
       }  
       const data = await response.json();
-      console.log("Payment Status Response:", data); 
-  
+      
+      if (!isMounted.current) return;
+
       const paymentStatus = data?.data?.[0]?.attributes?.status;
       const selectedPlan = localStorage.getItem("selectedPlan");
-      console.log("Selected Plan from localStorage:", selectedPlan); 
       
       if (paymentStatus === "paid") {
-        console.log('Auth Token:', token);
-        
         const startDate = new Date();
         const endDate = new Date();
         
-        const subscriptionType = selectedPlan === "Premium Plus" ? "PREMIUM_PLUS" : "PREMIUM";
-        
+        let subscriptionType;
         if (selectedPlan === "Premium Plus") {
-          endDate.setMonth(endDate.getMonth() + 6); 
+          subscriptionType = "PREMIUM_PLUS";
+          endDate.setMonth(endDate.getMonth() + 6);
         } else {
+          subscriptionType = "PREMIUM";
           endDate.setMonth(endDate.getMonth() + 1);
         }
-        console.log("Selected Plan:", selectedPlan);
-        console.log("Subscription Type:", subscriptionType);
-        console.log("Start Date:", startDate);
-        console.log("End Date:", endDate);
-        
-        await API.put(`/update-subscription/${userID}`, {}, {
-          params: {
-            subscriptionStatus: true,
-            subscriptionType: subscriptionType,
-            subscriptionStartDate: startDate.toISOString(),
-            subscriptionEndDate: endDate.toISOString()
-          }
+
+        const updateResponse = await API.put(`/update-subscription/${userID}`, {
+          subscriptionStatus: true,
+          subscriptionType: subscriptionType,
+          subscriptionStartDate: startDate.toISOString(),
+          subscriptionEndDate: endDate.toISOString()
         });
 
-        console.log("Backend update response:", response.data);
-        
-        // Update local state
-        setIsSubscribed(true);
-        setSubscriptionType(subscriptionType);
-        setSubscriptionEndDate(endDate);
-        
-        // Clear localStorage
-        localStorage.removeItem("paymentReference");
-        localStorage.removeItem("selectedPlan");
-        
-        // Optional: Show success message
-        alert("Subscription activated successfully!");
+        if (updateResponse.status === 200 && isMounted.current) {
+          setIsSubscribed(true);
+          setSubscriptionType(subscriptionType);
+          setSubscriptionEndDate(endDate);
+          
+          localStorage.removeItem("paymentReference");
+          localStorage.removeItem("selectedPlan");
+          
+          alert("Subscription activated successfully!");
+        }
       }
     } catch (error) {
-      console.error("Error checking payment status:", error);
-      alert("Error updating subscription. Please try again or contact support.");
+      if (isMounted.current) {
+        console.error("Error checking payment status:", error);
+        alert("Error updating subscription. Please try again or contact support.");
+      }
     }
   };
 

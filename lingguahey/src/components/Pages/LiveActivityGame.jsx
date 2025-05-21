@@ -27,7 +27,7 @@ import MultiplayerGameRoom from './MultiplayerGameRoom';
 
 const CHARACTERS = [
   { key: 'char_1', img: char_1, label: 'Char 1', value: 1 },
-  { key: 'char_2', img: char_2, label: 'Char 2', value: 21 },
+  { key: 'char_2', img: char_2, label: 'Char 2', value: 2 },
 ];
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
