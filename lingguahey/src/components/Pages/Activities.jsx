@@ -35,6 +35,7 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import OnePicFourWords from "./Games/GameCreation/OnePicFourWords";
 import PhraseTranslation from "./Games/GameCreation/PhraseTranslation";
 import WordTranslation from "./Games/GameCreation/WordTranslation";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as PieTooltip, Legend as PieLegend } from "recharts";
 
 const Activities = () => {
   const navigate = useNavigate();
@@ -51,6 +52,12 @@ const Activities = () => {
 
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
+  const [gameUsageData, setGameUsageData] = useState([
+    { name: "One Pic Four Words", value: 0 },
+    { name: "Phrase Translation", value: 0 },
+    { name: "Word Translation", value: 0 }
+  ]);
+  const GAME_COLORS = ["#42a5f5", "#66bb6a", "#ffa726"];
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -190,6 +197,35 @@ const Activities = () => {
 
       {/* Activities List */}
       <Grid container spacing={3} p={3}>
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} md={4}>
+            <Card elevation={2} sx={{ borderRadius: 2, p: 2, height: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <Typography variant="h6" sx={{ fontWeight: 500, color: "#3f51b5", mb: 2 }}>
+                Game Usage by Classroom
+              </Typography>
+              <ResponsiveContainer width="100%" height={350}>
+                <PieChart>
+                  <Pie
+                    data={gameUsageData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={110}
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {gameUsageData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={GAME_COLORS[idx % GAME_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <PieTooltip />
+                  <PieLegend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </Grid>
+        </Grid>
+
         <Grid item xs={12} width={550}>
           <Card elevation={2} sx={{ borderRadius: 2 }}>
             <CardContent>

@@ -97,7 +97,7 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
     const choice = newQuestionInputChoice.trim();
     if (!choice) return setNewQuestionMessage("Choice cannot be empty.");
     if (newQuestionChoices.includes(choice)) return setNewQuestionMessage("Duplicate choice.");
-    if (newQuestionChoices.length >= 5) return setNewQuestionMessage("Max 5 choices.");
+    if (newQuestionChoices.length >= 4) return setNewQuestionMessage("Max 4 choices.");
     setNewQuestionChoices([...newQuestionChoices, choice]);
     setNewQuestionInputChoice("");
     setNewQuestionMessage("");
@@ -292,7 +292,7 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
     <Grid
       container
       justifyContent="center"
-      sx={{ minHeight: "100vh", backgroundColor: "#c8e6c9", p: 2, color: "#232323" }}
+      sx={{ minHeight: "100vh", p: 2, color: "black" }}
     >
       <Box sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
         {/* Header */}
@@ -304,8 +304,8 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
             mb: 3,
           }}
         >
-          <Typography variant="h5" fontWeight="bold" color="#232323">
-            Activity Name (One Pic Four Words)
+          <Typography variant="h5" fontWeight="bold" color="black">
+           One Pic Four Words
           </Typography>
         </Box>
 
@@ -314,9 +314,8 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
           <Paper
             elevation={3}
             sx={{
-              bgcolor: "#18191B",
               p: 4,
-              color: "#fff",
+              color: "black",
               borderRadius: 3,
               mb: 4,
               boxShadow: 3,
@@ -325,7 +324,7 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
             <Typography
               variant="h6"
               fontWeight="bold"
-              color="#B3E5FC"
+              color="black"
               sx={{ mb: 2 }}
             >
               Edit Question
@@ -340,13 +339,12 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
             >
               {/* Image Upload */}
               <Box sx={{ flex: 1, minWidth: 220 }}>
-                <Typography color="#B3E5FC" mb={1} fontWeight="bold">
+                <Typography color="black" mb={1} fontWeight="bold">
                   Select Image +
                 </Typography>
                 <Paper
                   variant="outlined"
                   sx={{
-                    bgcolor: "#232323",
                     p: 2,
                     textAlign: "center",
                     border: "2px dashed #616161",
@@ -376,20 +374,20 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                           border: "1px solid #333",
                         }}
                       />
-                      <Typography variant="body2" color="#B3E5FC" sx={{ mt: 1 }}>
+                      <Typography variant="body2" color="black" sx={{ mt: 1 }}>
                         {editCorrectAnswer || <span style={{ color: "#616161" }}>No label</span>}
                       </Typography>
                     </Box>
                   ) : (
-                    <Typography color="#B3E5FC">Click to Upload Image</Typography>
+                    <Typography color="black">Click to Upload Image</Typography>
                   )}
                 </Paper>
               </Box>
 
               {/* Choices */}
               <Box sx={{ flex: 2 }}>
-                <Typography color="#B3E5FC" mb={1} fontWeight="bold">
-                  Enter Choices ({editChoices.length}/5)
+                <Typography color="black" mb={1} fontWeight="bold">
+                  Enter Choices ({editChoices.length}/4)
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
                   <TextField
@@ -399,9 +397,8 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                     onChange={(e) => setEditInputChoice(e.target.value)}
                     size="small"
                     sx={{
-                      bgcolor: "#232323",
-                      input: { color: "white" },
-                      label: { color: "#B3E5FC" },
+                      input: { color: "black" },
+                      label: { color: "black" },
                       "& .MuiOutlinedInput-root": {
                         "& fieldset": { borderColor: "#616161" },
                         "&:hover fieldset": { borderColor: "#B3E5FC" },
@@ -435,9 +432,9 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                       onDelete={() => removeEditChoice(choice)}
                       sx={{
                         bgcolor:
-                          editCorrectAnswer === choice ? "#4CAF50" : "#232323",
+                          editCorrectAnswer === choice ? "#4CAF50" : "",
                         color:
-                          editCorrectAnswer === choice ? "white" : "#B3E5FC",
+                          editCorrectAnswer === choice ? "white" : "black",
                         border:
                           editCorrectAnswer === choice
                             ? "2px solid #4CAF50"
@@ -453,12 +450,12 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                     />
                   ))}
                   {editChoices.length === 0 && (
-                    <Typography color="#616161" sx={{ mt: 1 }}>
+                    <Typography color="black" sx={{ mt: 1 }}>
                       No choices added yet.
                     </Typography>
                   )}
                 </Box>
-                <Typography color="#B3E5FC" mb={1}>
+                <Typography color="black" mb={1}>
                   {editCorrectAnswer
                     ? `Correct Answer: ${editCorrectAnswer}`
                     : "Click a choice to set as correct answer"}
@@ -515,9 +512,8 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
           <Paper
             elevation={3}
             sx={{
-              bgcolor: "#18191B",
               p: 4,
-              color: "#fff",
+              color: "black",
               borderRadius: 3,
               mb: 4,
               boxShadow: 3,
@@ -526,7 +522,7 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
             <Typography
               variant="h6"
               fontWeight="bold"
-              color="#B3E5FC"
+              color="black"
               sx={{ mb: 2 }}
             >
               {questions.length + 1}.
@@ -541,13 +537,12 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
             >
               {/* Image Upload */}
               <Box sx={{ flex: 1, minWidth: 220 }}>
-                <Typography color="#B3E5FC" mb={1} fontWeight="bold">
+                <Typography color="black" mb={1} fontWeight="bold">
                   Select Image +
                 </Typography>
                 <Paper
                   variant="outlined"
                   sx={{
-                    bgcolor: "#232323",
                     p: 2,
                     textAlign: "center",
                     border: "2px dashed #616161",
@@ -577,20 +572,20 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                           border: "1px solid #333",
                         }}
                       />
-                      <Typography variant="body2" color="#B3E5FC" sx={{ mt: 1 }}>
+                      <Typography variant="body2" color="black" sx={{ mt: 1 }}>
                         {newQuestionCorrectAnswer || <span style={{ color: "#616161" }}>No label</span>}
                       </Typography>
                     </Box>
                   ) : (
-                    <Typography color="#B3E5FC">Click to Upload Image</Typography>
+                    <Typography color="black">Click to Upload Image</Typography>
                   )}
                 </Paper>
               </Box>
 
               {/* Choices */}
               <Box sx={{ flex: 2 }}>
-                <Typography color="#B3E5FC" mb={1} fontWeight="bold">
-                  Enter Choices ({newQuestionChoices.length}/5)
+                <Typography color="black" mb={1} fontWeight="bold">
+                  Enter Choices ({newQuestionChoices.length}/4)
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
                   <TextField
@@ -600,12 +595,11 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                     onChange={(e) => setNewQuestionInputChoice(e.target.value)}
                     size="small"
                     sx={{
-                      bgcolor: "#232323",
-                      input: { color: "white" },
-                      label: { color: "#B3E5FC" },
+                      input: { color: "black" },
+                      label: { color: "black" },
                       "& .MuiOutlinedInput-root": {
                         "& fieldset": { borderColor: "#616161" },
-                        "&:hover fieldset": { borderColor: "#B3E5FC" },
+                        "&:hover fieldset": { borderColor: "black" },
                         "&.Mui-focused fieldset": { borderColor: "#81D4FA" },
                       },
                       flex: 1,
@@ -621,6 +615,7 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                       color: "black",
                       "&:hover": { bgcolor: "#4FC3F7" },
                       minWidth: 90,
+                      
                     }}
                   >
                     Add
@@ -636,9 +631,9 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                       onDelete={() => removeQuestionChoice(choice)}
                       sx={{
                         bgcolor:
-                          newQuestionCorrectAnswer === choice ? "#4CAF50" : "#232323",
+                          newQuestionCorrectAnswer === choice ? "#4CAF50" : "",
                         color:
-                          newQuestionCorrectAnswer === choice ? "white" : "#B3E5FC",
+                          newQuestionCorrectAnswer === choice ? "white" : "black",
                         border:
                           newQuestionCorrectAnswer === choice
                             ? "2px solid #4CAF50"
@@ -647,19 +642,19 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                           newQuestionCorrectAnswer === choice ? "bold" : "normal",
                         cursor: "pointer",
                         "& .MuiChip-deleteIcon": {
-                          color: "#E57373",
+                          color: "black",
                           "&:hover": { color: "#EF5350" },
                         },
                       }}
                     />
                   ))}
                   {newQuestionChoices.length === 0 && (
-                    <Typography color="#616161" sx={{ mt: 1 }}>
+                    <Typography color="black" sx={{ mt: 1 }}>
                       No choices added yet.
                     </Typography>
                   )}
                 </Box>
-                <Typography color="#B3E5FC" mb={1}>
+                <Typography color="black" mb={1}>
                   {newQuestionCorrectAnswer
                     ? `Correct Answer: ${newQuestionCorrectAnswer}`
                     : "Click a choice to set as correct answer"}

@@ -266,8 +266,8 @@ function PhraseTranslation({ activityId }) {
   const goBack = () => navigate(`/admindashboard`);
 
   return (
-    <Grid container justifyContent="center" sx={{ minHeight: '100vh', backgroundColor: '#c8e6c9', p: 2 }}>
-      <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', color: '#232323' }}>
+    <Grid container justifyContent="center" sx={{ minHeight: '100vh', p: 2 }}>
+      <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', color: 'black' }}>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" fontWeight="bold">Phrase Translation</Typography>

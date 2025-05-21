@@ -263,7 +263,7 @@ function OnePicFourWords({activityId}) {
     <Grid
       container
       justifyContent="center"
-      sx={{ minHeight: "100vh", backgroundColor: "#c8e6c9", p: 2, color: "#232323" }}
+      sx={{ minHeight: "100vh", p: 2, color: "black" }}
     >
       <Box sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
         {/* Header */}
@@ -275,8 +275,8 @@ function OnePicFourWords({activityId}) {
             mb: 3,
           }}
         >
-          <Typography variant="h5" fontWeight="bold" color="#232323">
-            Activity Name (One Pic Four Words)
+          <Typography variant="h5" fontWeight="bold" color="black">
+           One Pic Four Words
           </Typography>
           {/*
           <Button

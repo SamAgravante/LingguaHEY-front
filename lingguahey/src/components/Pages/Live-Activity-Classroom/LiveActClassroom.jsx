@@ -507,7 +507,7 @@ const LiveActClassroom = () => {
                 {activityQuestions.map((question, index) => (
                   <ListItem key={question.questionId}>
                     <ListItemText
-                      primary={`Question ${index + 1}: ${question.questionText || question.questionDescription}`}
+                      primary={`Question ${index + 1}: ${question.questionText}`}
                       secondary={`Game Type: 
                         ${question.gameType === "GAME1" ? "One Pic Four Words" 
                           : question.gameType === "GAME2" ? "Phrase Translation"

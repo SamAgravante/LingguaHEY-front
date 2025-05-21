@@ -96,7 +96,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
     const val = inputChoice.trim();
     if (!val) return setNewMessage("Choice cannot be empty.");
     if (newChoices.includes(val)) return setNewMessage("Already added.");
-    if (newChoices.length >= 5) return setNewMessage("Max 5 choices.");
+    if (newChoices.length >= 4) return setNewMessage("Max 4 choices.");
     setNewChoices([...newChoices, val]);
     setInputChoice("");
     setNewMessage("");
@@ -264,28 +264,27 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
   };
   
   return (
-    <Grid container justifyContent="center" sx={{ minHeight: '100vh', bgcolor: '#18191B', p: 2 }}>
-      <Box sx={{ width: '100%', maxWidth: 999, mx: 'auto', overflowY: 'auto', maxHeight: '90vh', p: 4, borderRadius: 3, bgcolor: '#121212' }}>
+    <Grid container justifyContent="center" sx={{ minHeight: '100vh', p: 2 }}>
+      <Box sx={{ width: '100%', maxWidth: 999, mx: 'auto', overflowY: 'auto', maxHeight: '90vh', p: 4, borderRadius: 3, }}>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" fontWeight="bold" color="#B3E5FC">Word Translation</Typography>
+          <Typography variant="h5" fontWeight="bold" color="black">Word Translation</Typography>
         </Box>
 
         {/* EDIT MODE */}
         {question ? (
-          <Paper sx={{ bgcolor: '#232323', p: 4, borderRadius: 3 }} elevation={3}>
-            <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>Edit Question</Typography>
+          <Paper sx={{ p: 4, borderRadius: 3 }} elevation={3}>
+            <Typography variant="h6" fontWeight="bold" color="black" sx={{ mb: 2 }}>Edit Question</Typography>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
               <Box flex={1}>
-                <Typography color="#B3E5FC" mb={1}>Word</Typography>
+                <Typography color="black" mb={1}>Word</Typography>
                 <TextField
                   fullWidth
                   variant="outlined"
                   value={editWord}
                   onChange={e => setEditWord(e.target.value)}
                   sx={{
-                    bgcolor: '#232323',
-                    input: { color: '#fff' },
+                    input: { color: 'black' },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': { borderColor: '#616161' },
                       '&:hover fieldset': { borderColor: '#81D4FA' },
@@ -295,7 +294,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                 />
               </Box>
               <Box flex={2}>
-                <Typography color="#B3E5FC" mb={1}>Choices ({editChoices.length}/5)</Typography>
+                <Typography color="black" mb={1}>Choices ({editChoices.length}/4)</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                   {editChoices.map((c, i) => {
                     const isCorr = c.choiceText === editCorrect;
@@ -305,8 +304,8 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                         label={c.choiceText}
                         onClick={() => setEditCorrect(c.choiceText)}
                         sx={{
-                          bgcolor: isCorr ? '#4CAF50' : '#232323',
-                          color: '#fff',
+                          bgcolor: isCorr ? '#4CAF50' : '',
+                          color: 'black',
                           border: isCorr ? '2px solid #4CAF50' : '1px solid #616161',
                           fontWeight: isCorr ? 'bold' : 'normal'
                         }}
@@ -314,7 +313,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                     );
                   })}
                 </Box>
-                <Typography color="#B3E5FC" mb={2}>
+                <Typography color="black" mb={2}>
                   {editCorrect ? `Correct: ${editCorrect}` : 'Click a choice to set correct answer'}
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
@@ -329,19 +328,18 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
           </Paper>
         ) : (
         // CREATE MODE
-          <Paper sx={{ bgcolor: '#232323', p: 4, borderRadius: 3 }} elevation={3}>
-            <Typography variant="h6" fontWeight="bold" color="#B3E5FC" sx={{ mb: 2 }}>{questions.length + 1}.</Typography>
+          <Paper sx={{ p: 4, borderRadius: 3 }} elevation={3}>
+            <Typography variant="h6" fontWeight="bold" color="black" sx={{ mb: 2 }}>{questions.length + 1}.</Typography>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
               <Box flex={1}>
-                <Typography color="#B3E5FC" mb={1}>Word</Typography>
+                <Typography color="black" mb={1}>Word</Typography>
                 <TextField
                   fullWidth
                   variant="outlined"
                   value={newWord}
                   onChange={e => setNewWord(e.target.value)}
                   sx={{
-                    bgcolor: '#232323',
-                    input: { color: '#fff' },
+                    input: { color: 'black' },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': { borderColor: '#616161' },
                       '&:hover fieldset': { borderColor: '#81D4FA' },
@@ -351,7 +349,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                 />
               </Box>
               <Box flex={2}>
-                <Typography color="#B3E5FC" mb={1}>Choices ({newChoices.length}/5)</Typography>
+                <Typography color="black" mb={1}>Choices ({newChoices.length}/4)</Typography>
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                   <TextField
                     label="Add Choice"
@@ -361,7 +359,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                     onChange={e => setInputChoice(e.target.value)}
                     disabled={newChoices.length >= 5}
                     sx={{ flex: 1,
-                      bgcolor: '#232323', input: { color: '#fff' },
+                      input: { color: 'black' },
                       '& .MuiOutlinedInput-root': {
                         '& fieldset': { borderColor: '#616161' },
                         '&:hover fieldset': { borderColor: '#81D4FA' },
@@ -369,7 +367,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                       }
                     }}
                   />
-                  <Button variant="contained" onClick={handleAddChoice} disabled={!inputChoice.trim() || newChoices.length>=5} sx={{ bgcolor: '#81D4FA', color: '#000' }}>Add</Button>
+                  <Button variant="contained" onClick={handleAddChoice} disabled={!inputChoice.trim() || newChoices.length>=5} sx={{ bgcolor: '#81D4FA', color: '#000'}}>Add</Button>
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                   {newChoices.map((c,i) => {
@@ -381,8 +379,8 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                         onClick={() => setCorrectAnswer(c)}
                         onDelete={() => handleRemoveChoice(c)}
                         sx={{
-                          bgcolor: isCorr ? '#4CAF50' : '#232323',
-                          color: '#fff',
+                          bgcolor: isCorr ? '#4CAF50' : '',
+                          color: 'black',
                           border: isCorr ? '2px solid #4CAF50' : '1px solid #616161',
                           fontWeight: isCorr ? 'bold' : 'normal'
                         }}
@@ -390,7 +388,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                     );
                   })}
                 </Box>
-                <Typography color="#B3E5FC" mb={2}>
+                <Typography color="black" mb={2}>
                   {correctAnswer ? `Correct: ${correctAnswer}` : 'Click a choice to set correct answer'}
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>

@@ -170,11 +170,11 @@ export default function WordTranslation({ activityId }) {
   };
 
   return (
-    <Grid container justifyContent="center" sx={{ minHeight: "100vh", bgcolor: "#18191B", p: 2 }}>
+    <Grid container justifyContent="center" sx={{ minHeight: "100vh", p: 2 }}>
       <Box sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
         {/* Header */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-          <Typography variant="h5" fontWeight="bold" color="#B3E5FC">
+          <Typography variant="h5" fontWeight="bold" color="black">
             Word Translation
           </Typography>
           <Button variant="text" onClick={() => navigate(`/admindashboard`)} sx={{ color: "#81D4FA" }}>
