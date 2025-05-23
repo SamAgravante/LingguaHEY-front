@@ -168,6 +168,24 @@ export default function Homepage() {
   };
 
   // ---------------- renderBody ----------------
+  const [deployedActivityId, setDeployedActivityId] = useState(null);
+
+  useEffect(() => {
+    const fetchDeployedActivity = async () => {
+      if (section === 'Activity' && classroom) {
+        try {
+          const res = await API.get(`/live-activities/classrooms/${classroom}/deployed`);
+          console.log('Deployed activity:', res.data);
+          setDeployedActivityId(res.data);
+        } catch (err) {
+          console.error('Failed to fetch deployed activity:', err);
+          setDeployedActivityId(null);
+        }
+      }
+    };
+    fetchDeployedActivity();
+  }, [section, classroom]);
+
   function renderBody() {
     // 1) Before selecting any item
     if (!current) {
@@ -176,7 +194,7 @@ export default function Homepage() {
         return (
           <LiveActivityGame
             ref={liveActivityRef}
-            activityId={classroom}
+            activityId={deployedActivityId}
             userId={user?.userId}
             onStarted={closeModal}
             onReturn={closeModal}

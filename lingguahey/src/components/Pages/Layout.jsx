@@ -86,6 +86,7 @@ const Layout = () => {
   }, [token, navigate, location.pathname]);
 
   // Poll for updated points
+  /* Test Purposes
   useEffect(() => {
     if (!userData.userId || !token) return;
 
@@ -99,7 +100,7 @@ const Layout = () => {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [userData.userId, token]);
+  }, [userData.userId, token]);*/
 
   const handleRoute = (route) => {
     if (route.label === "Logout") {

@@ -141,7 +141,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           if (payload.type === 'START') {
             setGameRoomOpen(true);
             // onStartedRef.current?.();
-            // navigate('/multiplayer', { state: { activityId } });
+            // navigate('/multiplayer', { state: { activityId } }); // <-- Remove this line to prevent redirect
           }
         }
       );
@@ -233,6 +233,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 role:        userDetails.role,
               };
               await USER_API.put(`/${user}`, payload);
+              console.log ('Profile updated:', payload.role);
               setHasJoined(true);
             } catch (err) {
               setError(err?.response?.data?.message || 'Failed to update profile');
@@ -310,7 +311,10 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           </IconButton>
         </DialogTitle>
         {/* Pass activityId and onLeave to MultiplayerGameRoom */}
-        <MultiplayerGameRoom activityId={activityId} onLeave={() => { disconnectWebsocket(); setGameRoomOpen(false); }} />
+        <MultiplayerGameRoom activityId={activityId} onLeave={(e) => {
+          disconnectWebsocket();
+          setGameRoomOpen(false);
+        }} />
       </Dialog>
     </Box>
   );
