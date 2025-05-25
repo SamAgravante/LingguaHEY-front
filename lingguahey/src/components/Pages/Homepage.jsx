@@ -45,9 +45,8 @@ export default function Homepage() {
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState('');
-  const [activities, setActivities] = useState([]);
-  const [current, setCurrent] = useState(null);
-  const [classroom, setClassroom] = useState(1);
+  const [activities, setActivities] = useState([]);  const [current, setCurrent] = useState(null);
+  const [classroom, setClassroom] = useState(null);
   const [userDetails, setUserDetails] = useState({});
   const [userActivities, setUserActivities] = useState([]);
   const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
@@ -62,19 +61,33 @@ export default function Homepage() {
     const decoded = getUserFromToken(token);
     if (decoded?.userId) setUser(decoded);
   }, [token]);
-
   // Fetch classroom, user details, progress
   useEffect(() => {
     if (!user) return;
     let isMounted = true;
     (async () => {
       try {
-        const classResp = await API.get(`classrooms/user/${user.userId}`);
-        if (!isMounted) return;
-        setClassroom(classResp.data.classroomID);
-
+        // First get user details to determine role
         const userResp = await API.get(`/users/${user.userId}`);
+        if (!isMounted) return;
         setUserDetails(userResp.data);
+        console.log('User details:', userResp.data);        // Get the appropriate endpoint based on user role        
+        const endpoint = userResp.data.role === 'TEACHER' 
+          ? `classrooms/teacher/${user.userId}`
+          : `classrooms/user/${user.userId}`;
+        
+        const classResp = await API.get(endpoint);
+        if (!isMounted) return;
+        
+        // For teachers, show cards if we get any response with data
+        if (userResp.data.role === 'TEACHER') {
+          if (classResp.data) {
+            setClassroom(true); // Enable cards for teachers if API succeeds
+          }
+        } else {
+          // For students, use the specific classroomID
+          setClassroom(classResp.data.classroomID);
+        }
 
         const prog = await API.get(`/activities/${user.userId}/progress`);
         setProgressVocab(prog.data.gameSet1Progress * 100);
@@ -372,55 +385,63 @@ export default function Homepage() {
           <Typography variant="h4" sx={{ mb: 2 }}>
             {userDetails.firstName ? `Welcome, ${userDetails.firstName}!` : 'Welcome!'}
           </Typography>
-          <Typography variant="h5" sx={{ mb: 4 }}>
-            Choose a section to start learning:
-          </Typography>
+          {classroom ? (
+            <Typography variant="h5" sx={{ mb: 4 }}>
+              Choose a section to start learning:
+            </Typography>
+          ) : (
+            <Typography variant="h5" sx={{ mb: 4, color: '#666' }}>
+              Please wait for a teacher to assign you to a classroom.
+            </Typography>
+          )}
         </Grid>
         <img src={bunnyWave} alt="Bunny Wave" width={80} height={120} />
       </Stack>
 
-      {/* Section Cards */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
-        {sections.map(s => (
-          <Box
-            key={s.key}
-            onClick={() => openModal(s.key)}
-            sx={{
-              backgroundColor: s.bg,
-              width: 360,
-              height: 560,
-              borderRadius: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              '&:hover': { transform: 'scale(1.05)' },
-            }}
-          >
-            {s.icon}
-            <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
-              {s.key}
-            </Typography>
-            {s.key !== 'Activity' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ flexGrow: 1 }}>
-                  <PastelProgress
-                    variant="determinate"
-                    value={s.progress}
-                    sx={{ width: '100%' }}
-                  />
-                  <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
-                    {s.progress.toFixed(0)}% Completed
-                  </Typography>
+      {/* Section Cards - only show if classroom exists */}
+      {classroom && (
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
+          {sections.map(s => (
+            <Box
+              key={s.key}
+              onClick={() => openModal(s.key)}
+              sx={{
+                backgroundColor: s.bg,
+                width: 360,
+                height: 560,
+                borderRadius: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s',
+                '&:hover': { transform: 'scale(1.05)' },
+              }}
+            >
+              {s.icon}
+              <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
+                {s.key}
+              </Typography>
+              {s.key !== 'Activity' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <PastelProgress
+                      variant="determinate"
+                      value={s.progress}
+                      sx={{ width: '100%' }}
+                    />
+                    <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
+                      {s.progress.toFixed(0)}% Completed
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            )}
-          </Box>
-        ))}
-      </Stack>
+              )}
+            </Box>
+          ))}
+        </Stack>
+      )}
 
       {/* Modal */}
       <Modal
