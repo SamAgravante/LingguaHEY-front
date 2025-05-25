@@ -61,31 +61,35 @@ export default function Homepage() {
     const decoded = getUserFromToken(token);
     if (decoded?.userId) setUser(decoded);
   }, [token]);
+
   // Fetch classroom, user details, progress
   useEffect(() => {
     if (!user) return;
     let isMounted = true;
     (async () => {
-      try {
-        // First get user details to determine role
+      try {        
         const userResp = await API.get(`/users/${user.userId}`);
-        if (!isMounted) return;
         setUserDetails(userResp.data);
-        console.log('User details:', userResp.data);        // Get the appropriate endpoint based on user role        
+        
+        console.log('User details:', userResp.data);        
         const endpoint = userResp.data.role === 'TEACHER' 
           ? `classrooms/teacher/${user.userId}`
           : `classrooms/user/${user.userId}`;
-        
+        console.log('Fetching classroom from endpoint:', endpoint);
         const classResp = await API.get(endpoint);
+        console.log ('Classroom response:', classResp.data);
         if (!isMounted) return;
         
-        // For teachers, show cards if we get any response with data
+        // Handle teacher vs student response differently
         if (userResp.data.role === 'TEACHER') {
-          if (classResp.data) {
-            setClassroom(true); // Enable cards for teachers if API succeeds
+          // For teachers, take the first classroom if they have any
+          if (Array.isArray(classResp.data) && classResp.data.length > 0) {
+            setClassroom(classResp.data[0].classroomID);
+          } else {
+            setClassroom(null);
           }
         } else {
-          // For students, use the specific classroomID
+          // For students, take the single classroom ID
           setClassroom(classResp.data.classroomID);
         }
 
@@ -171,11 +175,20 @@ export default function Homepage() {
   };
 
   const handleBackClick = () => {
-    if (!current && section === 'Activity' && liveActivityRef.current && liveActivityRef.current.handleReturn) {
-      liveActivityRef.current.handleReturn();
+    // If we're in Activity section with no current activity
+    if (!current && section === 'Activity') {
+      if (liveActivityRef.current?.handleReturn) {
+        console.log('Calling handleReturn on LiveActivityGame');
+        liveActivityRef.current.handleReturn();
+      } else {
+        console.log('No handleReturn available, closing modal directly');
+        closeModal();
+      }
     } else if (current) {
+      console.log('Going back to activity list');
       backToList();
     } else {
+      console.log('Closing modal');
       closeModal();
     }
   };
