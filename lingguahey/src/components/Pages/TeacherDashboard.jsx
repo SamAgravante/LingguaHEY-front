@@ -20,6 +20,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ClassIcon from "@mui/icons-material/Class";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
+import Classroom from "./Classroom";
+import LiveActClassroom from "./Live-Activity-Classroom/LiveActClassroom";
 
 const TeacherDashboard = () => {
   const [rooms, setRooms] = useState([]);

@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
@@ -14,15 +15,19 @@ import Subscription from "./components/Pages/Subscription";
 import AdminDashboard from "./components/Pages/AdminDashboard";
 import TeacherDashboard from "./components/Pages/TeacherDashboard";
 import Classroom from "./components/Pages/Classroom";
+import Activities from "./components/Pages/Activities";
 import OnePicFourWords from "./components/Pages/Games/GameCreation/OnePicFourWords";
 import PhraseTranslation from "./components/Pages/Games/GameCreation/PhraseTranslation";
 import WordTranslation from "./components/Pages/Games/GameCreation/WordTranslation";
-import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/L'AClassroom";
+
+import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/LiveActClassroom";
 import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
 import LiveActPhraseTranslation from "./components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
 import LiveActWordTranslation from "./components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
+
 import LiveActivityGame from "./components/Pages/LiveActivityGame";
 import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
+import MultiplayerGameRoom from "./components/Pages/MultiplayerGameRoom";
 
 function App() {
   const { token } = useAuth();
@@ -36,7 +41,20 @@ function App() {
 
       {/* Protected routes */}
       <Route element={token ? <Layout /> : <Navigate to="/login" replace />}>
-        <Route path = "/liveactivity" element={<LiveActivityGame />} />
+        {/* --- Live Lobby → Game flow --- */}
+        {/* 1) Lobby screen takes the activityId param */}
+        <Route
+          path="/liveactivity/:activityId"
+          element={<LiveActivityGame />}
+        />
+
+        {/* 2) Multiplayer room reads activityId from navigation state */}
+        <Route
+          path="/multiplayer"
+          element={<MultiplayerGameRoom />}
+        />
+
+        {/* --- Your existing protected pages --- */}
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/profilepage" element={<ProfilePage />} />
         <Route path="/contact" element={<Contact />} />
@@ -45,21 +63,11 @@ function App() {
         <Route path="/teacherdashboard" element={<TeacherDashboard />} />
         <Route path="/teacherdashboard/classroom/:roomId" element={<TeacherDashboardPopUp />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
-        <Route
-          path="/classroom/:classroomId/activities/:activityId/one-pic-four-words"
-          element={<OnePicFourWords />}
-        />
-        <Route
-          path="/classroom/:classroomId/activities/:activityId/phrase-translation"
-          element={<PhraseTranslation />}
-        />
-        <Route
-          path="/classroom/:classroomId/activities/:activityId/word-translation"
-          element={<WordTranslation />}
-        />
 
+        {/* Lesson Activities */}
+        <Route path="/activities" element={<Activities />} />
 
-        {/* Live Activities */}
+        {/* Live Activities under a classroom context */}
         <Route
           path="/classroom/:classroomId/live-activities"
           element={<LiveActClassroom />}
