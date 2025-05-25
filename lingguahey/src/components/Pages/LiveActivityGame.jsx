@@ -90,6 +90,15 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       .catch(() => setError('Could not load user profile'));
   }, [user]);
 
+  const disconnectWebsocket = () => {
+    try {
+      subscriptionRef.current?.unsubscribe();
+    } catch {}
+    try {
+      stompClientRef.current?.disconnect();
+    } catch {}
+  };
+
   // ---- LOBBY JOIN & WEBSOCKET ----
   useEffect(() => {
     if (!activityId || !user || !hasJoined || didInitRef.current) return;
