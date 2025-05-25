@@ -705,7 +705,8 @@ useEffect(() => {
         {/* Main Content */}
         <Grid container spacing={3}>          {/* Classroom Data */}          
         </Grid>
-         {/* Game Usage Pie Chart */}
+         {/* Game Usage Pie Chart 
+         
          <Grid container spacing={3} mb={4}>
           <Grid item xs={12} md={4}>
             <Card elevation={2} sx={{ borderRadius: 2, p: 2, height: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -734,6 +735,7 @@ useEffect(() => {
             </Card>
           </Grid>
         </Grid>
+        */}
       </Box>
 
       {/* Create Classroom Dialog */}

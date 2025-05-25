@@ -22,6 +22,7 @@ import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/L
 import LiveActPhraseTranslation from "./components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
 import LiveActWordTranslation from "./components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
 import LiveActivityGame from "./components/Pages/LiveActivityGame";
+import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
 
 function App() {
   const { token } = useAuth();
@@ -42,6 +43,7 @@ function App() {
         <Route path="/subscriptions" element={<Subscription />} />
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path="/teacherdashboard" element={<TeacherDashboard />} />
+        <Route path="/teacherdashboard/classroom/:roomId" element={<TeacherDashboardPopUp />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
         <Route
           path="/classroom/:classroomId/activities/:activityId/one-pic-four-words"
