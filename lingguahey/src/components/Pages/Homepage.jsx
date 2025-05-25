@@ -27,6 +27,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
 import { MusicContext } from '../../contexts/MusicContext';
+import { useScore } from '../../contexts/ScoreContext';
 import { styled } from '@mui/system';
 
 
@@ -48,8 +49,8 @@ export default function Homepage() {
   const [activities, setActivities] = useState([]);  const [current, setCurrent] = useState(null);
   const [classroom, setClassroom] = useState(null);
   const [userDetails, setUserDetails] = useState({});
-  const [userActivities, setUserActivities] = useState([]);
-  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const [userActivities, setUserActivities] = useState([]);  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const { refreshScore } = useScore();
   const [progressVocab, setProgressVocab] = useState(0);
   const [progressGrammar, setProgressGrammar] = useState(0);
   const [secVisibility, setSecVisibility] = useState(true);
@@ -153,9 +154,19 @@ export default function Homepage() {
     setSection(key);
     setCurrent(null);
     setOpen(true);
-  };
+  };  const closeModal = async () => {
+    try {
+      // Fetch updated progress
+      if (user) {
+        const prog = await API.get(`/activities/${user.userId}/progress`);
+        setProgressVocab(prog.data.gameSet1Progress * 100);
+        setProgressGrammar(prog.data.gameSet2Progress * 100);
+        refreshScore(); // Trigger score refresh in Layout
+      }
+    } catch (err) {
+      console.error('Failed to fetch progress:', err);
+    }
 
-  const closeModal = () => {
     setOpen(false);
     setSection('');
     setCurrent(null);
@@ -167,14 +178,22 @@ export default function Homepage() {
     setActivityMode(true);
     setCurrent(act);
   };
-
-  const backToList = () => {
-    fetchUserActivities();
+  const backToList = async () => {
+    await fetchUserActivities();
+    try {
+      if (user) {
+        const prog = await API.get(`/activities/${user.userId}/progress`);
+        setProgressVocab(prog.data.gameSet1Progress * 100);
+        setProgressGrammar(prog.data.gameSet2Progress * 100);
+      }
+    } catch (err) {
+      console.error('Failed to fetch progress:', err);
+    }
     setCurrent(null);
     setActivityMode(false);
   };
 
-  const handleBackClick = () => {
+  const handleBackClick = async () => {
     // If we're in Activity section with no current activity
     if (!current && section === 'Activity') {
       if (liveActivityRef.current?.handleReturn) {
@@ -182,14 +201,14 @@ export default function Homepage() {
         liveActivityRef.current.handleReturn();
       } else {
         console.log('No handleReturn available, closing modal directly');
-        closeModal();
+        await closeModal();
       }
     } else if (current) {
       console.log('Going back to activity list');
-      backToList();
+      await backToList();
     } else {
       console.log('Closing modal');
-      closeModal();
+      await closeModal();
     }
   };
 
@@ -256,6 +275,34 @@ export default function Homepage() {
           topics: lesson.topics.sort((x, y) => x.topicNumber - y.topicNumber),
         }));
 
+      // Helper function to check if an activity is accessible
+      const isActivityAccessible = (activity, lessonIndex, activityIndex) => {
+        // First activity of first lesson is always accessible
+        if (lessonIndex === 0 && activityIndex === 0) return true;
+
+        // Get all previous activities in current lesson
+        const currentLessonActivities = groupedLessons[lessonIndex].topics;
+        const previousActivitiesInLesson = currentLessonActivities.slice(0, activityIndex);
+
+        // Get activities from previous lessons
+        const previousLessonsActivities = groupedLessons
+          .slice(0, lessonIndex)
+          .flatMap(lesson => lesson.topics);
+
+        // Calculate required completions
+        const requiredCompletions = [
+          ...previousLessonsActivities,
+          ...previousActivitiesInLesson
+        ].map(act => act.activityId);
+
+        // Check if all required activities are completed
+        const isUnlocked = requiredCompletions.every(actId =>
+          userActivities.some(ua => ua.activity_ActivityId === actId && ua.completed)
+        );
+
+        return isUnlocked;
+      };
+
       return (
         <Stack
           spacing={3}
@@ -263,13 +310,13 @@ export default function Homepage() {
             mt: 4,
             px: 2,
             justifyContent: 'center',
-            alignItems: 'center', // center each lesson horizontally
+            alignItems: 'center',
           }}
         >
-          {groupedLessons.map(lesson => (
+          {groupedLessons.map((lesson, lessonIndex) => (
             <Box 
               key={`${lesson.lessonNumber}-${lesson.lessonName}`} 
-              sx={{ width: '100%', maxWidth: 800 }} // limit width, center via Stack
+              sx={{ width: '100%', maxWidth: 800 }}
             >
               {/* Lesson Header */}
               <Typography
@@ -285,27 +332,46 @@ export default function Homepage() {
                 spacing={2}
                 sx={{ alignItems: 'center' }}
               >
-                {lesson.topics.map(act => {
+                {lesson.topics.map((act, activityIndex) => {
                   const isCompleted = userActivities.some(
-                    ua =>
-                      ua.activity_ActivityId === act.activityId && ua.completed
+                    ua => ua.activity_ActivityId === act.activityId && ua.completed
                   );
+                  const isAccessible = isActivityAccessible(act, lessonIndex, activityIndex);
+                  const hasPrerequisites = !(lessonIndex === 0 && activityIndex === 0);
+
+                  const getStatusMessage = () => {
+                    if (isCompleted) return 'Activity completed!';
+                    if (!isAccessible && hasPrerequisites) return 'Complete previous activities to unlock';
+                    return 'Ready to start!';
+                  };
+
                   return (
                     <Box
                       key={act.activityId}
-                      onClick={() => startActivity(act)}
+                      onClick={() => isAccessible && startActivity(act)}
+                      title={getStatusMessage()}
                       sx={{
-                        backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
+                        backgroundColor: isCompleted
+                          ? '#C8E6C9'  // Green for completed
+                          : isAccessible
+                            ? '#FFF8E1' // Yellow for accessible
+                            : '#ECEFF1', // Grey for locked
                         borderRadius: 4,
                         p: 3,
                         width: '80%',
                         paddingBottom: 2,
                         boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                        cursor: 'pointer',
-                        '&:hover': { transform: 'scale(1.02)' },
+                        cursor: isAccessible ? 'pointer' : 'not-allowed',
+                        opacity: isAccessible ? 1 : 0.7,
+                        position: 'relative',
+                        transition: 'all 0.2s ease',
+                        '&:hover': isAccessible ? { 
+                          transform: 'scale(1.02)',
+                          boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
+                        } : {}
                       }}
                     >
-                      {/* Display activityName & game mode */}
+                      {/* Activity Name & Game Mode */}
                       <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                         {act.activityName}
                       </Typography>
@@ -315,6 +381,21 @@ export default function Homepage() {
                           : act.gameType === 'GAME2'
                           ? 'Phrase Translation'
                           : 'Word Translation'}
+                      </Typography>
+                      {/* Status indicator */}
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          display: 'block',
+                          mt: 1,
+                          color: isCompleted 
+                            ? '#2E7D32'  // Dark green
+                            : isAccessible 
+                              ? '#1565C0'  // Blue
+                              : '#757575'  // Grey
+                        }}
+                      >
+                        {getStatusMessage()}
                       </Typography>
                     </Box>
                   );
