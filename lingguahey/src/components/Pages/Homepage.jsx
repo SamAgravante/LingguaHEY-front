@@ -277,6 +277,9 @@ export default function Homepage() {
 
       // Helper function to check if an activity is accessible
       const isActivityAccessible = (activity, lessonIndex, activityIndex) => {
+        // Teachers can access all activities
+        if (userDetails.role === 'TEACHER') return true;
+
         // First activity of first lesson is always accessible
         if (lessonIndex === 0 && activityIndex === 0) return true;
 
@@ -520,7 +523,7 @@ export default function Homepage() {
               <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
                 {s.key}
               </Typography>
-              {s.key !== 'Activity' && (
+              {s.key !== 'Activity' && userDetails.role !== 'TEACHER' && (
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Box sx={{ flexGrow: 1 }}>
                     <PastelProgress
