@@ -39,8 +39,8 @@ export default function Signup() {
     password: "",
     confirmPassword: "",
     role,
-    subscriptionStatus: true,
-    idNumber: "",
+    subscriptionStatus: false,
+    idNumber: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);

@@ -460,7 +460,7 @@ useEffect(() => {
             Admin Dashboard
           </Typography>
           <Typography variant="body1" sx={{ color: "#757575" }}>
-            LinguaHey Learning Platform Management
+            LingguaHey Learning Platform Management
           </Typography>
         </Box>
 
@@ -713,9 +713,8 @@ useEffect(() => {
         {/* Main Content */}
         <Grid container spacing={3}>          {/* Classroom Data */}          
         </Grid>
-
-
          {/* Game Usage Pie Chart 
+         
          <Grid container spacing={3} mb={4}>
           <Grid item xs={12} md={4}>
             <Card elevation={2} sx={{ borderRadius: 2, p: 2, height: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -743,7 +742,8 @@ useEffect(() => {
               </ResponsiveContainer>
             </Card>
           </Grid>
-        </Grid>*/}
+        </Grid>
+        */}
       </Box>
 
       {/* Create Classroom Dialog 

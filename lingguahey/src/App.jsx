@@ -27,6 +27,7 @@ import LiveActWordTranslation from "./components/Pages/Live-Activity-Classroom/L
 import ResendVerification from "./components/ResendVerificationPage";
 import VerificationStatusPage from "./components/VerificationStatusPage";
 import LiveActivityGame from "./components/Pages/LiveActivityGame";
+import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
 import MultiplayerGameRoom from "./components/Pages/MultiplayerGameRoom";
 
 function App() {
@@ -64,6 +65,7 @@ function App() {
         <Route path="/subscriptions" element={<Subscription />} />
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path="/teacherdashboard" element={<TeacherDashboard />} />
+        <Route path="/teacherdashboard/classroom/:roomId" element={<TeacherDashboardPopUp />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
 
         {/* Lesson Activities */}
