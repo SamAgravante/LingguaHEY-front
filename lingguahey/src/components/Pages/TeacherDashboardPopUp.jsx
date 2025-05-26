@@ -520,7 +520,7 @@ const StudentListModalContent = () => (
               py: 0,
               px: 0,
               display: 'flex',
-              justifyContent: 'flex-start',
+              justifyContent: 'space-between', // Changed from 'flex-start' to 'space-between'
               alignItems: 'center',
               borderBottom: '1px solid #e0e0e0',
               bgcolor: '#f5f5f5',
@@ -528,24 +528,49 @@ const StudentListModalContent = () => (
               pt:{md:0}
             }}
           >
-            <Button sx={{borderRadius: 6, ml: "20px", mr:"20px",backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/teacherdashboard`)}>
-            <Typography variant="body1" sx={{ color: "white" }}>
-            Back to Dashboard
-            </Typography>
+            <Button 
+              sx={{
+                borderRadius: 6, 
+                ml: "20px",
+                backgroundColor: "#3f51b5", 
+                color: "#fff"
+              }} 
+              onClick={() => navigate(`/teacherdashboard`)}
+            >
+              <Typography variant="body1" sx={{ color: "white" }}>
+                Back to Dashboard
+              </Typography>
             </Button>  
-            <Typography variant="h4" component="h1" sx={{
-              color: '#3f51b5',
-              fontWeight: 700,
-              letterSpacing: '0.02em',
-              fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }, pl: 65, flexGrow: 1 }}>
+            
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              sx={{
+                color: '#3f51b5',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                textAlign: 'center', // Added textAlign center
+                flex: 1, // Added flex 1 to ensure it takes available space
+                mx: 2 // Added horizontal margin for spacing
+              }}
+            >
               {currentRoomName}
             </Typography>
 
-        <Button sx={{borderRadius: 6, ml: "auto", mr:"20px",backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/teacher/live-activities/${roomId}`)}>
-          <Typography variant="body1" sx={{ color: "white" }}>
-            Activity Creation
-          </Typography>
-        </Button>         
+            <Button 
+              sx={{
+                borderRadius: 6, 
+                mr:"20px",
+                backgroundColor: "#3f51b5", 
+                color: "#fff"
+              }} 
+              onClick={() => navigate(`/teacher/live-activities/${roomId}`)}
+            >
+              <Typography variant="body1" sx={{ color: "white" }}>
+                Activity Creation
+              </Typography>
+            </Button>         
           </Box>
             <Box sx={{ width: '100%', textAlign: 'center', my: 3 }}>
 
