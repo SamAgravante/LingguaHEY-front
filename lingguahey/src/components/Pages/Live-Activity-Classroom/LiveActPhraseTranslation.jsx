@@ -12,12 +12,12 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function PhraseTranslation({ activityId, classroomId, onGameCreated, question, onClose }) {
-  // State for adding a new phrase question
   const [newPhrase, setNewPhrase] = useState(question ? question.questionDescription : "");
   const [translation, setTranslation] = useState(question ? question.questionText : "");
   const [newChoices, setNewChoices] = useState(question ? question.choices.map(c => c.choiceText) : []);
   const [inputChoice, setInputChoice] = useState("");
   const [correctChoices, setCorrectChoices] = useState(question ? question.choices.filter(c => c.correct).map(c => c.choiceText) : []);
+  const [choiceOrder, setChoiceOrder] = useState(question ? question.choices.filter(c => c.correct).map(c => c.choiceText) : []);
   const [newMessage, setNewMessage] = useState("");
   const [isEditMode, setIsEditMode] = useState(!!question);
 
@@ -28,7 +28,9 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
       setNewPhrase(question.questionDescription || "");
       setTranslation(question.questionText || "");
       setNewChoices(question.choices.map(c => c.choiceText) || []);
-      setCorrectChoices(question.choices.filter(c => c.correct).map(c => c.choiceText) || []);
+      const correct = question.choices.filter(c => c.correct).map(c => c.choiceText) || [];
+      setCorrectChoices(correct);
+      setChoiceOrder(correct);
       setIsEditMode(true);
     }
   }, [question]);
@@ -62,15 +64,20 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
   const removeChoice = (choice) => {
     setNewChoices(newChoices.filter((c) => c !== choice));
     setCorrectChoices(correctChoices.filter((c) => c !== choice));
+    setChoiceOrder(choiceOrder.filter((c) => c !== choice));
     setNewMessage("");
   };
 
   const toggleCorrect = (choice) => {
-    setCorrectChoices((prev) =>
-      prev.includes(choice)
-        ? prev.filter((c) => c !== choice)
-        : [...prev, choice]
-    );
+    setCorrectChoices((prev) => {
+      if (prev.includes(choice)) {
+        setChoiceOrder(choiceOrder.filter(c => c !== choice));
+        return prev.filter((c) => c !== choice);
+      } else {
+        setChoiceOrder([...choiceOrder, choice]);
+        return [...prev, choice];
+      }
+    });
     setNewMessage("");
   };
 
@@ -104,15 +111,13 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
       let qRes;
       let qId;
       if (isEditMode && question) {
-        // Update existing question
         qRes = await axios.put(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/${question.questionId}`,
           form,
           { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
         );
-        qId = question.questionId; // Use existing question ID
+        qId = question.questionId;
       } else {
-        // Create new question
         qRes = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/questions/liveactivities/${activityId}`,
           form,
@@ -121,22 +126,21 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
         qId = qRes.data.questionId;
       }
 
-      // post choices and calculate score
       let score = 0;
       for (let i = 0; i < newChoices.length; i++) {
         const ch = newChoices[i];
         const isCorr = correctChoices.includes(ch);
+        const orderIndex = choiceOrder.indexOf(ch);
         await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/questions/${qId}`,
-          { choiceText: ch, choiceOrder: isCorr ? i + 1 : null, correct: isCorr },
+          { choiceText: ch, choiceOrder: isCorr ? orderIndex + 1 : null, correct: isCorr },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (isCorr) score++;
-      }      // post/put score
+      }
+
       if (qId) {
-        // Always create or update score
         try {
-          // Create new score
           await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}`,
             null,
@@ -144,7 +148,6 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
           );
         } catch (scoreError) {
           if (scoreError.response && scoreError.response.status === 409) {
-            // Score exists, update it instead
             await axios.put(
               `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}/score`,
               null,
@@ -152,7 +155,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
             );
           } else {
             console.error("Error creating/updating score:", scoreError);
-            throw scoreError; // Re-throw to be caught by outer catch block
+            throw scoreError;
           }
         }
       } else {
@@ -162,36 +165,26 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
       }
 
       setNewMessage("Saved successfully!");
-      // reset form
       setNewPhrase("");
       setTranslation("");
       setNewChoices([]);
       setCorrectChoices([]);
-      if (onClose) {
-        onClose();
-      }
-
-      // Call the callback function after the game is created
-      if (onGameCreated) {
-        onGameCreated();
-      }
-
+      setChoiceOrder([]);
+      if (onClose) onClose();
+      if (onGameCreated) onGameCreated();
     } catch (err) {
       console.error(err);
       setNewMessage("Save failed.");
     }
   };
 
-  // --- UI ---
   return (
     <Grid container justifyContent="center" sx={{ minHeight: '100vh', p: 2 }}>
       <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', color: 'black' }}>
-        {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" fontWeight="bold">Phrase Translation</Typography>
         </Box>
 
-        {/* Add New Phrase */}
         <Paper sx={{ color: 'black', p: 4, borderRadius: 3, mb: 4 }}>
           <Typography variant="h6" fontWeight="bold" color="black" sx={{ mb: 2 }}>{question ? 'Edit Question' : 'Add New Question'}</Typography>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
@@ -232,7 +225,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
                   : 'Select correct choice(s)'}
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
-                <Button variant="contained" color="error" onClick={() => { setNewPhrase(''); setTranslation(''); setNewChoices([]); setCorrectChoices([]); setNewMessage(''); }} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
+                <Button variant="contained" color="error" onClick={() => { setNewPhrase(''); setTranslation(''); setNewChoices([]); setCorrectChoices([]); setChoiceOrder([]); setNewMessage(''); }} sx={{ bgcolor: '#E57373' }}>Cancel</Button>
                 <Button variant="contained" onClick={saveNew} disabled={!newPhrase.trim() || newChoices.length < 3 || correctChoices.length === 0} sx={{ bgcolor: '#4CAF50' }}>Save</Button>
               </Box>
             </Box>
