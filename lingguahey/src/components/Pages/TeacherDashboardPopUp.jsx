@@ -34,6 +34,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import BlockIcon from '@mui/icons-material/Block';
+import API from "../../api";
 
 
 const TeacherDashboardPopUp = () => {
@@ -72,19 +73,8 @@ const TeacherDashboardPopUp = () => {
   const [selectedActivity, setSelectedActivity] = useState('');
   const [selectedActivityName, setSelectedActivityName] = useState('');
   const [isDeployed, setIsDeployed] = useState(false);
- 
-  const API = React.useMemo(() => {
-    if (!token) return null;
-    return axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL,
-      timeout: 10000,
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  }, [token]);
+
+
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -95,7 +85,7 @@ const TeacherDashboardPopUp = () => {
         const fetchUser = async () => {
           if (!API) return;
           try {
-            const response = await API.get(`/api/lingguahey/users/${decoded.userId}`);
+            const response = await API.get(`/users/${decoded.userId}`);
             setUserData({
               userId: response.data.userId,
               firstName: response.data.firstName,
@@ -124,24 +114,24 @@ const TeacherDashboardPopUp = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const roomDetailsResponse = await API.get(`/api/lingguahey/classrooms/${roomId}`);
+      const roomDetailsResponse = await API.get(`/classrooms/${roomId}`);
       setRoomDetails(roomDetailsResponse.data);
 
-      const enrolledStudentsResponse = await API.get(`/api/lingguahey/classrooms/${roomId}/students`);
+      const enrolledStudentsResponse = await API.get(`/classrooms/${roomId}/students`);
       setSelectedRoomStudents(enrolledStudentsResponse.data || []);
 
-      const allStudentsResponse = await API.get('/api/lingguahey/users?role=USER');
+      const allStudentsResponse = await API.get('/users?role=USER');
       if (Array.isArray(allStudentsResponse.data)) {
         setAllStudents(allStudentsResponse.data.filter(student => student.role === "USER"));
       } else {
         setAllStudents([]);
       }
 
-      const activityStatsResponse = await API.get(`/api/lingguahey/activities/${roomId}/activities`);
+      const activityStatsResponse = await API.get(`/activities/${roomId}/activities`);
        setActivityStats(activityStatsResponse.data || { averageScore: 85, lowestScore: 60, highestScore: 95, studentsReachedGoal: 15, studentsFailed: 3 });
 
 
-      const progressDataResponse = await API.get(`/api/lingguahey/activities/${roomId}/progress`);
+      const progressDataResponse = await API.get(`/activities/${roomId}/progress`);
       setProgressData(progressDataResponse.data || [
         { userId: '1', firstName: 'Jake', lastName: 'Hoker Aves', completedActivities: 20, totalActivities: 25 },
         { userId: '2', firstName: 'Jane', lastName: 'Doe', completedActivities: 22, totalActivities: 25 },
@@ -162,7 +152,7 @@ const TeacherDashboardPopUp = () => {
   const fetchActivities = async () => {
     if (!API || !roomId) return;
     try {
-      const response = await API.get(`/api/lingguahey/live-activities/${roomId}/live-activities`);
+      const response = await API.get(`/live-activities/${roomId}/live-activities`);
       console.log('Fetched activities:', response.data);
       setActivities(response.data || []);
       
@@ -190,7 +180,7 @@ const TeacherDashboardPopUp = () => {
   const handleAddStudentToClassroom = async (student) => {
     if (!API) return;
     try {
-      const response = await API.post(`/api/lingguahey/classrooms/${roomId}/students/${student.userId}`, {});
+      const response = await API.post(`/classrooms/${roomId}/students/${student.userId}`, {});
       if (response.status === 200 || response.status === 201) {
         setSelectedRoomStudents(prev => [...prev, student]);
         setAllStudents(prev => prev.filter(s => s.userId !== student.userId));
@@ -204,7 +194,7 @@ const TeacherDashboardPopUp = () => {
     if (!API) return;
     try {
       const studentToRemove = selectedRoomStudents.find(s => s.userId === studentId);
-      await API.delete(`/api/lingguahey/classrooms/${roomId}/students/${studentId}`);
+      await API.delete(`/classrooms/${roomId}/students/${studentId}`);
       setSelectedRoomStudents(prev => prev.filter(student => student.userId !== studentId));
       if (studentToRemove) {
         const studentExistsInAll = allStudents.find(s => s.userId === studentToRemove.userId);
@@ -241,7 +231,7 @@ const TeacherDashboardPopUp = () => {
     }
 
     try {
-      const response = await API.put(`/api/lingguahey/live-activities/${selectedActivity}/set-deployed/true`);
+      const response = await API.put(`/live-activities/${selectedActivity}/set-deployed/true`);
       if (response.status === 200) {
         setIsDeployed(true);
         setActivityStatus("Deployed");
@@ -260,7 +250,7 @@ const TeacherDashboardPopUp = () => {
     }
 
     try {
-      const response = await API.put(`/api/lingguahey/live-activities/${selectedActivity}/set-deployed/false`);
+      const response = await API.put(`/live-activities/${selectedActivity}/set-deployed/false`);
       if (response.status === 200) {
         setIsDeployed(false);
         setActivityStatus("Undeployed");
@@ -528,11 +518,22 @@ const StudentListModalContent = () => (
               pt:{md:0}
             }}
           >
-            <Button sx={{borderRadius: 6, ml: "20px", mr:"20px",backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/teacherdashboard`)}>
-            <Typography variant="body1" sx={{ color: "white" }}>
-            Back to Rooms
-            </Typography>
-            </Button>  
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={handleGoBack}
+              sx={{
+                color: '#3f51b5',
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                padding: '4px 10px',
+                mr: 1,
+                '&:hover': {
+                  bgcolor: 'rgba(63, 81, 181, 0.08)',
+                }
+              }}
+            >
+              Back to Dashboard
+            </Button>
             <Typography variant="h4" component="h1" sx={{
               color: '#3f51b5',
               fontWeight: 700,
@@ -541,11 +542,19 @@ const StudentListModalContent = () => (
               {currentRoomName}
             </Typography>
 
-        <Button sx={{borderRadius: 6, ml: "auto", mr:"20px",backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/teacher/live-activities/${roomId}`)}>
-          <Typography variant="body1" sx={{ color: "white" }}>
-            Activity Creation
-          </Typography>
-        </Button>         
+
+
+            <Chip
+              label="Edit Class Details"
+              size="medium"
+              sx={{
+                ml: 'auto',
+                bgcolor: 'rgba(102, 102, 102, 0.1)',
+                color: '#3f51b5',
+                fontWeight: 500,
+                '&:hover': { bgcolor: 'rgba(102, 102, 102, 0.2)', cursor: 'pointer' },
+              }}
+            />
           </Box>
             <Box sx={{ width: '100%', textAlign: 'center', my: 3 }}>
 
