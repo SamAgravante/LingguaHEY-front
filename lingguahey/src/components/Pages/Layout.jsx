@@ -28,10 +28,10 @@ const textColor = "#5D4037";
 const allRoutes = [
   { label: "Home", path: "/homepage", roles: ["USER", "ADMIN", "TEACHER"] },
   { label: "Profile", path: "/profilepage", roles: ["USER", "ADMIN", "TEACHER"] },
-  { label: "Subscriptions", path: "/subscriptions", roles: ["USER", "TEACHER", "ADMIN"] },
+  { label: "Subscriptions", path: "/subscriptions", roles: ["TEACHER", "ADMIN"] },
   { label: "Contact Us", path: "/contact", roles: ["USER", "TEACHER", "ADMIN"] },
   { label: "Admin DB", path: "/admindashboard", roles: ["ADMIN"] },
-  { label: "Teacher DB", path: "/teacherdashboard", roles: ["TEACHER", "ADMIN"] },
+  { label: "Teacher DB", path: "/teacherdashboard", roles: ["TEACHER"] },
   //{ label: "Logout", path: "/logout", roles: ["USER", "TEACHER", "ADMIN"] },
   { label: "Logout", path: "/landingpage", roles: ["USER", "TEACHER", "ADMIN"] },
 ];
@@ -141,9 +141,11 @@ const Layout = () => {
             {userData.lastName}
           </Typography>
 
-          <Typography variant="h7" align="center" sx={{ color: textColor, padding: 2 }}>
-            {totalPoints} Total Points
-          </Typography>
+          {userData.role !== "TEACHER" && (
+            <Typography variant="h7" align="center" sx={{ color: textColor, padding: 2 }}>
+              {totalPoints} Total Points
+            </Typography>
+          )}
           <Divider />
           <Box sx={{ p: 2 }}>
             <Button
