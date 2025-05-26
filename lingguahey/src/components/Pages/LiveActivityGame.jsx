@@ -71,7 +71,8 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const [localUserChar, setLocalUserChar] = useState(null);
   const [userDetails, setUserDetails] = useState(null);
   const [gameRoomOpen, setGameRoomOpen] = useState(false);
-  const [frozenInitialUsers, setFrozenInitialUsers] = useState([]); // NEW: freeze users at game start
+  const [frozenInitialUsers, setFrozenInitialUsers] = useState([]);
+  const [hasDeployedActivity, setHasDeployedActivity] = useState(true); // Add this state
 
   const user = userId || getUserFromToken().userId;
   const role = useRef(getUserFromToken().role?.toUpperCase());
@@ -338,12 +339,23 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        {/* Pass activityId, initialUsers, and onLeave to MultiplayerGameRoom */}
-        <MultiplayerGameRoom activityId={activityId} initialUsers={frozenInitialUsers} onLeave={(e) => {
-          disconnectWebsocket();
-          setGameRoomOpen(false);
-        }} />
+        {/* Pass activityId and filtered users (excluding teachers) to MultiplayerGameRoom */}
+        <MultiplayerGameRoom 
+          activityId={activityId} 
+          initialUsers={frozenInitialUsers.filter(user => user.role?.toUpperCase() !== 'TEACHER')} 
+          onLeave={(e) => {
+            disconnectWebsocket();
+            setGameRoomOpen(false);
+          }} 
+        />
       </Dialog>
+
+      {/* Deployed Activity Check (NEW) */}
+      {!hasDeployedActivity && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          This activity is not deployed. Please contact your administrator.
+        </Alert>
+      )}
     </Box>
   );
 });

@@ -11,22 +11,17 @@ import {
   Typography,
   Button,
   LinearProgress,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton,
-  Chip,
   Stack as MuiStack
 } from '@mui/material';
 import { styled } from '@mui/system';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import CloseIcon from '@mui/icons-material/Close';
 import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
 import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
-import speechBubble from '../../assets/images/objects/speech-bubble.png';
 import { mockQuestions } from './mockQuestions';
+import MultiplayerGameRoomGameContent from './MultiplayerGameRoomGameContent';
 
 const pastels = [
   '#FFCDD2', // light red
@@ -36,18 +31,23 @@ const pastels = [
   '#D1C4E9', // light purple
 ];
 
+// --- PastelContainer: update to fit parent box strictly ---
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
-  backgroundSize: 'contain',
+  backgroundSize: 'cover',
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'center',
-  padding: '24px',
-  minHeight: '720px',
+  padding: '12px',
+  minHeight: 0,
+  minWidth: 0,
+  width: '100%',
+  height: '100%',
+  maxWidth: '100%',
+  maxHeight: '100%',
+  overflow: 'auto',
   fontFamily: 'Comic Sans MS, sans-serif',
   borderRadius: '20px',
-  width: '90vw',
-  maxWidth: 1200,
-  margin: 'auto',
+  boxSizing: 'border-box',
 }));
 
 const ChoiceButton = styled(Button)(() => ({
@@ -55,9 +55,19 @@ const ChoiceButton = styled(Button)(() => ({
   textTransform: 'none',
   fontWeight: 'bold',
   borderRadius: '12px',
-  padding: '12px 16px',
-  margin: '8px',
-  width: '100%',
+  padding: '4px 8px',
+  margin: '6px',
+  width: '200px',
+  height: '200px',
+  minWidth: '200px',
+  maxWidth: '200px',
+  minHeight: '200px',
+  maxHeight: '200px',
+  fontSize: '1.1rem',
+  display: 'grid',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#FFF',
   '&:hover': {
     filter: 'brightness(1.1)',
     transform: 'scale(1.05)',
@@ -83,7 +93,8 @@ function shuffleArray(array) {
   return arr;
 }
 
-export default function MultiplayerGameRoom({ activityId: propActivityId, onLeave }) {
+export default function MultiplayerGameRoom({ activityId: propActivityId, onLeave, initialUsers }) {
+  console.log('Initial users:', initialUsers);
   const token = localStorage.getItem('token');
   let activityId = propActivityId;
   const { state } = useLocation();
@@ -95,12 +106,16 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
   const stompClientRef = useRef(null);
   const subscriptionRef = useRef(null);
 
+  // State for managing game
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
+  const [lastConfirmedIndex, setLastConfirmedIndex] = useState(-1);
   const [progress, setProgress] = useState(0);
   const [showDialog, setShowDialog] = useState(false);
+  const lastConfirmedRef = useRef(-1); // Add ref to track last confirmed index
 
   const [leaderboard, setLeaderboard] = useState([]); 
+  const [leaderboardInitialized, setLeaderboardInitialized] = useState(false); // Track if initialUsers have been used
   
   const [shuffledChoices, setShuffledChoices] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -140,8 +155,14 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
             }
             setPendingAnswer(null);
             setWaitingForTeacher(false);
-            setIndex(payload.payload.questionIndex);
-            setProgress(((payload.payload.questionIndex + 1) / questions.length) * 100);
+            
+            // Update index and progress together to ensure they stay in sync
+            const nextIndex = payload.payload.questionIndex;
+            const confirmedIndex = lastConfirmedRef.current;
+            setIndex(nextIndex);
+            setLastConfirmedIndex(confirmedIndex);
+            setProgress(((confirmedIndex + 1) / questions.length) * 100);
+            
             fetchLeaderboard();
           }
           // Handle FINISH_QUIZ event for all users
@@ -150,20 +171,11 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
               await submitPendingAnswer();
               setPendingAnswer(null);
             }
+            lastConfirmedRef.current = questions.length - 1;
+            setLastConfirmedIndex(questions.length - 1);
+            setProgress(100);
             setShowDialog(true);
             fetchLeaderboard();
-            // Leave lobby/game room for all users after quiz finishes
-            try {
-              if (activityId && userId) {
-                await API.delete(`/lobby/${activityId}/leave`, { params: { userId } });
-              }
-            } catch (e) {}
-            // Unsubscribe and return to lobby (call onLeave)
-            setTimeout(() => {
-              if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
-              if (stompClientRef.current && stompClientRef.current.connected) stompClientRef.current.disconnect();
-              if (onLeave) onLeave({ completed: true });
-            }, 1200);
           }
         }
       );
@@ -195,26 +207,67 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       .catch(() => setQuestions(mockQuestions));
   }, [activityId]);
 
-  // Fetch leaderboard from API
+  // Fetch leaderboard from API and merge with initial users
   async function fetchLeaderboard() {
     if (!activityId) return;
     try {
-      const res = await API.get(`/scores/live-activities/${activityId}/leaderboard`);
-      if (Array.isArray(res.data)) {
-        // Deduplicate by userId, keep highest score
-        const unique = {};
-        res.data.forEach(entry => {
+      const scoresRes = await API.get(`/scores/live-activities/${activityId}/leaderboard`);
+      const scoresArr = Array.isArray(scoresRes.data) ? scoresRes.data : [];
+      // On first call, use initialUsers; after that, only update scores
+      if (!leaderboardInitialized) {
+        const usersArr = Array.isArray(initialUsers) ? initialUsers : [];
+        const scoreMap = {};
+        scoresArr.forEach(entry => {
           const id = entry.userId;
           const score = entry.score ?? entry.totalScore ?? 0;
-          if (!unique[id] || unique[id].score < score) {
-            unique[id] = {
-              userId: id,
+          scoreMap[id] = {
+            userId: id,
+            name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
+            score
+          };
+        });          const merged = usersArr.map(user => {
+          const id = user.userId;
+          return {
+            userId: id,
+            name: user.name || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+            score: scoreMap[id]?.score ?? 0,
+            role: user.role,
+          };
+        });
+        // Add any scores for users not in initialUsers
+        scoresArr.forEach(entry => {
+          if (!merged.find(u => u.userId === entry.userId)) {            merged.push({
+              userId: entry.userId,
               name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
-              score
-            };
+              score: entry.score ?? entry.totalScore ?? 0,
+              role: entry.role,
+            });
           }
         });
-        setLeaderboard(Object.values(unique));
+        setLeaderboard(merged);
+        setLeaderboardInitialized(true);
+      } else {
+        // Only update scores for users already in leaderboard
+        setLeaderboard(prev => {
+          const prevMap = {};
+          prev.forEach(u => { prevMap[u.userId] = u; });
+          scoresArr.forEach(entry => {
+            if (prevMap[entry.userId]) {
+              prevMap[entry.userId] = {
+                ...prevMap[entry.userId],
+                score: entry.score ?? entry.totalScore ?? 0
+              };
+            } else {
+              // New user (edge case)
+              prevMap[entry.userId] = {
+                userId: entry.userId,
+                name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
+                score: entry.score ?? entry.totalScore ?? 0,
+              };
+            }
+          });
+          return Object.values(prevMap);
+        });
       }
     } catch (e) {}
   }
@@ -282,9 +335,10 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
 
   // --- Choice handlers: store answer locally, disable input, show waiting for teacher ---
   const handleChoice = choice => {
-    if (waitingForTeacher || pendingAnswer !== null) return;
-    setPendingAnswer(choice.choiceId);
-    setWaitingForTeacher(userRole !== 'TEACHER');
+    if (userRole !== 'TEACHER') {
+      setPendingAnswer(choice.choiceId);
+      setWaitingForTeacher(true);
+    }
   };
 
   // Update handleSelect and handleRemove to always update pendingAnswer for GAME2
@@ -314,10 +368,19 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
 
   const handleNext = () => {
     if (index < questions.length - 1) {
+      const currentIndex = index;
+      const nextIndex = currentIndex + 1;
+      
+      // Update progress immediately based on the current question being confirmed
+      lastConfirmedRef.current = currentIndex;
+      setLastConfirmedIndex(currentIndex);
+      setProgress(((currentIndex + 1) / questions.length) * 100);
+      
+      // Then send the next question request
       API.post(
         `/lobby/${activityId}/next-question`,
         null,
-        { params: { questionIndex: index + 1, teacherId: userId } }
+        { params: { questionIndex: nextIndex, teacherId: userId } }
       ).catch(() => {});
     }
   };
@@ -331,221 +394,162 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     } catch {
       onLeave?.();
     }
-  };
-
-  const handleDialogClose = () => {
+  };  const handleDialogClose = async () => {
     setShowDialog(false);
-    if (onLeave) onLeave();
-    else window.location.reload();
+    
+    try {
+      // Only teachers can stop the activity
+      if (userRole === 'TEACHER') {
+        // Stop the activity and clear scores
+        await API.post(`/lobby/${activityId}/stop`, null, { params: { teacherId: userId } });
+      }
+      
+      // Leave lobby/game room for all users after quiz finishes
+      await API.delete(`/lobby/${activityId}/leave`, { params: { userId } });
+      
+      // Unsubscribe and disconnect WebSocket
+      if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
+      if (stompClientRef.current?.connected) stompClientRef.current.disconnect();
+      
+      // Return to lobby for all users
+      if (onLeave) onLeave({ completed: true });
+      else window.location.reload();
+    } catch (error) {
+      console.error('Error ending activity:', error);
+      // Even if there's an error, try to redirect
+      if (onLeave) onLeave({ completed: true });
+      else window.location.reload();
+    }
   };
-
-  // --- Leaderboard block, always rendered at the top of the question area ---
-  const leaderboardBlock = leaderboard.length > 0 && (
-    <Box sx={{ mt: 3, mb: 2 }}>
-      <Typography variant="h6">Leaderboard</Typography>
-      {leaderboard.map(entry => (
-        <Typography key={entry.userId}>
-          {entry.name}: {entry.score}
-        </Typography>
-      ))}
+  // --- Leaderboard block, now with profile characters ---
+  const leaderboardBlock = (
+    <Box sx={{ 
+      mt: 3, 
+      mb: 2, 
+      width: '100%', 
+      height: '85vh', // Make height taller relative to viewport
+      minHeight: '600px', // Increase minimum height
+      position: 'relative', 
+      overflow: 'visible',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <Typography variant="h6" sx={{ 
+        mb: '2vh', 
+        fontWeight: 'bold', 
+        color: '#2E2E34',
+        fontSize: 'clamp(1rem, 2vw, 1.5rem)' // Responsive font size
+      }}>
+        Leaderboard - King of the Hill
+      </Typography>
+      {/* Hill background with enhanced gradient */}
+      <Box sx={{
+        position: 'absolute',
+        left: 0,
+        bottom: 0,
+        width: '100%',
+        height: '90%', // Taller hill background
+        zIndex: 0,
+        pointerEvents: 'none',
+        background: 'linear-gradient(180deg, #81d4fa 0%, #a5d6a7 60%, #8bc34a 100%)',
+        borderTopLeftRadius: '35%',
+        borderTopRightRadius: '35%',
+        boxShadow: 'inset 0 4px 20px rgba(0,0,0,0.1)'
+      }} />
+      {/* Crown marker */}
+      <Box sx={{
+        position: 'absolute',
+        left: '50%',
+        top: '12%', // Position crown higher
+        transform: 'translateX(-50%)',
+        width: 'clamp(35px, 6vw, 55px)', // Slightly larger crown
+        height: 'clamp(35px, 6vw, 55px)',
+        backgroundImage: 'url(/crown.png)',
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        zIndex: 1,
+        filter: 'drop-shadow(0 2px 8px rgba(255,215,0,0.6))',
+      }} />
+      {/* Characters climbing the hill */}      <Box sx={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: '90%', zIndex: 1 }}>
+        {[...leaderboard]
+          .filter(entry => entry.role?.toUpperCase() !== 'TEACHER') // Exclude teacher from leaderboard
+          .sort((a, b) => b.score - a.score)
+          .map((entry, idx, arr) => {            // Calculate height based on score relative to total questions
+            const maxPossiblePoints = questions.length; // One point per question
+            const heightPercent = Math.min(1, entry.score / maxPossiblePoints);
+            const maxHeight = '70%'; // Maximum climb height as percentage of container
+            const y = `calc(${maxHeight} * ${heightPercent})`; // Height increases with score
+              // Calculate horizontal position with unique path for each character
+            const angle = (idx * (2 * Math.PI / arr.length)) + (heightPercent * Math.PI * 2);
+            const radius = `${30 - (heightPercent * 10)}%`; // Radius decreases as they climb
+            const horizontalOffset = `calc(${Math.sin(angle)} * ${radius})`;
+            const baseX = `calc(50% + ${horizontalOffset} + ${idx * 2}%)`; // Center-based positioning
+            
+            // Is this character the leader?
+            const isLeader = idx === 0 && entry.score > 0;
+            
+            return (
+              <Box 
+                key={entry.userId} 
+                sx={{ 
+                  position: 'absolute',
+                  left: baseX,
+                  bottom: y,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  width: 70,
+                  transform: `translateX(-50%) ${isLeader ? 'scale(1.1)' : 'scale(1)'}`,
+                  transition: 'all 0.5s cubic-bezier(.4,0,.2,1)',
+                  zIndex: isLeader ? 2 : 1,
+                }}
+              >
+                <Typography sx={{ 
+                  fontSize: 12, 
+                  fontWeight: 600, 
+                  color: isLeader ? '#ffd700' : '#2E2E34',
+                  textAlign: 'center', 
+                  maxWidth: 70, 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  whiteSpace: 'nowrap',
+                  textShadow: isLeader ? '0 0 4px rgba(255,215,0,0.5)' : 'none',
+                  mb: 0.5 
+                }}>
+                  {entry.name}
+                </Typography>
+                <Box
+                  component="img"
+                  src={entry.profileCharacterUrl || bunnyStand}
+                  alt="character"
+                  sx={{ 
+                    height: 60,
+                    width: 'auto',
+                    objectFit: 'contain',
+                    filter: isLeader ? 'drop-shadow(0 0 8px #ffd700)' : 'none',
+                    transform: isLeader ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+                <Typography sx={{ 
+                  fontSize: 14, 
+                  fontWeight: 700, 
+                  color: isLeader ? '#ffd700' : '#2E2E34',
+                  textShadow: isLeader ? '0 0 4px rgba(255,215,0,0.5)' : 'none',
+                  mt: 0.5 
+                }}>
+                  {entry.score}
+                </Typography>
+              </Box>
+            );
+          })}
+      </Box>
     </Box>
   );
 
-  // Render per game type
-  function renderGame() {
-    if (!q) return null;
-    if (q.gameType === 'GAME1') {
-      // One Pic Four Words
-      return (
-        <PastelContainer>
-          {leaderboardBlock}
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2E2E34', mb: 1 }}>
-            One Pic Four Words
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ flexGrow: 1 }}>
-              <PastelProgress variant="determinate" value={progress} />
-            </Box>
-            <Typography variant="body2" sx={{ ml: 2, color: '#2E2E34' }}>
-              {index + 1} / {questions.length}
-            </Typography>
-          </Box>
-          <Grid sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: '5vh' }}>
-            <MuiStack direction="row">
-              <Box sx={{ minHeight: 250, minWidth: 100, backgroundImage: `url(${bunnyStand})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat' }} />
-              <Box sx={{ height: '180px', width: '250px', minWidth: 100, maxWidth: 400, backgroundImage: `url(${speechBubble})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Grid>
-                  <MuiStack direction="column" alignItems="center">
-                    <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34', maxWidth: '80%', marginBottom: 4 }}>
-                      Can you tell me what is this?
-                    </Typography>
-                  </MuiStack>
-                </Grid>
-              </Box>
-              {q.questionImage && (
-                <Box sx={{ textAlign: 'center', mb: 2, minWidth: 300, minHeight: 300 }}>
-                  <img src={`data:image/png;base64,${q.questionImage}`} alt="quiz" style={{ width: 200, height: 200 }} />
-                </Box>
-              )}
-            </MuiStack>
-          </Grid>
-          <Grid container spacing={4} sx={{ justifyContent: 'center' }}>
-            {shuffledOptions.map((choice, i) => (
-              <Grid item xs={6} key={choice.choiceId} sx={{ minHeight: 150, minWidth: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ChoiceButton
-                  onClick={() => handleChoice(choice)}
-                  sx={{ fontSize: '3rem', height: '100%', backgroundColor: pastels[i % pastels.length], '&:hover': { scale: 1.05 } }}
-                  disabled={pendingAnswer !== null}
-                >
-                  {choice.choiceText}
-                </ChoiceButton>
-              </Grid>
-            ))}
-          </Grid>
-          {waitingForTeacher && userRole !== 'TEACHER' && (
-            <Typography sx={{ mt: 3, fontSize: 28, color: '#2E2E34', textAlign: 'center' }}>Waiting for teacher...</Typography>
-          )}
-        </PastelContainer>
-      );
-    } else if (q.gameType === 'GAME2') {
-      // Phrase Translation
-      return (
-        <PastelContainer>
-          {leaderboardBlock}
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2E2E34', mb: 1 }}>
-            Phrase Translation
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ flexGrow: 1 }}>
-              <PastelProgress variant="determinate" value={progress} />
-            </Box>
-            <Typography variant="body2" sx={{ ml: 2, color: '#2E2E34' }}>
-              {index + 1} / {questions.length}
-            </Typography>
-          </Box>
-          <Grid sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <MuiStack direction="row">
-              <Box sx={{ minHeight: 250, minWidth: 100, backgroundImage: `url(${bunnyStand})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat' }} />
-              <Box sx={{ minHeight: 250, minWidth: 100, maxWidth: 400, backgroundImage: `url(${speechBubble})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', justifyItems: 'center' }}>
-                <Grid>
-                  <MuiStack direction="column" alignItems="center" sx={{ padding: 2 }}>
-                    <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-                      What does
-                    </Typography>
-                    <MuiStack direction="row" alignItems="center" sx={{ flexWrap: 'wrap' }}>
-                      <Typography variant="h3" sx={{ textAlign: 'center', color: '#E6bbad', textShadow: '-1px -1px 0 #bb998f, 1px -1px 0 #bb998f, -1px 1px 0 #bb998f, 1px 1px 0 #bb998f' }}>
-                        {q.questionDescription}
-                      </Typography>
-                      <IconButton onClick={() => synthesizeSpeech(q.questionDescription)}>
-                        <VolumeUpIcon sx={{ fontSize: 32, color: '#2E2E34' }} />
-                      </IconButton>
-                    </MuiStack>
-                    <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-                      mean?
-                    </Typography>
-                  </MuiStack>
-                </Grid>
-              </Box>
-            </MuiStack>
-          </Grid>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2, minHeight: 80, alignItems: 'center', justifyContent: 'center', backgroundColor: '#BBDEFB', p: 1, borderRadius: 1, marginBottom: 4 }}>
-            {selected.map(id => {
-              const choice = q.choices.find(c => c.choiceId === id) || {};
-              return (
-                <Chip
-                  key={id}
-                  label={choice.choiceText}
-                  onDelete={() => handleRemove(id)}
-                  onClick={() => handleRemove(id)}
-                  deleteIcon={<CloseIcon sx={{ color: '#bb998f', fontSize: 28, '&:hover': { color: '#E6bbad' } }} />}
-                  sx={{ m: 0.5, backgroundColor: '#FFECB3', color: '#2E2E34', fontSize: '2rem', minHeight: 70, minWidth: 50, paddingRight: '8px', '& .MuiChip-label': { fontSize: '2rem', paddingRight: '6px' } }}
-                  disabled={pendingAnswer !== null && userRole !== 'TEACHER'}
-                />
-              );
-            })}
-          </Box>
-          <Grid container spacing={4} sx={{ justifyContent: 'center' }}>
-            {shuffledChoices.map((c, i) => (
-              <Grid item xs={6} key={c.choiceId} sx={{ minHeight: 150, minWidth: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ChoiceButton
-                  onClick={() => handleSelect(c)}
-                  variant={selected.includes(c.choiceId)}
-                  disabled={selected.includes(c.choiceId) || waitingForTeacher}
-                  sx={{ backgroundColor: pastels[i % pastels.length], fontSize: '3rem', height: '100%' }}
-                >
-                  {c.choiceText}
-                </ChoiceButton>
-              </Grid>
-            ))}
-          </Grid>
-          {waitingForTeacher && userRole !== 'TEACHER' && (
-            <Typography sx={{ mt: 3, fontSize: 28, color: '#2E2E34', textAlign: 'center' }}>Waiting for teacher...</Typography>
-          )}
-        </PastelContainer>
-      );
-    } else if (q.gameType === 'GAME3') {
-      // Word Translation
-      return (
-        <PastelContainer>
-          {leaderboardBlock}
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2E2E34', mb: 1 }}>
-            Word Translation
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ flexGrow: 1 }}>
-              <PastelProgress variant="determinate" value={progress} />
-            </Box>
-            <Typography variant="body2" sx={{ ml: 2, color: '#2E2E34' }}>
-              {index + 1} / {questions.length}
-            </Typography>
-          </Box>
-          <Grid sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: '10vh' }}>
-            <MuiStack direction="row">
-              <Box sx={{ minHeight: 250, minWidth: 100, backgroundImage: `url(${bunnyStand})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat' }} />
-              <Box sx={{ minHeight: 250, minWidth: 300, backgroundImage: `url(${speechBubble})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', justifyItems: 'center' }}>
-                <Grid>
-                  <MuiStack direction="column" alignItems="center" sx={{ paddingTop: 5 }}>
-                    <Typography variant="h4" sx={{ textAlign: 'center', color: '#2E2E34' }}>
-                      What does this mean?
-                    </Typography>
-                    <MuiStack direction="row" alignItems="center">
-                      <Typography variant="h3" sx={{ textAlign: 'center', color: '#E6bbad', textShadow: '-1px -1px 0 #bb998f, 1px -1px 0 #bb998f, -1px 1px 0 #bb998f, 1px 1px 0 #bb998f' }}>
-                        {q.questionText}
-                      </Typography>
-                      <IconButton onClick={() => synthesizeSpeech(q.questionText)}>
-                        <VolumeUpIcon sx={{ fontSize: 32, color: '#2E2E34' }} />
-                      </IconButton>
-                    </MuiStack>
-                  </MuiStack>
-                </Grid>
-              </Box>
-            </MuiStack>
-          </Grid>
-          <Grid container spacing={4} sx={{ justifyContent: 'center' }}>
-            {shuffledOptions.map((choice, i) => (
-              <Grid item xs={6} key={choice.choiceId} sx={{ minHeight: 150, minWidth: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ChoiceButton
-                  onClick={() => handleChoice(choice)}
-                  sx={{ fontSize: '3rem', height: '100%', backgroundColor: pastels[i % pastels.length], '&:hover': { scale: 1.05 } }}
-                  disabled={pendingAnswer !== null}
-                >
-                  {choice.choiceText}
-                </ChoiceButton>
-              </Grid>
-            ))}
-          </Grid>
-          {waitingForTeacher && userRole !== 'TEACHER' && (
-            <Typography sx={{ mt: 3, fontSize: 28, color: '#2E2E34', textAlign: 'center' }}>Waiting for teacher...</Typography>
-          )}
-        </PastelContainer>
-      );
-    }
-    return null;
-  }
-
   return (
-    <div
-      style={{
+    <Box
+      sx={{
         position: 'fixed',
         top: 0,
         left: 0,
@@ -554,34 +558,58 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
         background: 'linear-gradient(135deg, #FFECB3 30%, #E1F5FE 90%)',
         zIndex: 1300,
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         margin: 0,
         padding: 0,
       }}
     >
-      <button
+      <Button
         onClick={handleLeave}
-        style={{
+        sx={{
           position: 'absolute',
           top: 24,
           right: 32,
           background: '#FF5252',
           color: 'white',
           border: 'none',
-          borderRadius: 8,
-          padding: '10px 24px',
+          borderRadius: 2,
+          px: 3,
+          py: 1.5,
           fontSize: 18,
           fontWeight: 600,
           cursor: 'pointer',
           zIndex: 1400,
+          '&:hover': { background: '#ff1744' },
         }}
       >
         Leave
-      </button>
-      <Box sx={{ width: '100%', maxWidth: 1200, margin: 'auto', mt: 4 }}>
-        {renderGame()}
+      </Button>
+      <Box sx={{ display: 'flex', flexDirection: 'row', width: 1920, height: 520, justifyContent: 'center', alignItems: 'center', gap: 0 }}>
+        {/* Left: Activity/Game Content */}
+        <Box sx={{ width: 850, height: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 4, boxShadow: 2, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, p: 3, ml: 0 }}>
+          <MultiplayerGameRoomGameContent
+            q={q}
+            progress={progress}
+            index={index}
+            questions={questions}
+            shuffledOptions={shuffledOptions}
+            shuffledChoices={shuffledChoices}
+            selected={selected}
+            handleChoice={handleChoice}
+            handleSelect={handleSelect}
+            handleRemove={handleRemove}
+            pendingAnswer={pendingAnswer}
+            userRole={userRole}
+            waitingForTeacher={waitingForTeacher}
+            pastels={pastels}
+            synthesizeSpeech={synthesizeSpeech}
+          />
+        </Box>
+        {/* Right: Leaderboard Only */}
+        <Box sx={{ width: 850, height: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 4, boxShadow: 2, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, p: 3, ml: 0 }}>
+          {leaderboardBlock}
+        </Box>
       </Box>
       {/* Teacher-only Next/Finish button, only if not in completion dialog */}
       {userRole === 'TEACHER' && !showDialog && (
@@ -601,6 +629,8 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
             onClick={async () => {
               // Teacher triggers FINISH_QUIZ for all users
               if (userRole === 'TEACHER') {
+                setLastConfirmedIndex(questions.length - 1); // Mark all questions as confirmed
+                setProgress(100); // Set progress to 100%
                 await API.post(`/lobby/${activityId}/finish-quiz`, null, { params: { teacherId: userId } }).catch(() => {});
               }
             }}
@@ -621,13 +651,25 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
               </Typography>
             ))
           ) : (
-            <Typography>No leaderboard data.</Typography>
+            Array.isArray(initialUsers) && initialUsers.length > 0 ? (
+              initialUsers.map(user => (
+                <Typography key={user.userId}>
+                  {(user.name || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim())}: 0
+                </Typography>
+              ))
+            ) : (
+              <Typography>No scores available.</Typography>
+            )
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDialogClose} variant="contained">Close</Button>
+          <Button onClick={handleDialogClose} color="primary">
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 }
+
+export { PastelContainer, PastelProgress, ChoiceButton };
