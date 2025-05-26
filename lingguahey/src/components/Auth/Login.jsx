@@ -1,4 +1,5 @@
-import { useState, useEffect, useContext } from "react";
+// src/components/Auth/Login.jsx
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -11,18 +12,18 @@ import {
   InputAdornment,
   IconButton,
   Snackbar,
-  Alert
+  Alert,
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useAuth } from "../../contexts/AuthContext";
 import { MusicContext } from "../../contexts/MusicContext";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 // Axios instance
 const API = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
-  timeout: 1000,
+  timeout: 5000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -30,67 +31,102 @@ const API = axios.create({
 });
 
 export default function Login() {
-  // ---- LOGIC (unchanged) ----
-  const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [snackOpen, setSnackOpen] = useState(false);
-  const [snackMessage, setSnackMessage] = useState("");
-  const [snackSeverity, setSnackSeverity] = useState("error");
   const navigate = useNavigate();
   const { setToken } = useAuth();
   const { setIntroMode } = useContext(MusicContext);
 
-  useEffect(() => {
-    setIntroMode(true); // Switch to default/background music
-  }, []);
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [snackOpen, setSnackOpen] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
+  const [snackSeverity, setSnackSeverity] = useState("error");
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => {
+    setIntroMode(true);
+  }, [setIntroMode]);
+
+  const handleChange = (e) =>
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleClickShowPassword = () => setShowPassword((s) => !s);
 
   const showSnack = (message, severity = "error") => {
     setSnackMessage(message);
     setSnackSeverity(severity);
     setSnackOpen(true);
   };
-
-  const handleSnackClose = (event, reason) => {
-    if (reason === 'clickaway') return;
+  const handleSnackClose = (_, reason) => {
+    if (reason === "clickaway") return;
     setSnackOpen(false);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
-    const { email, password } = form;
-    if (!email || !password) {
+
+    if (!form.email || !form.password) {
       showSnack("Please enter your School Email and Password.", "warning");
       return;
     }
+
     try {
-      const res = await API.post("/login", { email, password });
+      const res = await API.post("/login", form);
+      // success: 200 OK
       setToken(res.data.token);
       showSnack("Logged in successfully!", "success");
-      setTimeout(() => navigate("/Homepage"), 500);
+      setTimeout(() => navigate("/homepage"), 500);
     } catch (err) {
-      showSnack("Invalid School Email or Password.", "error");
+      const status = err.response?.status;
+
+      if (status === 401) {
+        // invalid credentials
+        showSnack("Incorrect email or password.", "error");
+      } else if (status === 403) {
+        // not verified or disabled
+        showSnack("Please check your email to verify your account.", "warning");
+      } else {
+        // other errors
+        showSnack(
+          err.response?.data?.message ||
+            "An unexpected error occurred. Please try again.",
+          "error"
+        );
+      }
     }
   };
 
+  // styling tokens
   const pageBg = "linear-gradient(135deg, #FFECB3 30%, #E1F5FE 90%)";
   const panelBg = "#FFFFFF";
   const primaryBtn = "#FFCC80";
-  const textColor = "#5D4037"; 
+  const textColor = "#5D4037";
 
   return (
     <>
-      <Grid container sx={{ minHeight: '100vh', minWidth: '100vw', background: pageBg, p: 2 }} alignItems="center" justifyContent="center">
+      <Grid
+        container
+        sx={{
+          minHeight: "100vh",
+          minWidth: "100vw",
+          background: pageBg,
+          p: 2,
+        }}
+        alignItems="center"
+        justifyContent="center"
+      >
         <Box component="form" onSubmit={handleLogin} sx={{ width: '100%', maxWidth: 400, backgroundColor: panelBg, borderRadius: 2, p: 4, boxShadow: 3 }}>
           <IconButton onClick={()=>navigate('/')}><ArrowBackIcon sx={{ color:textColor }}/>
           <Typography sx={{ cursor:'pointer', color: textColor }} onClick={()=>navigate('/')}>Back</Typography>
           </IconButton>
+          
+
+
           <Stack spacing={3}>
-            <Typography variant="h4" align="center" sx={{ color: textColor }}>Log In</Typography>
+            <Typography
+              variant="h4"
+              align="center"
+              sx={{ color: textColor }}
+            >
+              Log In
+            </Typography>
 
             <TextField
               label="School Email"
@@ -105,7 +141,7 @@ export default function Login() {
             <TextField
               label="Password"
               name="password"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               value={form.password}
               onChange={handleChange}
               fullWidth
@@ -114,22 +150,38 @@ export default function Login() {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={handleClickShowPassword} edge="end">
+                    <IconButton
+                      onClick={handleClickShowPassword}
+                      edge="end"
+                    >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
 
-            <Button type="submit" fullWidth variant="contained" sx={{ backgroundColor: primaryBtn, color: textColor, textTransform: 'none' }}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{
+                backgroundColor: primaryBtn,
+                color: textColor,
+                textTransform: "none",
+              }}
+            >
               Log in
             </Button>
 
             <Typography
               align="center"
-              sx={{ color: primaryBtn, cursor: 'pointer', mt: 1 }}
-              onClick={() => navigate('/roleselect')}
+              sx={{
+                color: primaryBtn,
+                cursor: "pointer",
+                mt: 1,
+              }}
+              onClick={() => navigate("/roleselect")}
             >
               No Account? Register Now!
             </Typography>
@@ -137,9 +189,18 @@ export default function Login() {
         </Box>
       </Grid>
 
-      {/* Snackbar for notifications */}
-      <Snackbar open={snackOpen} autoHideDuration={4000} onClose={handleSnackClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={handleSnackClose} severity={snackSeverity} sx={{ width: '100%' }}>
+      {/* Snackbar */}
+      <Snackbar
+        open={snackOpen}
+        autoHideDuration={4000}
+        onClose={handleSnackClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackClose}
+          severity={snackSeverity}
+          sx={{ width: "100%" }}
+        >
           {snackMessage}
         </Alert>
       </Snackbar>
