@@ -307,7 +307,7 @@ export default function Signup() {
                 </Typography>
                 <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
                   <strong>10. Contact Us</strong><br />
-                  If you have any questions, contact us at baliguat.hanzharvey@gmail.com.
+                  If you have any questions, contact us at teamlingguahey@gmail.com.
                 </Typography>
                 <Typography variant="body2" sx={{ fontStyle: "italic", color: "black", mt: 1 }}>
                   By using our services, you agree to these Terms & Conditions.
