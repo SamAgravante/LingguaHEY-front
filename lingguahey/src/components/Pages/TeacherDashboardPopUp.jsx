@@ -15,8 +15,8 @@ import {
   FormControl,
   CircularProgress,
   Alert,
-  Card, 
-  CardContent, 
+  Card,
+  CardContent,
   Avatar,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -27,12 +27,12 @@ import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import SchoolIcon from "@mui/icons-material/School"; // Added SchoolIcon for students reached goal
-import CancelIcon from "@mui/icons-material/Cancel"; // Added CancelIcon for students failed
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'; // Example icon for average score
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'; // Example icon for lowest score
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'; // Example icon for highest score
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'; // Icon for Deployed
+import SchoolIcon from "@mui/icons-material/School";
+import CancelIcon from "@mui/icons-material/Cancel";
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import BlockIcon from '@mui/icons-material/Block';
 
 
@@ -46,8 +46,8 @@ const TeacherDashboardPopUp = () => {
   const [allStudents, setAllStudents] = useState([]);
   const [openStudentListModal, setOpenStudentListModal] = useState(false);
 
-  const [selectedWeek, setSelectedWeek] = useState("Week 1");
-  const [activityStatus, setActivityStatus] = useState("Deployed");
+  // const [selectedWeek, setSelectedWeek] = useState("Week 1"); // Removed
+  const [activityStatus, setActivityStatus] = useState("Undeployed");
 
   const [activityStats, setActivityStats] = useState({
     averageScore: 0,
@@ -68,6 +68,10 @@ const TeacherDashboardPopUp = () => {
     role: null,
   });
 
+  const [activities, setActivities] = useState([]);
+  const [selectedActivity, setSelectedActivity] = useState('');
+  const [selectedActivityName, setSelectedActivityName] = useState('');
+  const [isDeployed, setIsDeployed] = useState(false);
 
   const API = React.useMemo(() => {
     if (!token) return null;
@@ -155,10 +159,30 @@ const TeacherDashboardPopUp = () => {
     }
   }, [roomId, API]);
 
+  const fetchActivities = async () => {
+    if (!API || !roomId) return;
+    try {
+      const response = await API.get(`/api/lingguahey/live-activities/${roomId}/live-activities`);
+      console.log('Fetched activities:', response.data);
+      setActivities(response.data || []);
+      
+      if (selectedActivity) {
+        const selectedAct = response.data.find(act => act.activity_ActivityId === selectedActivity);
+        if (selectedAct) {
+          setIsDeployed(selectedAct.deployed || false);
+          setActivityStatus(selectedAct.deployed ? "Deployed" : "Undeployed");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch activities:", err);
+      setActivities([]);
+    }
+  };
+
   useEffect(() => {
     fetchRoomData();
+    fetchActivities();
   }, [fetchRoomData]);
-
 
   const handleOpenStudentListModal = () => setOpenStudentListModal(true);
   const handleCloseStudentListModal = () => setOpenStudentListModal(false);
@@ -193,12 +217,59 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
-  const handleWeekChange = (event) => {
-    setSelectedWeek(event.target.value);
-  };
+  // const handleWeekChange = (event) => { // Removed
+  //   setSelectedWeek(event.target.value);
+  // };
 
   const handleGoBack = () => {
     navigate("/teacherdashboard");
+  };
+
+  const handleActivityChange = (event) => {
+    const activityId = event.target.value;
+    setSelectedActivity(activityId);
+    const activity = activities.find(a => a.activity_ActivityId === activityId);
+    setSelectedActivityName(activity ? activity.activity_ActivityName : '');
+    setIsDeployed(activity ? activity.deployed : false);
+    setActivityStatus(activity?.deployed ? "Deployed" : "Undeployed");
+  };
+
+  const handleDeploy = async () => {
+    if (!API || !selectedActivity) {
+      alert('Please select an activity first');
+      return;
+    }
+
+    try {
+      const response = await API.put(`/api/lingguahey/live-activities/${selectedActivity}/set-deployed/true`);
+      if (response.status === 200) {
+        setIsDeployed(true);
+        setActivityStatus("Deployed");
+        console.log('Activity deployed successfully');
+      }
+    } catch (err) {
+      console.error("Failed to deploy activity:", err);
+      alert('Failed to deploy activity');
+    }
+  };
+
+  const handleUndeploy = async () => {
+    if (!API || !selectedActivity) {
+      alert('Please select an activity first');
+      return;
+    }
+
+    try {
+      const response = await API.put(`/api/lingguahey/live-activities/${selectedActivity}/set-deployed/false`);
+      if (response.status === 200) {
+        setIsDeployed(false);
+        setActivityStatus("Undeployed");
+        console.log('Activity undeployed successfully');
+      }
+    } catch (err) {
+      console.error("Failed to undeploy activity:", err);
+      alert('Failed to undeploy activity');
+    }
   };
 
   if (isLoading) {
@@ -383,28 +454,24 @@ const StudentListModalContent = () => (
     </Modal>
   );
 
-  // Define the new stats card structure
   const scoreStatsCards = [
     {
       label: "Average Score",
       count: activityStats.averageScore,
-      color: "#424242", // Changed from original TeacherDashboardPopUp, using a darker gray
-      icon: <TrendingUpIcon />, // Example icon
-       // Assuming 'over 25' is static or needs to be fetched
+      color: "#424242",
+      icon: <TrendingUpIcon />,
     },
     {
       label: "Lowest Score",
       count: activityStats.lowestScore,
-      color: "#f44336", // Changed from original TeacherDashboardPopUp
-      icon: <ArrowDownwardIcon />, // Example icon
-     // Assuming 'only 1 student got this score' is static or needs to be fetched
+      color: "#f44336",
+      icon: <ArrowDownwardIcon />,
     },
     {
       label: "Highest Score",
       count: activityStats.highestScore,
-      color: "#4caf50", // Changed from original TeacherDashboardPopUp
-      icon: <ArrowUpwardIcon />, // Example icon
-     // Assuming '2 students got this score' is static or needs to be fetched
+      color: "#4caf50",
+      icon: <ArrowUpwardIcon />,
     },
   ];
 
@@ -412,20 +479,19 @@ const StudentListModalContent = () => (
     {
       label: "Students Failed to Reach Goal",
       count: activityStats.studentsFailed,
-      color: "#f44336", // Red for failed
-      icon: <CancelIcon />, // Icon for failure
+      color: "#f44336",
+      icon: <CancelIcon />,
     },
     {
       label: "Students Reached Goal",
       count: activityStats.studentsReachedGoal,
-      color: "#4caf50", // Green for success
-      icon: <SchoolIcon />, // Icon for success
+      color: "#4caf50",
+      icon: <SchoolIcon />,
     },
   ];
 
   return (
     <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
-      {/* Header - Replicated from TeacherDashboard */}
       <Box
         sx={{
           backgroundColor: "#fff",
@@ -449,7 +515,6 @@ const StudentListModalContent = () => (
       </Box>
 
 
-          {/* Original Header Section of TeacherDashboardPopUp, now modified */}
           <Box
             sx={{
               py: 0,
@@ -460,6 +525,7 @@ const StudentListModalContent = () => (
               borderBottom: '1px solid #e0e0e0',
               bgcolor: '#f5f5f5',
               borderRadius: '8px 8px 0 0',
+              pt:{md:0}
             }}
           >
             <Button
@@ -478,13 +544,19 @@ const StudentListModalContent = () => (
             >
               Back to Dashboard
             </Button>
+            <Typography variant="h4" component="h1" sx={{
+              color: '#3f51b5',
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }, pl: 65, flexGrow: 1 }}>
+              {currentRoomName}
+            </Typography>
 
 
 
             <Chip
               label="Edit Class Details"
               size="medium"
-              // onClick={handleEditClassDetails}
               sx={{
                 ml: 'auto',
                 bgcolor: 'rgba(102, 102, 102, 0.1)',
@@ -494,47 +566,55 @@ const StudentListModalContent = () => (
               }}
             />
           </Box>
-
-          {/* Alert for data loading errors */}
-          {error && roomDetails && (
-             <Alert severity="warning" sx={{m: {xs: 1, md: 2}, borderRadius: 1}} action={
-                <Button color="inherit" size="small" onClick={fetchRoomData}>
-                    RELOAD DATA
-                </Button>
-             }>
-                There was an issue loading some classroom data: {error}
-             </Alert>
-          )}
             <Box sx={{ width: '100%', textAlign: 'center', my: 3 }}>
-            <Typography variant="h4" component="h1" sx={{ color: '#3f51b5', fontWeight: 700, letterSpacing: '0.02em',fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' } }}>
-              {currentRoomName}
-            </Typography>
-          
+
+
           </Box>
-          {/* Content Grid */}
-          <Grid container sx={{flexGrow: 1, p: {xs:2, sm:3, md:4}}}>
-            {/* Left Panel - Activity Data */}
-            <Grid item xs={12} md={6} sx={{ pr: { md: 6 }, mb: {xs: 4, md: 0}, pl: { md: 10}}}>
+          <Grid container sx={{flexGrow: 1, p: {xs:2, sm:3, md:4},pt:{md:0}}}>
+
+            <Grid item xs={12} md={6} sx={{ pr: { md: 6 }, mb: {xs: 4, md: 0}, pl: { md: 10} }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#3f51b5', fontWeight: 600 }}>Activity Data</Typography>
 
-              {/* Select Activity Box */}
               <Box sx={{ mb: 4, p: 2, borderRadius: 1, bgcolor: 'background.paper', boxShadow: 1 }}>
-                <Typography variant="body2" color="text.secondary" id="select-activity-label" mb={1}>Select Activity</Typography>
+                <Typography variant="body2" color="text.secondary" id="select-activity-label" mb={1}>
+                  Select Activity
+                </Typography>
                 <FormControl fullWidth>
-                  <Select labelId="select-activity-label" value={selectedWeek} onChange={handleWeekChange} displayEmpty sx={{ bgcolor: 'background.paper' }}>
-                    <MenuItem value="Week 1">Week 1</MenuItem>
-                    <MenuItem value="Week 2">Week 2</MenuItem>
+                  <Select
+                    labelId="select-activity-label"
+                    value={selectedActivity}
+                    onChange={(e) => {
+                      const activity = activities.find(a => a.activity_ActivityId === e.target.value);
+                      setSelectedActivity(e.target.value);
+                      setSelectedActivityName(activity ? activity.activity_ActivityName : '');
+                      console.log('Selected activity:', activity);
+                    }}
+                    displayEmpty
+                    sx={{ bgcolor: 'background.paper' }}
+                  >
+                    <MenuItem value="" disabled>
+                      <em>Select an activity</em>
+                    </MenuItem>
+                    {activities && activities.map((activity) => (
+                      <MenuItem key={activity.activity_ActivityId} value={activity.activity_ActivityId}>
+                        {activity.activity_ActivityName || 'Untitled Activity'}
+                      </MenuItem>
+                    ))}
+                    {(!activities || activities.length === 0) && (
+                      <MenuItem value="" disabled>
+                        No activities available
+                      </MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Box>
 
-              {/* Status Box */}
               <Card
                 elevation={2}
                 sx={{
                   width: "100%",
                   minWidth: 150,
-                  maxWidth: 260, // Adjusted for single card layout if desired, or remove maxWidth for full width
+                  maxWidth: 260,
                   height: 140,
                   display: "flex",
                   flexDirection: "column",
@@ -543,8 +623,8 @@ const StudentListModalContent = () => (
                   borderRadius: 3,
                   boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
                   backgroundColor: "#fff",
-                  mb: 4, // Added margin-bottom for spacing
-                  mx: 'auto' // Center the card if maxWidth is applied
+                  mb: 4,
+                  mx: 'auto'
                 }}
               >
                 <CardContent sx={{ width: "100%", p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -559,7 +639,6 @@ const StudentListModalContent = () => (
                   </Typography>
                 </CardContent>
               </Card>
-              {/* Score Statistics Grid - Modified to match AdminDashboard card style */}
               <Grid container spacing={3} mb={4}>
                 {scoreStatsCards.map((item, i) => (
                   <Grid item xs={12} sm={4} key={i}>
@@ -567,7 +646,7 @@ const StudentListModalContent = () => (
                       elevation={2}
                       sx={{
                         width: "100%",
-                        minWidth: 150, // Adjusted to fit 3 in a row better
+                        minWidth: 150,
                         maxWidth: 260,
                         height: 140,
                         display: "flex",
@@ -575,7 +654,7 @@ const StudentListModalContent = () => (
                         justifyContent: "center",
                         alignItems: "center",
                         borderRadius: 3,
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.08)", // AdminDashboard's shadow
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
                         backgroundColor: "#fff",
                       }}
                     >
@@ -583,7 +662,7 @@ const StudentListModalContent = () => (
                         <Avatar sx={{ bgcolor: item.color, width: 44, height: 44, mb: 1 }}>
                           {item.icon}
                         </Avatar>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#444", mb: 0.5, textAlign: "center" }}> {/* Smaller variant for longer labels */}
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#444", mb: 0.5, textAlign: "center" }}>
                           {item.label}
                         </Typography>
                         <Typography variant="h4" sx={{ fontWeight: 700, color: item.color, textAlign: "center" }}>
@@ -596,16 +675,46 @@ const StudentListModalContent = () => (
                 ))}
               </Grid>
 
-              {/* Action Buttons */}
-              <Box sx={{ display: 'flex', gap: 2.4, mb: 4, paddingTop:0.1,flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Button variant="contained" sx={{ bgcolor: '#9e9e9e', '&:hover': {bgcolor: '#757575'} , flexGrow: {xs: 1, sm:0} }}>View Scores</Button>
-                <Button variant="contained" sx={{ bgcolor: '#9e9e9e', '&:hover': {bgcolor: '#757575'} , flexGrow: {xs: 1, sm:0} }}>Delete</Button>
-                <Button variant="contained" sx={{ bgcolor: '#ff9800', '&:hover': {bgcolor: '#fb8c00'} , flexGrow: {xs: 1, sm:0} }}>Edit</Button>
-                <Button variant="contained" sx={{ bgcolor: '#f44336', '&:hover': {bgcolor: '#d32f2f'} , flexGrow: {xs: 1, sm:0} }}>Undeploy</Button>
-                <Button variant="contained" sx={{ bgcolor: '#4caf50', '&:hover': {bgcolor: '#388e3c'} , flexGrow: {xs: 1, sm:0} }}>Deploy</Button>
+              <Box sx={{ display: 'flex', gap: 2.4, mb: 4, paddingTop:0.1, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <Button
+                  variant="contained"
+                  sx={{ bgcolor: '#9e9e9e', '&:hover': {bgcolor: '#757575'}, flexGrow: {xs: 1, sm:0} }}
+                  disabled={!selectedActivity}
+                >
+                  View Scores
+                </Button>
+                <Button
+                  variant="contained"
+                  sx={{ bgcolor: '#9e9e9e', '&:hover': {bgcolor: '#757575'}, flexGrow: {xs: 1, sm:0} }}
+                  disabled={!selectedActivity}
+                >
+                  Delete
+                </Button>
+                <Button
+                  variant="contained"
+                  sx={{ bgcolor: '#ff9800', '&:hover': {bgcolor: '#fb8c00'}, flexGrow: {xs: 1, sm:0} }}
+                  disabled={!selectedActivity}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="contained"
+                  sx={{ bgcolor: '#f44336', '&:hover': {bgcolor: '#d32f2f'}, flexGrow: {xs: 1, sm:0} }}
+                  onClick={handleUndeploy}
+                  disabled={!selectedActivity || !isDeployed}
+                >
+                  Undeploy
+                </Button>
+                <Button
+                  variant="contained"
+                  sx={{ bgcolor: '#4caf50', '&:hover': {bgcolor: '#388e3c'}, flexGrow: {xs: 1, sm:0} }}
+                  onClick={handleDeploy}
+                  disabled={!selectedActivity || isDeployed}
+                >
+                  Deploy
+                </Button>
               </Box>
 
-              {/* Enrolled Students Box */}
               <Box sx={{ p: 3, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="subtitle1" fontWeight={600}>Enrolled Students ({selectedRoomStudents.length})</Typography>
@@ -621,11 +730,9 @@ const StudentListModalContent = () => (
               </Box>
             </Grid>
 
-            {/* Right Panel - Activity Progress */}
             <Grid item xs={12} md={6} sx={{ pl: { md: 21} }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#3f51b5', fontWeight: 600 }}>Activity Progress</Typography>
 
-              {/* Progress Summary Grid - Modified to match AdminDashboard card style */}
               <Grid container spacing={3} sx={{ mb: 4 }}>
                 {progressSummaryCards.map((item, i) => (
                   <Grid item xs={12} sm={6} key={i}>
@@ -641,7 +748,7 @@ const StudentListModalContent = () => (
                         justifyContent: "center",
                         alignItems: "center",
                         borderRadius: 3,
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.08)", // AdminDashboard's shadow
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
                         backgroundColor: "#fff",
                       }}
                     >
@@ -662,7 +769,6 @@ const StudentListModalContent = () => (
                 ))}
               </Grid>
 
-              {/* Progress Tracker List */}
               <Box sx={{ mt: 4, p: 3, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, bgcolor: '#e0e0e0', p: 1.5, borderRadius: '4px 4px 0 0' }}>
                   <Typography variant="subtitle1" fontWeight={600}>Student Name</Typography>
