@@ -571,9 +571,9 @@ export default function Homepage() {
               <IconButton onClick={closeModal}>
                 <CloseIcon />
               </IconButton>
-            </Stack>
+            </Stack>            
             <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
-              {section} Activities!
+              {section === 'Activity' ? 'King of the Hill!' : `${section} Activities!`}
             </Typography>
             <Box
               sx={{
