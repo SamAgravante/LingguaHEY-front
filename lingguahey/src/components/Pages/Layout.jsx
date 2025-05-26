@@ -102,10 +102,15 @@ const Layout = () => {
     fetchPoints();
   }, [userData.userId, token, refreshTrigger]);
 
-  const handleRoute = (route) => {
+  const handleRoute = async (route) => {
     if (route.label === "Logout") {
-      logout();
-      navigate("/");
+      try {
+        await API.post("/auth/logout");   // → SpringSecurity’s logoutUrl
+      } catch (err) {
+        console.error("Server logout failed:", err);
+      }
+      logout();                                      // clear client token
+      navigate("/");                      // match your landing route
     } else {
       navigate(route.path);
     }
