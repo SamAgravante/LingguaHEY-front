@@ -485,7 +485,9 @@ export default function Homepage() {
             </Typography>
           ) : (
             <Typography variant="h5" sx={{ mb: 4, color: '#666' }}>
-              Please wait for a teacher to assign you to a classroom.
+              {userDetails.role === 'TEACHER' 
+                ? 'Please create a classroom.'
+                : 'Please wait for a teacher to assign you to a classroom.'}
             </Typography>
           )}
         </Grid>
