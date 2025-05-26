@@ -466,7 +466,7 @@ const LiveActClassroom = () => {
         {/* Right Column (for Enrolled Students) */}
         <Grid item xs={12} md={6}> {/* Occupy half width on medium and up screens */}
           {/* List of Students Section */}
-          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, backgroundColor: "#fff",marginLeft:5,width:500,minHeight: 342 }}>
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, backgroundColor: "#fff",marginLeft:5,width:500,minHeight: 400 }}>
             <Typography variant="h6" color="text.primary" mb={3}>
               Enrolled Students
             </Typography>

@@ -99,7 +99,7 @@ const Dashboard = () => {
               },
             });
             setUsers(response.data);
-            setConcurrentUsers(1);
+            // setConcurrentUsers(1); // This will be updated by the new API call
             setRegisteredUsers(response.data.length);
             let studentCount = 0;
             let teacherCount = 0;
@@ -152,7 +152,24 @@ const Dashboard = () => {
           }
         };
 
+        // New function to fetch concurrent users
+        const fetchActiveTokenCount = async () => {
+          try {
+            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/analytics/active-token-count`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            setConcurrentUsers(response.data);
+          } catch (err) {
+            console.error("Failed to fetch active token count:", err);
+            // Handle error or set to 0 if API call fails
+            setConcurrentUsers(0);
+          }
+        };
+
         fetchUser();
+        fetchActiveTokenCount(); // Call the new function
       } catch (err) {
         console.error("Failed to decode token:", err);
         setError("Failed to decode token. Please try again later.");
