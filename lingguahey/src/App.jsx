@@ -66,6 +66,7 @@ function App() {
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path="/teacherdashboard" element={<TeacherDashboard />} />
         <Route path="/teacherdashboard/classroom/:roomId" element={<TeacherDashboardPopUp />} />
+        <Route path="/teacher/live-activities/:roomId" element={<LiveActClassroom />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
 
         {/* Lesson Activities */}

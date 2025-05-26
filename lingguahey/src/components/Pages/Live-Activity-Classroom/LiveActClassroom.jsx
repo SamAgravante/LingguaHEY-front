@@ -26,7 +26,8 @@ import axios from "axios";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { jwtDecode } from "jwt-decode";
-//import API from "../../api";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 // Import game components
 import LiveActOnePicFourWords from "./LiveActOnePicFourWords";
@@ -35,7 +36,7 @@ import LiveActWordTranslation from "./LiveActWordTranslation";
 
 const LiveActClassroom = () => {
   const navigate = useNavigate();
-  const { classroomId, classroomName } = useParams();
+  const { roomId: classroomId, classroomName } = useParams();
   const [activities, setActivities] = useState([]);
   const [newActivityName, setNewActivityName] = useState(""); // Use newActivityName
   const [selectedActivityType, setSelectedActivityType] = useState("");
@@ -45,6 +46,7 @@ const LiveActClassroom = () => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
   const [students, setStudents] = useState([]);
+  const { roomId } = useParams();
 
   //Dialogs State
   const [openDialog, setOpenDialog] = useState(false);
@@ -326,115 +328,188 @@ const LiveActClassroom = () => {
   }
 
   return (
-    <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E1F5FE", p: 2 }}>
-      <Typography variant="h5" fontWeight="bold" color="black" mb={3}>
-        {classroom ? `Live Activities for ${classroom.classroomName}` : "Loading..."}
-      </Typography>
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
+    <Box sx={{ backgroundColor: "#f0f2f5", minHeight: "100vh", p: 3 }}>
+      {/* Header Section */}
+      <Box
+        sx={{
+          backgroundColor: "#fff",
+          py: 2,
+          px: 3,
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          mb: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderRadius: 2,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <DashboardIcon sx={{ mr: 2, color: "#3f51b5", fontSize: 32 }} />
+          <Typography variant="h4" sx={{ fontWeight: 600, color: "#3f51b5" }}>
+            Activity Creation
+          </Typography>
+        </Box>
 
-      {/* Create New Activity Section */}
-      <Box mt={4} p={4}>
-        <Typography variant="h6" color="black" mb={2}>
-          Create a New Activity
-        </Typography>
-        <TextField
-          label="Activity Name"
-          variant="outlined"
-          value={newActivityName}
-          onChange={(e) => setNewActivityName(e.target.value)}
-          sx={{ mr: 2, width: "300px" }}
-        />
         <Button
-          variant="contained"
-          sx={{ backgroundColor: "#FFCCBC", "&:hover": { backgroundColor: "#FFAB91" } }}
-          onClick={createActivity}
-          disabled={!newActivityName} // Disable if activity name is empty
-        >
-          Create Activity
-        </Button>
-      </Box>
-
-      {/* Activity List */}
-      <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
-        <Box
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(`/teacherdashboard/classroom/${roomId}`)}
           sx={{
-            maxHeight: "600px",
-            overflowY: "auto",
+            borderRadius: 2,
+            backgroundColor: "#3f51b5",
+            color: "#fff",
+            "&:hover": {
+              backgroundColor: "#2c387e",
+            },
+            px: 3,
+            py: 1.2,
           }}
         >
-          <List>
-            {activities.map((activity, index) => {
-              return (
-                <ListItem key={activity.activity_ActivityId} sx={{ borderBottom: "1px solid #444" }}>
-                  <ListItemText
-                    primary={`${index + 1}: ${activity.activity_ActivityName}`} // Display activity name
-                    secondary={`Activity ID: ${activity.activity_ActivityId}`}
-                  />
-                  <ListItemSecondaryAction>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleGoToActivity(activity)}
-                      sx={{ mr: 1 }}
-                    >
-                      Go To Activity
-                    </Button>
-                    <IconButton edge="end" color="error" onClick={() => handleDelete(activity)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              );
-            })}
-          </List>
-        </Box>
-      </Paper>
-
-      {/* View Students Section */}
-      <Box mt={4} sx={{ width: "100%", maxWidth: 800 }}>
-        <Typography variant="h6" color="black" mb={2}>
-          List of Students
+          Back to Dashboard
+        </Button>
+      </Box>
+      <Grid item xs={12}>
+        <Typography variant="h5" fontWeight="bold" color="#3f51b5" mb={3} pl={87}>
+          {classroom ? `${classroom.classroomName}` : "Loading..."}
         </Typography>
         {error && (
           <Typography color="error" sx={{ mb: 2 }}>
             {error}
           </Typography>
         )}
-        <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
-          <Box
-            sx={{
-              maxHeight: "300px",
-              overflowY: "auto",
-            }}
-          >
-            <List>
-              {students.map((student, index) => (
-                <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
-                  <ListItemText
-                    primary={`${index + 1}. ${student.firstName} ${student.lastName}`}
-                    secondary={`Email: ${student.email}`}
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleRemoveStudent(student)}
-                      sx={{ mr: 1 }}
+      </Grid>
+
+      {/* Main Content Sections - Stacked Vertically */}
+      <Grid container direction="row" spacing={2}> {/* Changed direction to "row" and added spacing */}
+        {/* Left Column */}
+        <Grid item xs={12} md={6}> {/* Occupy half width on medium and up screens */}
+          {/* Create New Activity Section */}
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, backgroundColor: "#fff", mb: 5,marginLeft:20,width:500 }}> {/* Added mb for margin-bottom */}
+            <Typography variant="h6" color="text.primary" mb={3}>
+              Create a New Activity
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <TextField
+                label="Activity Name"
+                variant="outlined"
+                fullWidth
+                value={newActivityName}
+                onChange={(e) => setNewActivityName(e.target.value)}
+                sx={{ flexGrow: 1 }}
+              />
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: "#FFA726", // Orange color for creation
+                  "&:hover": { backgroundColor: "#FB8C00" },
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                }}
+                onClick={createActivity}
+                disabled={!newActivityName}
+              >
+                Create
+              </Button>
+            </Box>
+          </Paper>
+
+          {/* Activity List Section */}
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, backgroundColor: "#fff",marginLeft:20,width:500 }}>
+            <Typography variant="h6" color="text.primary" mb={3}>
+              Your Activities
+            </Typography>
+            <Box sx={{ maxHeight: "400px", overflowY: "auto" }}>
+              <List>
+                {activities.length > 0 ? (
+                  activities.map((activity, index) => (
+                    <ListItem
+                      key={activity.activity_ActivityId}
+                      divider
+                      sx={{ py: 1.5, px: 0 }}
                     >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        </Paper>
-      </Box>
-      {/* Confirmation Dialog */}
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle1" fontWeight="medium">
+                            {`${index + 1}. ${activity.activity_ActivityName}`}
+                          </Typography>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          onClick={() => handleGoToActivity(activity)}
+                          sx={{ mr: 1, borderRadius: 1.5 }}
+                        >
+                          Configure
+                        </Button>
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={() => handleDelete(activity)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))
+                ) : (
+                  <Typography variant="body1" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+                    No activities created yet.
+                  </Typography>
+                )}
+              </List>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Right Column (for Enrolled Students) */}
+        <Grid item xs={12} md={6}> {/* Occupy half width on medium and up screens */}
+          {/* List of Students Section */}
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, backgroundColor: "#fff",marginLeft:5,width:500,minHeight: 342 }}>
+            <Typography variant="h6" color="text.primary" mb={3}>
+              Enrolled Students
+            </Typography>
+            <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+              <List>
+                {students.length > 0 ? (
+                  students.map((student, index) => (
+                    <ListItem
+                      key={index}
+                      divider
+                      sx={{ py: 1.5, px: 0 }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle1" fontWeight="medium">
+                            {`${index + 1}. ${student.firstName} ${student.lastName}`}
+                          </Typography>
+                        }
+                        secondary={`Email: ${student.email}`}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={() => handleRemoveStudent(student)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))
+                ) : (
+                  <Typography variant="body1" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+                    No students enrolled in this classroom.
+                  </Typography>
+                )}
+              </List>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid> {/* End of Main Content Sections Grid */}
+
+      {/* Confirmation Dialogs */}
       <Dialog
         open={openDialog}
         onClose={closeDialog}
@@ -456,7 +531,7 @@ const LiveActClassroom = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      {/* Delete Activity Confirmation Dialog */}
+
       <Dialog
         open={openDeleteDialog}
         onClose={closeDeleteDialog}
@@ -484,42 +559,50 @@ const LiveActClassroom = () => {
         aria-labelledby="activity-dialog-title"
         aria-describedby="activity-dialog-description"
         maxWidth="md"
-        fullWidth="true"
-        overflowY="auto"
-        sx={{
-          "& .MuiDialog-paper": {
-            maxHeight: "80vh", // Set the maximum height of the dialog
+        fullWidth={true}
+        PaperProps={{
+          sx: {
+            maxHeight: "90vh", // Set the maximum height of the dialog
             overflowY: "auto", // Enable vertical scrolling if content exceeds max height
+            borderRadius: 2,
           },
         }}
       >
         <DialogTitle id="activity-dialog-title">
           {selectedActivity ? `Configure ${selectedActivity.activity_ActivityName}` : "Configure Activity"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent dividers sx={{ pt: 2 }}>
           {/* List of Questions */}
           {activityQuestions.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" color="black" fontWeight="bold">
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" color="text.primary" fontWeight="bold" mb={2}>
                 Existing Questions:
               </Typography>
-              <List>
+              <List sx={{ bgcolor: "#f9f9f9", borderRadius: 1, p: 2 }}>
                 {activityQuestions.map((question, index) => (
-                  <ListItem key={question.questionId}>
+                  <ListItem key={question.questionId} divider={index < activityQuestions.length - 1} sx={{ py: 1 }}>
                     <ListItemText
-                      primary={`Question ${index + 1}: ${question.questionText}`}
-                      secondary={`Game Type: 
-                        ${question.gameType === "GAME1" ? "One Pic Four Words" 
-                          : question.gameType === "GAME2" ? "Phrase Translation"
-                          : question.gameType === "GAME3" ? "Word Translation"
+                      primary={
+                        <Typography variant="body1" fontWeight="medium">
+                          {`Question ${index + 1}: ${question.questionText}`}
+                        </Typography>
+                      }
+                      secondary={`Game Type: ${
+                        question.gameType === "GAME1"
+                          ? "One Pic Four Words"
+                          : question.gameType === "GAME2"
+                          ? "Phrase Translation"
+                          : question.gameType === "GAME3"
+                          ? "Word Translation"
                           : question.activityName
-                    }`}
+                      }`}
                     />
                     <ListItemSecondaryAction>
                       <IconButton
                         edge="end"
                         aria-label="edit"
                         onClick={() => handleEditQuestion(question)}
+                        sx={{ mr: 1 }}
                       >
                         <EditIcon />
                       </IconButton>
@@ -536,21 +619,24 @@ const LiveActClassroom = () => {
               </List>
             </Box>
           )}
-          <DialogContentText id="activity-dialog-description">
-            Select the game type to configure the activity.
-          </DialogContentText>
+          <Typography variant="subtitle1" color="text.secondary" mb={2}>
+            Select the game type to add new questions to this activity.
+          </Typography>
           {/* Game type selection */}
           {!selectedQuestionType && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2, justifyContent: "center", mt: 2 }}>
-              <FormControl fullWidth>
-                <InputLabel id="game-type-select-label">Game Type</InputLabel>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="game-type-select-label">Select Game Type</InputLabel>
                 <Select
                   labelId="game-type-select-label"
                   id="game-type-select"
                   value={selectedQuestionType || ""}
-                  label="Game Type"
+                  label="Select Game Type"
                   onChange={(e) => handleQuestionTypeSelect(e.target.value)}
                 >
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
                   <MenuItem value="GAME1">One Pic Four Words</MenuItem>
                   <MenuItem value="GAME2">Phrase Translation</MenuItem>
                   <MenuItem value="GAME3">Word Translation</MenuItem>
@@ -560,30 +646,36 @@ const LiveActClassroom = () => {
           )}
           {/* Render the appropriate game component based on the selected game type */}
           {selectedQuestionType === "GAME1" && (
-            <LiveActOnePicFourWords
-              activityId={selectedActivity.activity_ActivityId}
-              classroomId={classroomId}
-              onGameCreated={resetSelectedQuestionType} // Pass the callback function
-            />
+            <Box mt={3}>
+              <LiveActOnePicFourWords
+                activityId={selectedActivity.activity_ActivityId}
+                classroomId={classroomId}
+                onGameCreated={resetSelectedQuestionType} // Pass the callback function
+              />
+            </Box>
           )}
           {selectedQuestionType === "GAME2" && (
-            <LiveActPhraseTranslation
-              activityId={selectedActivity.activity_ActivityId}
-              classroomId={classroomId}
-              onGameCreated={resetSelectedQuestionType} // Pass the callback function
-            />
+            <Box mt={3}>
+              <LiveActPhraseTranslation
+                activityId={selectedActivity.activity_ActivityId}
+                classroomId={classroomId}
+                onGameCreated={resetSelectedQuestionType} // Pass the callback function
+              />
+            </Box>
           )}
           {selectedQuestionType === "GAME3" && (
-            <LiveActWordTranslation
-              activityId={selectedActivity.activity_ActivityId}
-              classroomId={classroomId}
-              onGameCreated={resetSelectedQuestionType} // Pass the callback function
-            />
+            <Box mt={3}>
+              <LiveActWordTranslation
+                activityId={selectedActivity.activity_ActivityId}
+                classroomId={classroomId}
+                onGameCreated={resetSelectedQuestionType} // Pass the callback function
+              />
+            </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={closeActivityDialog} color="primary">
-            Cancel
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={closeActivityDialog} color="secondary" variant="outlined">
+            Close
           </Button>
         </DialogActions>
       </Dialog>
@@ -593,12 +685,12 @@ const LiveActClassroom = () => {
         open={openGame1EditDialog}
         onClose={closeGame1EditDialog}
         aria-labelledby="game1-edit-dialog-title"
-        aria-describedby="game1-edit-dialog-description"
         maxWidth="md"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle id="game1-edit-dialog-title">Edit One Pic Four Words Question</DialogTitle>
-        <DialogContent>
+        <DialogContent dividers>
           <LiveActOnePicFourWords
             activityId={selectedActivity?.activity_ActivityId}
             classroomId={classroomId}
@@ -607,7 +699,7 @@ const LiveActClassroom = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeGame1EditDialog} color="primary">
+          <Button onClick={closeGame1EditDialog} color="secondary" variant="outlined">
             Cancel
           </Button>
         </DialogActions>
@@ -618,12 +710,12 @@ const LiveActClassroom = () => {
         open={openGame2EditDialog}
         onClose={closeGame2EditDialog}
         aria-labelledby="game2-edit-dialog-title"
-        aria-describedby="game2-edit-dialog-description"
         maxWidth="md"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle id="game2-edit-dialog-title">Edit Phrase Translation Question</DialogTitle>
-        <DialogContent>
+        <DialogContent dividers>
           <LiveActPhraseTranslation
             activityId={selectedActivity?.activity_ActivityId}
             classroomId={classroomId}
@@ -632,7 +724,7 @@ const LiveActClassroom = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeGame2EditDialog} color="primary">
+          <Button onClick={closeGame2EditDialog} color="secondary" variant="outlined">
             Cancel
           </Button>
         </DialogActions>
@@ -643,12 +735,12 @@ const LiveActClassroom = () => {
         open={openGame3EditDialog}
         onClose={closeGame3EditDialog}
         aria-labelledby="game3-edit-dialog-title"
-        aria-describedby="game3-edit-dialog-description"
         maxWidth="md"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle id="game3-edit-dialog-title">Edit Word Translation Question</DialogTitle>
-        <DialogContent>
+        <DialogContent dividers>
           <LiveActWordTranslation
             activityId={selectedActivity?.activity_ActivityId}
             classroomId={classroomId}
@@ -657,13 +749,13 @@ const LiveActClassroom = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeGame3EditDialog} color="primary">
+          <Button onClick={closeGame3EditDialog} color="secondary" variant="outlined">
             Cancel
           </Button>
         </DialogActions>
       </Dialog>
-       {/* Edit Question Dialog */}
-       <Dialog
+      {/* Edit Question Dialog - Consider removing this if game-specific edit dialogs are fully handling edits */}
+      <Dialog
         open={openEditDialog}
         onClose={closeEditDialog}
         aria-labelledby="edit-dialog-title"
@@ -695,7 +787,7 @@ const LiveActClassroom = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Grid>
+    </Box>
   );
 };
 
