@@ -371,6 +371,7 @@ const TeacherDashboard = () => {
                           {room.name}
                         </Typography>
                       </Box>
+                      {/*
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -382,6 +383,7 @@ const TeacherDashboard = () => {
                       >
                         {room.activities?.length || 0} Activities
                       </Typography>
+                      */}
                     </CardContent>
                   </Card>
                 </Grid>

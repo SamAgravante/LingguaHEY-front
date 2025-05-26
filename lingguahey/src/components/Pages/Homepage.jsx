@@ -72,13 +72,13 @@ export default function Homepage() {
         const userResp = await API.get(`/users/${user.userId}`);
         setUserDetails(userResp.data);
         
-        console.log('User details:', userResp.data);        
+        //console.log('User details:', userResp.data);        
         const endpoint = userResp.data.role === 'TEACHER' 
           ? `classrooms/teacher/${user.userId}`
           : `classrooms/user/${user.userId}`;
-        console.log('Fetching classroom from endpoint:', endpoint);
+        //console.log('Fetching classroom from endpoint:', endpoint);
         const classResp = await API.get(endpoint);
-        console.log ('Classroom response:', classResp.data);
+        //console.log ('Classroom response:', classResp.data);
         if (!isMounted) return;
         
         // Handle teacher vs student response differently
@@ -197,17 +197,17 @@ export default function Homepage() {
     // If we're in Activity section with no current activity
     if (!current && section === 'Activity') {
       if (liveActivityRef.current?.handleReturn) {
-        console.log('Calling handleReturn on LiveActivityGame');
+        //console.log('Calling handleReturn on LiveActivityGame');
         liveActivityRef.current.handleReturn();
       } else {
-        console.log('No handleReturn available, closing modal directly');
+        //console.log('No handleReturn available, closing modal directly');
         await closeModal();
       }
     } else if (current) {
-      console.log('Going back to activity list');
+      //console.log('Going back to activity list');
       await backToList();
     } else {
-      console.log('Closing modal');
+      //console.log('Closing modal');
       await closeModal();
     }
   };
@@ -220,7 +220,7 @@ export default function Homepage() {
       if (section === 'Activity' && classroom) {
         try {
           const res = await API.get(`/live-activities/classrooms/${classroom}/deployed`);
-          console.log('Deployed activity:', res.data);
+          //console.log('Deployed activity:', res.data);
           setDeployedActivityId(res.data);
         } catch (err) {
           console.error('Failed to fetch deployed activity:', err);
@@ -485,7 +485,9 @@ export default function Homepage() {
             </Typography>
           ) : (
             <Typography variant="h5" sx={{ mb: 4, color: '#666' }}>
-              Please wait for a teacher to assign you to a classroom.
+              {userDetails.role === 'TEACHER' 
+                ? 'Please create a classroom.'
+                : 'Please wait for a teacher to assign you to a classroom.'}
             </Typography>
           )}
         </Grid>
