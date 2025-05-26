@@ -55,6 +55,7 @@ export default function Signup() {
     "Please wait while we process your registration..."
   );
   const [dialogLoading, setDialogLoading] = useState(true);
+  
 
   useEffect(() => {
     setIntroMode(true);
@@ -78,6 +79,12 @@ export default function Signup() {
   const handleSignUp = async (e) => {
     e.preventDefault();
 
+    const emailPattern = /^[A-Za-z0-9._%+-]+@cit\.edu$/;
+    if (!emailPattern.test(user.email)) {
+      showSnack("Email must end with @cit.edu", "warning");
+      return;
+    }
+    
     // basic validations
     if (user.password.length < 8) {
       showSnack("Password must be at least 8 characters.", "warning");
