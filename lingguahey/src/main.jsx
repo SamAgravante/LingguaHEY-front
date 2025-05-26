@@ -10,6 +10,7 @@ import theme from './theme';
 import "./index.css";
 import { GlobalStyles } from '@mui/material';
 import { MusicProvider } from "./contexts/MusicContext"; // <-- Add this import
+import { ScoreProvider } from "./contexts/ScoreContext"; // <-- Add this import
 
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -22,7 +23,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <BrowserRouter>
         <AuthProvider>
           <MusicProvider>
-            <App />
+            <ScoreProvider>
+              <App />
+            </ScoreProvider>
           </MusicProvider>
         </AuthProvider>
       </BrowserRouter>

@@ -71,6 +71,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const [localUserChar, setLocalUserChar] = useState(null);
   const [userDetails, setUserDetails] = useState(null);
   const [gameRoomOpen, setGameRoomOpen] = useState(false);
+  const [frozenInitialUsers, setFrozenInitialUsers] = useState([]); // NEW: freeze users at game start
 
   const user = userId || getUserFromToken().userId;
   const role = useRef(getUserFromToken().role?.toUpperCase());
@@ -79,6 +80,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const didInitRef = useRef(false);
   const skipCleanupRef = useRef(true);
   const onStartedRef = useRef(onStarted);
+  const lastNonEmptyUsersRef = useRef([]); // Always keep the latest non-empty user list
   useEffect(() => { onStartedRef.current = onStarted; }, [onStarted]);
 
   // ---- FETCH USER DETAILS ----
@@ -87,6 +89,15 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       .then(res => setUserDetails(res.data))
       .catch(() => setError('Could not load user profile'));
   }, [user]);
+
+  const disconnectWebsocket = () => {
+    try {
+      subscriptionRef.current?.unsubscribe();
+    } catch {}
+    try {
+      stompClientRef.current?.disconnect();
+    } catch {}
+  };
 
   // ---- LOBBY JOIN & WEBSOCKET ----
   useEffect(() => {
@@ -130,6 +141,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           try { payload = JSON.parse(msg.body); } catch { return; }
           if (Array.isArray(payload.users)) {
             setUsers(payload.users);
+            if (payload.users.length > 0) lastNonEmptyUsersRef.current = payload.users;
             const me = payload.users.find(u => u.userId === user);
             if (me?.role && role.current !== me.role.toUpperCase()) role.current = me.role.toUpperCase();
             if (!me?.character && selectedChar) setLocalUserChar(selectedChar);
@@ -139,9 +151,11 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             setUsers(prev => prev.some(u => u.userId === payload.user.userId) ? prev : [...prev, payload.user]);
           }
           if (payload.type === 'START') {
+            console.log('users at START (from ref):', lastNonEmptyUsersRef.current); // Log the correct user list
+            setFrozenInitialUsers(lastNonEmptyUsersRef.current); // Freeze the latest non-empty user list
             setGameRoomOpen(true);
             // onStartedRef.current?.();
-            // navigate('/multiplayer', { state: { activityId } });
+            // navigate('/multiplayer', { state: { activityId } }); // <-- Remove this line to prevent redirect
           }
         }
       );
@@ -171,21 +185,35 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   };
 
   const handleReturn = () => {
+    // First try to leave the lobby gracefully
     LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } })
+      .catch(err => console.error('Error leaving lobby:', err))
       .finally(() => {
-        subscriptionRef.current?.unsubscribe();
-        stompClientRef.current?.disconnect(() => onReturn?.());
+        // Cleanup websocket connections
+        if (subscriptionRef.current) {
+          try {
+            subscriptionRef.current.unsubscribe();
+          } catch (e) {
+            console.error('Error unsubscribing:', e);
+          }
+        }
+        if (stompClientRef.current) {
+          try {
+            stompClientRef.current.disconnect(() => {
+              console.log('WebSocket disconnected');
+              // Call onReturn callback after disconnecting
+              onReturn?.();
+            });
+          } catch (e) {
+            console.error('Error disconnecting:', e);
+            // Still call onReturn even if disconnect fails
+            onReturn?.();
+          }
+        } else {
+          // If no WebSocket, still call onReturn
+          onReturn?.();
+        }
       });
-  };
-
-  // --- Disconnect STOMP/WebSocket and unsubscribe ---
-  const disconnectWebsocket = () => {
-    try {
-      subscriptionRef.current?.unsubscribe();
-    } catch {}
-    try {
-      stompClientRef.current?.disconnect();
-    } catch {}
   };
 
   useImperativeHandle(ref, () => ({ handleReturn }));
@@ -233,6 +261,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 role:        userDetails.role,
               };
               await USER_API.put(`/${user}`, payload);
+              console.log ('Profile updated:', payload.role);
               setHasJoined(true);
             } catch (err) {
               setError(err?.response?.data?.message || 'Failed to update profile');
@@ -264,7 +293,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           : users.map(u => (
             <Box key={u.userId} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <img
-                src={getCharImgByValue(u.character || (u.userId === user ? localUserChar : null))}
+                src={getCharImgByValue(u.character || u.profilePic || (u.userId === user ? localUserChar : null))}
                 alt="char"
                 style={{ width: 36, height: 36, marginRight: 8 }}
               />
@@ -309,8 +338,11 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        {/* Pass activityId and onLeave to MultiplayerGameRoom */}
-        <MultiplayerGameRoom activityId={activityId} onLeave={() => { disconnectWebsocket(); setGameRoomOpen(false); }} />
+        {/* Pass activityId, initialUsers, and onLeave to MultiplayerGameRoom */}
+        <MultiplayerGameRoom activityId={activityId} initialUsers={frozenInitialUsers} onLeave={(e) => {
+          disconnectWebsocket();
+          setGameRoomOpen(false);
+        }} />
       </Dialog>
     </Box>
   );

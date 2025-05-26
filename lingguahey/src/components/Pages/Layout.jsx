@@ -16,6 +16,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import API from "../../api";
 import { jwtDecode } from "jwt-decode";
 import { MusicContext } from "../../contexts/MusicContext";
+import { useScore } from "../../contexts/ScoreContext";
 import { getUserFromToken } from "../../utils/auth";
 
 const drawerWidth = 240;
@@ -48,8 +49,8 @@ const Layout = () => {
     role: null,
   });
   const [totalPoints, setTotalPoints] = useState(0);
-
   const { setIntroMode } = useContext(MusicContext);
+  const { refreshTrigger } = useScore();
 
   useEffect(() => {
     setIntroMode(false); // Switch to default/background music
@@ -87,19 +88,19 @@ const Layout = () => {
 
   // Poll for updated points
   useEffect(() => {
-    if (!userData.userId || !token) return;
-
-    const interval = setInterval(async () => {
+    const fetchPoints = async () => {
+      if (!userData.userId || !token) return;
+      
       try {
         const { data } = await API.get(`/scores/users/${userData.userId}/total`);
         setTotalPoints(data);
       } catch (err) {
         console.error("Failed to fetch user points:", err);
       }
-    }, 10000);
+    };
 
-    return () => clearInterval(interval);
-  }, [userData.userId, token]);
+    fetchPoints();
+  }, [userData.userId, token, refreshTrigger]);
 
   const handleRoute = (route) => {
     if (route.label === "Logout") {

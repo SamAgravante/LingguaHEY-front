@@ -24,7 +24,8 @@ import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/LiveAct
 import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
 import LiveActPhraseTranslation from "./components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
 import LiveActWordTranslation from "./components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
-
+import ResendVerification from "./components/ResendVerificationPage";
+import VerificationStatusPage from "./components/VerificationStatusPage";
 import LiveActivityGame from "./components/Pages/LiveActivityGame";
 import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
 import MultiplayerGameRoom from "./components/Pages/MultiplayerGameRoom";
@@ -38,6 +39,9 @@ function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
       <Route path="/roleselect" element={<RoleSelect />} />
+      <Route path="/verify-status" element={<VerificationStatusPage />} />
+      <Route path="/resend-verification" element={<ResendVerification />} />
+    
 
       {/* Protected routes */}
       <Route element={token ? <Layout /> : <Navigate to="/login" replace />}>

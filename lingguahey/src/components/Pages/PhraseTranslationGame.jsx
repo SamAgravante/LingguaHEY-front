@@ -36,11 +36,11 @@ const pastels = [
 // 🎨 Styled components
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
-  backgroundSize: 'contain',
+  backgroundSize: 'cover',
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'center',
-  padding: '18px',
-  maxHeight: '900px',
+  padding: '24px',
+  minHeight: '670px',
   fontFamily: 'Comic Sans MS, sans-serif',
   borderRadius: '20px',
 
@@ -263,6 +263,13 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
           marginBottom: 4,
         }}
       >
+        <Box sx={{ 
+          flexGrow: 1, 
+          display: 'flex', 
+          alignItems: 'center',
+          justifyContent: 'center',
+          }}>
+          
         {selected.map(id => {
           const choice = q.choices.find(c => c.choiceId === id) || {};
           return (
@@ -296,7 +303,24 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
             />
           );
         })}
+        </Box>
+        {/* Push button to the right */}
+        <Box sx={{ paddingRight: 2 }}>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            sx={{
+              backgroundColor: '#FFB3BA',
+              color: '#2E2E34',
+              fontSize: '2rem',
+            }}
+            disabled={!selected.length}
+          >
+            Submit
+          </Button>
+        </Box>
       </Box>
+
 
       <Grid container spacing={4} sx={{ justifyContent: 'center' }}>
         {shuffledChoices.map((c, i) => (
@@ -327,24 +351,6 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
           </Grid>
         ))}
       </Grid>
-
-      <Grid container spacing={4} sx={{ justifyContent: 'center', mt: 4 }}>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          sx={{ 
-            mt: 2, 
-            backgroundColor: '#FFB3BA', 
-            color: '#2E2E34',
-            justifyContent: 'center',
-          }}
-          disabled={!selected.length}
-        >
-          Submit
-        </Button>
-      </Grid>
-
-
       <Dialog open={showDialog} onClose={handleDialogClose}>
         <DialogTitle>🎉 Quiz Complete!</DialogTitle>
         <DialogContent>

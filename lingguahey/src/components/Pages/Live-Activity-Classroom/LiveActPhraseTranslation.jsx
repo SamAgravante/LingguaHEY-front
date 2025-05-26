@@ -132,38 +132,27 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (isCorr) score++;
-      }
-
-      // post/put score
+      }      // post/put score
       if (qId) {
-        if (isEditMode && question && question.scores && question.scores.length > 0) {
-          // Update existing score
-          await axios.put(
-            `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}/score`,
+        // Always create or update score
+        try {
+          // Create new score
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}`,
             null,
             { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
           );
-        } else {
-          // Check if score already exists before creating
-          try {
-            const scoreCheckResponse = await axios.get(
-              `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}`,
-              { headers: { Authorization: `Bearer ${token}` } }
+        } catch (scoreError) {
+          if (scoreError.response && scoreError.response.status === 409) {
+            // Score exists, update it instead
+            await axios.put(
+              `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}/score`,
+              null,
+              { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
             );
-
-            if (!scoreCheckResponse.data) {
-              // Create new score
-              await axios.post(
-                `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}`,
-                null,
-                { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
-              );
-            } else {
-              console.warn("Score already exists, skipping creation.");
-            }
-          } catch (scoreCheckError) {
-            // Handle errors during score check
-            console.error("Error checking for existing score:", scoreCheckError);
+          } else {
+            console.error("Error creating/updating score:", scoreError);
+            throw scoreError; // Re-throw to be caught by outer catch block
           }
         }
       } else {
