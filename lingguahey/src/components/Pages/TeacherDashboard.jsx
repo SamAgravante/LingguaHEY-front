@@ -189,7 +189,7 @@ const TeacherDashboard = () => {
   }
   
   return (
-    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "90vh", pb: 5 }}>
+    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
       {/* Header */}
       <Box 
         sx={{ 
@@ -371,6 +371,7 @@ const TeacherDashboard = () => {
                           {room.name}
                         </Typography>
                       </Box>
+                      {/*
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -382,6 +383,7 @@ const TeacherDashboard = () => {
                       >
                         {room.activities?.length || 0} Activities
                       </Typography>
+                      */}
                     </CardContent>
                   </Card>
                 </Grid>
