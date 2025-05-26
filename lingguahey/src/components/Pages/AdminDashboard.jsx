@@ -90,7 +90,7 @@ const Dashboard = () => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-
+        console.log("Decoded Token:", decoded);
         const fetchUser = async () => {
           try {
             const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users`, {
@@ -155,11 +155,8 @@ const Dashboard = () => {
         // New function to fetch concurrent users
         const fetchActiveTokenCount = async () => {
           try {
-            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/analytics/active-token-count`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
+            const response = await API.get(`/users/analytics/active-token-count`); 
+            console.log("For token",response);             
             setConcurrentUsers(response.data);
           } catch (err) {
             console.error("Failed to fetch active token count:", err);

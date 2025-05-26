@@ -11,7 +11,14 @@ import {
   Avatar,
   Paper,
   CircularProgress,
-  Alert
+  Alert,
+  Container,
+  Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -35,6 +42,8 @@ const TeacherDashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState(null);
   const navigate = useNavigate();
   const [token, setToken] = useState(localStorage.getItem("token"));
 
@@ -147,11 +156,20 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleDeleteRoom = async (roomId) => {
-    if (!API) return;
+  const handleDeleteClick = (e, room) => {
+    e.stopPropagation();
+    setRoomToDelete(room);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!API || !roomToDelete) return;
+    
     try {
-      await API.delete(`/api/lingguahey/classrooms/${roomId}`);
-      setRooms(prev => prev.filter(room => room.id !== roomId));
+      await API.delete(`/api/lingguahey/classrooms/${roomToDelete.id}`);
+      setRooms(prev => prev.filter(room => room.id !== roomToDelete.id));
+      setDeleteModalOpen(false);
+      setRoomToDelete(null);
     } catch (err) {
       console.error("Failed to delete room:", err);
       // Add user feedback
@@ -197,113 +215,239 @@ const TeacherDashboard = () => {
 
       <Box sx={{ maxWidth: 1600, mx: "auto", px: 3 }}>
         {/* Create Room Section */}
-        <Box sx={{ mb: 4, display: "flex", gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          <TextField
-            label="New Room Name"
-            variant="outlined"
-            value={newRoomName}
-            onChange={(e) => setNewRoomName(e.target.value)}
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 4,
+            p: 3,
+            borderRadius: 2,
+            backgroundColor: "#fff",
+            border: "1px solid rgba(0, 0, 0, 0.12)"
+          }}
+        >
+          <Box 
             sx={{ 
-              backgroundColor: "#fff",
-              borderRadius: 1,
-              flexGrow: 1,
-              minWidth: '250px'
+              display: "flex", 
+              gap: 2, 
+              alignItems: 'center', 
+              width: { xs: '100%', md: '50%', lg: '40%' }
             }}
-          />
-          <Button 
-            variant="contained" 
-            onClick={handleCreateRoom}
-            disabled={!newRoomName.trim()}
-            sx={{ 
-              backgroundColor: "#3f51b5", 
-              "&:hover": { backgroundColor: "#303f9f" },
-              height: '56px' // Match TextField height
-            }}
-            startIcon={<AddIcon />}
           >
-            Create Room
-          </Button>
-        </Box>
+            <TextField
+              fullWidth
+              label="New Room Name"
+              variant="outlined"
+              value={newRoomName}
+              placeholder="Enter room name..."
+              onChange={(e) => setNewRoomName(e.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#fff",
+                  borderRadius: 1,
+                  "&:hover fieldset": {
+                    borderColor: "#3f51b5",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "#3f51b5",
+                  }
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleCreateRoom}
+              disabled={!newRoomName.trim()}
+              sx={{
+                height: 56,
+                px: 3,
+                backgroundColor: "#3f51b5",
+                "&:hover": {
+                  backgroundColor: "#303f9f"
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: "#e0e0e0"
+                },
+                whiteSpace: "nowrap"
+              }}
+              startIcon={<AddIcon />}
+            >
+              Create Room
+            </Button>
+          </Box>
+        </Paper>
 
         {/* Rooms Grid */}
-        <Typography variant="h5" sx={{ mb: 3, color: "#3f51b5", fontWeight: 500 }}>
-          Your Rooms
-        </Typography>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} action={
-            <Button color="inherit" size="small" onClick={fetchRooms}>
-              RETRY
-            </Button>
-          }>
-            {error}
-          </Alert>
-        )}
-        {isLoading && rooms.length > 0 && <CircularProgress sx={{ display: 'block', margin: '20px auto'}}/>}
-
-        <Grid container spacing={3}>
-          {!isLoading && rooms.length > 0 ? (
-            rooms.map((room) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={room.id}>
-                <Card 
-                  sx={{ 
-                    borderRadius: 2,
-                    transition: "transform 0.2s, box-shadow 0.2s",
-                    cursor: "pointer",
-                    height: '100%', // Ensure cards have same height if content varies
-                    display: 'flex',
-                    flexDirection: 'column',
-                    "&:hover": {
-                      transform: "translateY(-5px)",
-                      boxShadow: "0 8px 16px rgba(0,0,0,0.1)"
-                    }
-                  }}
-                  onClick={() => handleRoomClick(room)}
+        <Box sx={{ mb: 4 }}>
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3,
+                borderRadius: 2,
+                "& .MuiAlert-message": { fontSize: "0.95rem" }
+              }}
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={fetchRooms}
+                  sx={{ fontWeight: 500 }}
                 >
-                  <CardContent sx={{ position: "relative", p: 3, flexGrow: 1 }}>
-                    <IconButton 
-                      aria-label={`Delete room ${room.name}`}
+                  RETRY
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
+          )}
+
+          {isLoading && rooms.length > 0 && (
+            <Box display="flex" justifyContent="center" my={4}>
+              <CircularProgress size={32} sx={{ color: "#3f51b5" }}/>
+            </Box>
+          )}
+
+          <Grid container spacing={3}>
+            {!isLoading && rooms.length > 0 ? (
+              rooms.map((room) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={room.id}>
+                  <Card
+                    sx={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 2,
+                      transition: "all 0.2s ease-in-out",
+                      border: "1px solid rgba(0, 0, 0, 0.12)",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
+                      }
+                    }}
+                    onClick={() => handleRoomClick(room)}
+                  >
+                    <CardContent sx={{ p: 3, position: "relative" }}>
+                      <Tooltip title="Delete Room" placement="top">
+                        <IconButton
+                          size="small"
+                          edge="end"
+                          aria-label={`Delete room ${room.name}`}
+                          sx={{
+                            position: "absolute",
+                            top: 8,
+                            right: 8,
+                            color: "#f44336",
+                            opacity: 0.7,
+                            "&:hover": {
+                              opacity: 1,
+                              backgroundColor: "rgba(244, 67, 54, 0.08)"
+                            }
+                          }}
+                          onClick={(e) => handleDeleteClick(e, room)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                        <Avatar 
+                          sx={{ 
+                            bgcolor: "#3f51b5",
+                            mr: 2,
+                            width: 40,
+                            height: 40
+                          }}
+                        >
+                          <ClassIcon />
+                        </Avatar>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 500,
+                            fontSize: "1.1rem",
+                            color: "#1a237e"
+                          }}
+                        >
+                          {room.name}
+                        </Typography>
+                      </Box>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: "text.secondary",
+                          display: "flex",
+                          alignItems: "center",
+                          mt: 1
+                        }}
+                      >
+                        {room.activities?.length || 0} Activities
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              !isLoading && (
+                <Grid item xs={12}>
+                  <Paper 
+                    sx={{ 
+                      p: 4, 
+                      textAlign: "center",
+                      borderRadius: 2,
+                      backgroundColor: "#f8f9fa",
+                      border: "1px solid rgba(0, 0, 0, 0.12)"
+                    }}
+                  >
+                    <Typography 
+                      variant="body1" 
                       sx={{ 
-                        position: "absolute", 
-                        top: 8, 
-                        right: 8, 
-                        color: "#f44336",
-                        "&:hover": { backgroundColor: "rgba(244, 67, 54, 0.1)" }
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click when deleting
-                        handleDeleteRoom(room.id);
+                        color: "text.secondary",
+                        fontWeight: 500
                       }}
                     >
-                      <DeleteIcon />
-                    </IconButton>
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                      <Avatar sx={{ bgcolor: "#3f51b5", mr: 2 }}>
-                        <ClassIcon />
-                      </Avatar>
-                      <Typography variant="h6" sx={{ fontWeight: 500 }}>
-                        {room.name}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {room.activities?.length || 0} Activities
+                      No rooms created yet. Create your first room to get started.
                     </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          ) : (
-             !isLoading && ( // Only show "no rooms" if not loading
-              <Grid item xs={12}>
-                <Paper sx={{ p: 3, textAlign: "center" }}>
-                  <Typography variant="body1" color="text.secondary">
-                    No rooms created yet. Create your first room to get started.
-                  </Typography>
-                </Paper>
-              </Grid>
-            )
-          )}
-        </Grid>
+                  </Paper>
+                </Grid>
+              )
+            )}
+          </Grid>
+        </Box>
       </Box>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DialogTitle id="delete-dialog-title">
+          {"Delete Room"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete "{roomToDelete?.name}"? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteModalOpen(false)} 
+            sx={{ color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteRoom} 
+            color="error" 
+            variant="contained"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
