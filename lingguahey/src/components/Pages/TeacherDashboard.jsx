@@ -189,7 +189,7 @@ const TeacherDashboard = () => {
   }
   
   return (
-    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
+    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "90vh", pb: 5 }}>
       {/* Header */}
       <Box 
         sx={{ 
