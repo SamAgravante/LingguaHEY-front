@@ -94,7 +94,7 @@ function shuffleArray(array) {
 }
 
 export default function MultiplayerGameRoom({ activityId: propActivityId, onLeave, initialUsers }) {
-  console.log('Initial users:', initialUsers);
+  //console.log('Initial users:', initialUsers);
   const token = localStorage.getItem('token');
   let activityId = propActivityId;
   const { state } = useLocation();
@@ -286,12 +286,12 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     if (!userId || !q) return;
     try {
       if (q.gameType === 'GAME1' || q.gameType === 'GAME3') {
-        console.log('Pending answer submitted:', pendingAnswer, 'userId:', userId, 'questionId:', q.questionId);
+        //console.log('Pending answer submitted:', pendingAnswer, 'userId:', userId, 'questionId:', q.questionId);
         await API.post(
           `/scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${pendingAnswer}`
         );
       } else if (q.gameType === 'GAME2') {
-        console.log('Pending answer submitted:', pendingAnswer, 'userId:', userId, 'questionId:', q.questionId);
+        //console.log('Pending answer submitted:', pendingAnswer, 'userId:', userId, 'questionId:', q.questionId);
         await API.post(
           `/scores/award/translation/questions/${q.questionId}/users/${userId}`,
           Array.isArray(pendingAnswer) ? pendingAnswer : []
