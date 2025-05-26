@@ -16,6 +16,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import API from "../../api";
 import { jwtDecode } from "jwt-decode";
 import { MusicContext } from "../../contexts/MusicContext";
+import { useScore } from "../../contexts/ScoreContext";
+import { getUserFromToken } from "../../utils/auth";
 
 const drawerWidth = 240;
 const pastelBackground = "#FFE0B2";
@@ -47,8 +49,8 @@ const Layout = () => {
     role: null,
   });
   const [totalPoints, setTotalPoints] = useState(0);
-
   const { setIntroMode } = useContext(MusicContext);
+  const { refreshTrigger } = useScore();
 
   useEffect(() => {
     setIntroMode(false); // Switch to default/background music
@@ -58,7 +60,9 @@ const Layout = () => {
   useEffect(() => {
     if (!token) return;
 
-    const { userId } = jwtDecode(token);
+    const userObj = getUserFromToken();
+    const userId = userObj?.userId || userObj?.id;
+    if (!userId) return;
 
     const loadUser = async () => {
       try {
@@ -84,31 +88,35 @@ const Layout = () => {
 
   // Poll for updated points
   useEffect(() => {
-    if (!userData.userId || !token) return;
-
-    const interval = setInterval(async () => {
+    const fetchPoints = async () => {
+      if (!userData.userId || !token) return;
+      
       try {
         const { data } = await API.get(`/scores/users/${userData.userId}/total`);
         setTotalPoints(data);
       } catch (err) {
         console.error("Failed to fetch user points:", err);
       }
-    }, 10000);
+    };
 
-    return () => clearInterval(interval);
-  }, [userData.userId, token]);
+    fetchPoints();
+  }, [userData.userId, token, refreshTrigger]);
 
-  const handleRoute = (route) => {
+  const handleRoute = async (route) => {
     if (route.label === "Logout") {
-      logout();
-      navigate("/");
+      try {
+        await API.post("/auth/logout");   // → SpringSecurity’s logoutUrl
+      } catch (err) {
+        console.error("Server logout failed:", err);
+      }
+      logout();                                      // clear client token
+      navigate("/");                      // match your landing route
     } else {
       navigate(route.path);
     }
   };
 
   const filteredRoutes = allRoutes.filter((r) => r.roles.includes(userData.role));
-
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>

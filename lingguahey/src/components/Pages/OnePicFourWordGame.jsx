@@ -24,11 +24,11 @@ import speechBubble from '../../assets/images/objects/speech-bubble.png';
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
-  backgroundSize: 'contain',
+  backgroundSize: 'cover',
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'center',
   padding: '24px',
-  minHeight: '720px',
+  minHeight: '670px',
   fontFamily: 'Comic Sans MS, sans-serif',
   borderRadius: '20px',
 

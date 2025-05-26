@@ -1,5 +1,5 @@
 // src/components/Pages/Homepage.jsx
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   Grid,
   Stack,
@@ -27,6 +27,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
 import { MusicContext } from '../../contexts/MusicContext';
+import { useScore } from '../../contexts/ScoreContext';
 import { styled } from '@mui/system';
 
 
@@ -45,15 +46,15 @@ export default function Homepage() {
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState('');
-  const [activities, setActivities] = useState([]);
-  const [current, setCurrent] = useState(null);
-  const [classroom, setClassroom] = useState('');
+  const [activities, setActivities] = useState([]);  const [current, setCurrent] = useState(null);
+  const [classroom, setClassroom] = useState(null);
   const [userDetails, setUserDetails] = useState({});
-  const [userActivities, setUserActivities] = useState([]);
-  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const [userActivities, setUserActivities] = useState([]);  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const { refreshScore } = useScore();
   const [progressVocab, setProgressVocab] = useState(0);
   const [progressGrammar, setProgressGrammar] = useState(0);
   const [secVisibility, setSecVisibility] = useState(true);
+  const liveActivityRef = useRef(null);
 
   // Decode token → user
   useEffect(() => {
@@ -67,13 +68,31 @@ export default function Homepage() {
     if (!user) return;
     let isMounted = true;
     (async () => {
-      try {
-        const classResp = await API.get(`classrooms/user/${user.userId}`);
-        if (!isMounted) return;
-        setClassroom(classResp.data.classroomID);
-
+      try {        
         const userResp = await API.get(`/users/${user.userId}`);
         setUserDetails(userResp.data);
+        
+        console.log('User details:', userResp.data);        
+        const endpoint = userResp.data.role === 'TEACHER' 
+          ? `classrooms/teacher/${user.userId}`
+          : `classrooms/user/${user.userId}`;
+        console.log('Fetching classroom from endpoint:', endpoint);
+        const classResp = await API.get(endpoint);
+        console.log ('Classroom response:', classResp.data);
+        if (!isMounted) return;
+        
+        // Handle teacher vs student response differently
+        if (userResp.data.role === 'TEACHER') {
+          // For teachers, take the first classroom if they have any
+          if (Array.isArray(classResp.data) && classResp.data.length > 0) {
+            setClassroom(classResp.data[0].classroomID);
+          } else {
+            setClassroom(null);
+          }
+        } else {
+          // For students, take the single classroom ID
+          setClassroom(classResp.data.classroomID);
+        }
 
         const prog = await API.get(`/activities/${user.userId}/progress`);
         setProgressVocab(prog.data.gameSet1Progress * 100);
@@ -135,9 +154,19 @@ export default function Homepage() {
     setSection(key);
     setCurrent(null);
     setOpen(true);
-  };
+  };  const closeModal = async () => {
+    try {
+      // Fetch updated progress
+      if (user) {
+        const prog = await API.get(`/activities/${user.userId}/progress`);
+        setProgressVocab(prog.data.gameSet1Progress * 100);
+        setProgressGrammar(prog.data.gameSet2Progress * 100);
+        refreshScore(); // Trigger score refresh in Layout
+      }
+    } catch (err) {
+      console.error('Failed to fetch progress:', err);
+    }
 
-  const closeModal = () => {
     setOpen(false);
     setSection('');
     setCurrent(null);
@@ -149,16 +178,59 @@ export default function Homepage() {
     setActivityMode(true);
     setCurrent(act);
   };
-
-  const backToList = () => {
-    fetchUserActivities();
+  const backToList = async () => {
+    await fetchUserActivities();
+    try {
+      if (user) {
+        const prog = await API.get(`/activities/${user.userId}/progress`);
+        setProgressVocab(prog.data.gameSet1Progress * 100);
+        setProgressGrammar(prog.data.gameSet2Progress * 100);
+      }
+    } catch (err) {
+      console.error('Failed to fetch progress:', err);
+    }
     setCurrent(null);
     setActivityMode(false);
   };
 
-  const handleBackClick = () => (current ? backToList() : closeModal());
+  const handleBackClick = async () => {
+    // If we're in Activity section with no current activity
+    if (!current && section === 'Activity') {
+      if (liveActivityRef.current?.handleReturn) {
+        console.log('Calling handleReturn on LiveActivityGame');
+        liveActivityRef.current.handleReturn();
+      } else {
+        console.log('No handleReturn available, closing modal directly');
+        await closeModal();
+      }
+    } else if (current) {
+      console.log('Going back to activity list');
+      await backToList();
+    } else {
+      console.log('Closing modal');
+      await closeModal();
+    }
+  };
 
   // ---------------- renderBody ----------------
+  const [deployedActivityId, setDeployedActivityId] = useState(null);
+
+  useEffect(() => {
+    const fetchDeployedActivity = async () => {
+      if (section === 'Activity' && classroom) {
+        try {
+          const res = await API.get(`/live-activities/classrooms/${classroom}/deployed`);
+          console.log('Deployed activity:', res.data);
+          setDeployedActivityId(res.data);
+        } catch (err) {
+          console.error('Failed to fetch deployed activity:', err);
+          setDeployedActivityId(null);
+        }
+      }
+    };
+    fetchDeployedActivity();
+  }, [section, classroom]);
+
   function renderBody() {
     // 1) Before selecting any item
     if (!current) {
@@ -166,9 +238,11 @@ export default function Homepage() {
       if (section === 'Activity') {
         return (
           <LiveActivityGame
-            activityId={classroom}
+            ref={liveActivityRef}
+            activityId={deployedActivityId}
             userId={user?.userId}
             onStarted={closeModal}
+            onReturn={closeModal}
           />
         );
       }
@@ -201,6 +275,34 @@ export default function Homepage() {
           topics: lesson.topics.sort((x, y) => x.topicNumber - y.topicNumber),
         }));
 
+      // Helper function to check if an activity is accessible
+      const isActivityAccessible = (activity, lessonIndex, activityIndex) => {
+        // First activity of first lesson is always accessible
+        if (lessonIndex === 0 && activityIndex === 0) return true;
+
+        // Get all previous activities in current lesson
+        const currentLessonActivities = groupedLessons[lessonIndex].topics;
+        const previousActivitiesInLesson = currentLessonActivities.slice(0, activityIndex);
+
+        // Get activities from previous lessons
+        const previousLessonsActivities = groupedLessons
+          .slice(0, lessonIndex)
+          .flatMap(lesson => lesson.topics);
+
+        // Calculate required completions
+        const requiredCompletions = [
+          ...previousLessonsActivities,
+          ...previousActivitiesInLesson
+        ].map(act => act.activityId);
+
+        // Check if all required activities are completed
+        const isUnlocked = requiredCompletions.every(actId =>
+          userActivities.some(ua => ua.activity_ActivityId === actId && ua.completed)
+        );
+
+        return isUnlocked;
+      };
+
       return (
         <Stack
           spacing={3}
@@ -208,13 +310,13 @@ export default function Homepage() {
             mt: 4,
             px: 2,
             justifyContent: 'center',
-            alignItems: 'center', // center each lesson horizontally
+            alignItems: 'center',
           }}
         >
-          {groupedLessons.map(lesson => (
+          {groupedLessons.map((lesson, lessonIndex) => (
             <Box 
               key={`${lesson.lessonNumber}-${lesson.lessonName}`} 
-              sx={{ width: '100%', maxWidth: 800 }} // limit width, center via Stack
+              sx={{ width: '100%', maxWidth: 800 }}
             >
               {/* Lesson Header */}
               <Typography
@@ -230,27 +332,46 @@ export default function Homepage() {
                 spacing={2}
                 sx={{ alignItems: 'center' }}
               >
-                {lesson.topics.map(act => {
+                {lesson.topics.map((act, activityIndex) => {
                   const isCompleted = userActivities.some(
-                    ua =>
-                      ua.activity_ActivityId === act.activityId && ua.completed
+                    ua => ua.activity_ActivityId === act.activityId && ua.completed
                   );
+                  const isAccessible = isActivityAccessible(act, lessonIndex, activityIndex);
+                  const hasPrerequisites = !(lessonIndex === 0 && activityIndex === 0);
+
+                  const getStatusMessage = () => {
+                    if (isCompleted) return 'Activity completed!';
+                    if (!isAccessible && hasPrerequisites) return 'Complete previous activities to unlock';
+                    return 'Ready to start!';
+                  };
+
                   return (
                     <Box
                       key={act.activityId}
-                      onClick={() => startActivity(act)}
+                      onClick={() => isAccessible && startActivity(act)}
+                      title={getStatusMessage()}
                       sx={{
-                        backgroundColor: isCompleted ? '#C8E6C9' : '#FFF8E1',
+                        backgroundColor: isCompleted
+                          ? '#C8E6C9'  // Green for completed
+                          : isAccessible
+                            ? '#FFF8E1' // Yellow for accessible
+                            : '#ECEFF1', // Grey for locked
                         borderRadius: 4,
                         p: 3,
                         width: '80%',
                         paddingBottom: 2,
                         boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                        cursor: 'pointer',
-                        '&:hover': { transform: 'scale(1.02)' },
+                        cursor: isAccessible ? 'pointer' : 'not-allowed',
+                        opacity: isAccessible ? 1 : 0.7,
+                        position: 'relative',
+                        transition: 'all 0.2s ease',
+                        '&:hover': isAccessible ? { 
+                          transform: 'scale(1.02)',
+                          boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
+                        } : {}
                       }}
                     >
-                      {/* Display activityName & game mode */}
+                      {/* Activity Name & Game Mode */}
                       <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                         {act.activityName}
                       </Typography>
@@ -260,6 +381,21 @@ export default function Homepage() {
                           : act.gameType === 'GAME2'
                           ? 'Phrase Translation'
                           : 'Word Translation'}
+                      </Typography>
+                      {/* Status indicator */}
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          display: 'block',
+                          mt: 1,
+                          color: isCompleted 
+                            ? '#2E7D32'  // Dark green
+                            : isAccessible 
+                              ? '#1565C0'  // Blue
+                              : '#757575'  // Grey
+                        }}
+                      >
+                        {getStatusMessage()}
                       </Typography>
                     </Box>
                   );
@@ -279,9 +415,11 @@ export default function Homepage() {
     if (section === 'Activity') {
       return (
         <LiveActivityGame
+          ref={liveActivityRef}
           activityId={current.activityId}
           userId={user?.userId}
           onStarted={closeModal}
+          onReturn={closeModal}
         />
       );
     } else if (section === 'Grammar') {
@@ -341,55 +479,63 @@ export default function Homepage() {
           <Typography variant="h4" sx={{ mb: 2 }}>
             {userDetails.firstName ? `Welcome, ${userDetails.firstName}!` : 'Welcome!'}
           </Typography>
-          <Typography variant="h5" sx={{ mb: 4 }}>
-            Choose a section to start learning:
-          </Typography>
+          {classroom ? (
+            <Typography variant="h5" sx={{ mb: 4 }}>
+              Choose a section to start learning:
+            </Typography>
+          ) : (
+            <Typography variant="h5" sx={{ mb: 4, color: '#666' }}>
+              Please wait for a teacher to assign you to a classroom.
+            </Typography>
+          )}
         </Grid>
         <img src={bunnyWave} alt="Bunny Wave" width={80} height={120} />
       </Stack>
 
-      {/* Section Cards */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
-        {sections.map(s => (
-          <Box
-            key={s.key}
-            onClick={() => openModal(s.key)}
-            sx={{
-              backgroundColor: s.bg,
-              width: 360,
-              height: 560,
-              borderRadius: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              '&:hover': { transform: 'scale(1.05)' },
-            }}
-          >
-            {s.icon}
-            <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
-              {s.key}
-            </Typography>
-            {s.key !== 'Activity' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ flexGrow: 1 }}>
-                  <PastelProgress
-                    variant="determinate"
-                    value={s.progress}
-                    sx={{ width: '100%' }}
-                  />
-                  <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
-                    {s.progress.toFixed(0)}% Completed
-                  </Typography>
+      {/* Section Cards - only show if classroom exists */}
+      {classroom && (
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
+          {sections.map(s => (
+            <Box
+              key={s.key}
+              onClick={() => openModal(s.key)}
+              sx={{
+                backgroundColor: s.bg,
+                width: 360,
+                height: 560,
+                borderRadius: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s',
+                '&:hover': { transform: 'scale(1.05)' },
+              }}
+            >
+              {s.icon}
+              <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
+                {s.key}
+              </Typography>
+              {s.key !== 'Activity' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <PastelProgress
+                      variant="determinate"
+                      value={s.progress}
+                      sx={{ width: '100%' }}
+                    />
+                    <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
+                      {s.progress.toFixed(0)}% Completed
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            )}
-          </Box>
-        ))}
-      </Stack>
+              )}
+            </Box>
+          ))}
+        </Stack>
+      )}
 
       {/* Modal */}
       <Modal

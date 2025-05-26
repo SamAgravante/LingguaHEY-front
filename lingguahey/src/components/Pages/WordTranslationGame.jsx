@@ -33,11 +33,11 @@ const pastels = [
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
-  backgroundSize: 'contain',
+  backgroundSize: 'cover',
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'center',
   padding: '24px',
-  minHeight: '720px',
+  minHeight: '670px',
   fontFamily: 'Comic Sans MS, sans-serif',
   borderRadius: '20px',
 
@@ -153,9 +153,8 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
 
     if (!isCompleted && userId) {
       API.post(
-        `scores/award/translation/questions/${q.questionId}/users/${userId}`,
-        [choice.choiceId]
-      ).catch(err => console.error('Error awarding translation score:', err));
+        `scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${choice.choiceId}`
+      ).catch(err => console.error('Error awarding score:', err));
     }
 
     if (nextIndex < questions.length) {

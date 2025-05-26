@@ -1,462 +1,454 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
   Grid,
-  Paper,
+  Card,
+  CardContent,
   Button,
   TextField,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   IconButton,
+  Avatar,
+  Paper,
+  CircularProgress,
+  Alert,
+  Container,
+  Tooltip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle,
+  DialogTitle
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ClassIcon from "@mui/icons-material/Class";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import Classroom from "./Classroom";
-import LiveActClassroom from "./Live-Activity-Classroom/L'AClassroom";
+import LiveActClassroom from "./Live-Activity-Classroom/LiveActClassroom";
 
 const TeacherDashboard = () => {
-  const [classroomName, setClassroomName] = useState(""); // State for new classroom name
-  const [students, setStudents] = useState([]); // State for students
-  const [classrooms, setClassrooms] = useState([]); // State for classrooms
-  const navigate = useNavigate();
-  const [userRole, setUserRole] = useState(null);
+  const [rooms, setRooms] = useState([]);
+  const [newRoomName, setNewRoomName] = useState("");
   const [userData, setUserData] = useState({
     userId: "",
     firstName: "",
-    middleName: "",
     lastName: "",
     role: null,
   });
-  const [username, setUsername] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState(null);
+  const navigate = useNavigate();
+  const [token, setToken] = useState(localStorage.getItem("token"));
 
-  // State for dialogs
-  const [openDialog, setOpenDialog] = useState(false);
-  const [dialogMessage, setDialogMessage] = useState("");
-  const [selectedClassroomId, setSelectedClassroomId] = useState(null);
-  const [studentId, setStudentId] = useState(""); // State for student ID input
-
-  // Function to open the dialog for adding a student
-  const openAddStudentDialog = (classroomId) => {
-    setSelectedClassroomId(classroomId);
-    setDialogMessage("Enter the student's ID:");
-    setOpenDialog(true);
-  };
-
-  // Function to close the dialog
-  const closeDialog = () => {
-    setOpenDialog(false);
-    setDialogMessage("");
-    setStudentId(""); // Clear the student ID input
-  };
-
-  // Function to handle the confirmation of adding a student
-  const handleConfirmAddStudent = async () => {
-    if (!studentId) {
-      setDialogMessage("Student ID is required.");
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${selectedClassroomId}/students/${studentId}`,
-        {}, // Empty body for POST request
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      console.log("Student added to classroom:", response.data);
-      setDialogMessage("Student added to classroom successfully!");
-    } catch (error) {
-      console.error("Failed to add student to classroom:", error);
-      setDialogMessage("Failed to add student to classroom. Please try again.");
-    } finally {
-      closeDialog();
-    }
-  };
-
-  // Function to open the dialog for deleting a classroom
-  const openConfirmationDialog = (classroomId) => {
-    setSelectedClassroomId(classroomId);
-    setDialogMessage("Are you sure you want to delete this classroom?");
-    setOpenDialog(true);
-  };
-
-  // Function to handle the confirmation of classroom deletion
-  const handleConfirmDelete = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${selectedClassroomId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setClassrooms((prev) => prev.filter((classroom) => classroom.id !== selectedClassroomId)); // Remove the classroom from the state
-      setDialogMessage("Classroom deleted successfully.");
-    } catch (error) {
-      console.error("Failed to delete classroom:", error);
-      setDialogMessage("Failed to delete classroom. Please try again.");
-    } finally {
-      closeDialog();
-    }
-  };
-
-  // Fetch user data and role
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const API = axios.create({
-      baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/auth`,
-      headers: { Authorization: `Bearer ${token}` },
+  const API = React.useMemo(() => {
+    if (!token) return null;
+    return axios.create({
+      baseURL: import.meta.env.VITE_API_BASE_URL, // Ensure this is configured
+      timeout: 10000,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
+  }, [token]);
+  
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+    } else {
+      navigate("/login"); // Or your login route
+    }
+  }, [navigate]);
+
+
+  // Fetch user data
+  useEffect(() => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-
         const fetchUser = async () => {
+          if (!API) return;
           try {
-            const response = await axios.get(
-              `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users/${decoded.userId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-            const user = response.data;
-
-            setUsername(user.firstName);
+            const response = await API.get(`/api/lingguahey/users/${decoded.userId}`);
             setUserData({
-              userId: user.userId,
-              firstName: user.firstName,
-              middleName: user.middleName || "",
-              lastName: user.lastName || "",
-              role: user.role,
+              userId: response.data.userId,
+              firstName: response.data.firstName,
+              lastName: response.data.lastName,
+              role: response.data.role,
             });
-            setUserRole(user.role);
-            setIsAdmin(user.role === "ADMIN");
           } catch (err) {
             console.error("Failed to fetch user:", err);
+            // Potentially set an error state for user data
           }
         };
-
         fetchUser();
       } catch (err) {
         console.error("Failed to decode token:", err);
       }
     }
-  }, []);
+  }, [token, API]);
 
-  // Fetch classrooms
-  useEffect(() => {
-    const fetchClassrooms = async () => {
-      try {
-        const token = localStorage.getItem("token"); // Retrieve the token from local storage
-        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`, {
-          headers: {
-            Authorization: `Bearer ${token}`, // Pass the token in the Authorization header
-          },
-        });
-
-        console.log("Classroom API response:", response.data);
-
-        // Map the response to ensure the name field is populated
-        setClassrooms(
-          response.data.map((classroom) => ({
-            ...classroom,
-            name: classroom.name || classroom.classroomName || "Unnamed Classroom", // Adjust field names as needed
-            id: classroom.classroomID,
-          }))
-        );
-      } catch (error) {
-        console.error("Failed to fetch classrooms:", error);
-        setClassrooms(
-          response.data.map((classroom) => {
-            const id = classroom.classroomID;
-            const name = classroom.name || classroom.classroomName || "Unnamed Classroom";
-            if (!id) {
-              console.warn("Invalid classroom object:", classroom);
-            }
-            return { name, id };
-          })
-        ); // Fallback to an empty array in case of an error
-      }
-    };
-
-    fetchClassrooms();
-  }, []);
-
-  // Fetch students based on user role
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        let url = `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users`;
-
-        // If the user is a teacher, fetch only users with the role "USER"
-        if (!isAdmin) {
-          url = `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users?role=USER`;
-        }
-
-        const response = await axios.get(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        // Check if the response is an array before setting the state
-        if (Array.isArray(response.data)) {
-          // Filter the students array to only include users with the "USER" role
-          const userStudents = response.data.filter((student) => student.role === "USER");
-          setStudents(userStudents);
-        } else {
-          console.warn("Unexpected response format for students:", response.data);
-          // Handle the unexpected response format appropriately
-          // For example, you could set an empty array or display an error message
-          setStudents([]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch students:", error);
-        setStudents([]);
-        setError("Failed to fetch students. Please try again later.");
-      }
-    };
-
-    fetchStudents();
-  }, [isAdmin]); // Fetch students whenever the userRole changes
-
-  const handleDelete = async (userId) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setStudents((prev) => prev.filter((user) => user.userId !== userId)); // Remove the classroom from the state
-      alert("User deleted successfully.");
-    } catch (error) {
-      console.error("Failed to delete user:", error);
-      alert("Failed to delete user. Please try again.");
-    }
-  };
-
-  // Handle classroom creation
-  const handleCreateClassroom = async () => {
-    try {
-      const token = localStorage.getItem("token"); // Retrieve the token from local storage
-      // Ensure classroomName is not empty before making the API call
-      if (!classroomName.trim()) {
-        console.warn("Classroom name cannot be empty.");
-        return;
-      }
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`,
-        { classroomName: classroomName },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      console.log("Classroom created:", response.data);
-      // Instead of adding the entire response, only add the classroomName and classroomID to the state
-      setClassrooms((prev) => [
-        ...prev,
-        { name: response.data.classroomName, id: response.data.classroomID },
-      ]);
-      setClassroomName("");
-      navigate(`/classroom/${response.data.classroomID}/live-activities`); // Redirect to the classroom page
-    } catch (error) {
-      console.error("Failed to create classroom:", error);
-    }
-  };
-
-  // Navigate to Classroom Component
-  const handleViewClassroom = (classroomId) => {
-    console.log("Navigating to classroom with ID:", classroomId);
-    if (!classroomId) {
-      alert("Classroom ID is invalid.");
+  const fetchRooms = useCallback(async () => {
+    if (!API) {
+      setIsLoading(false);
       return;
     }
-    navigate(`/classroom/${classroomId}/live-activities`);
+    setIsLoading(true);
+    setError(null);
+    try {
+      // User ID for fetching rooms should come from the decoded token or userData
+      // Assuming the teacher's own rooms are fetched.
+      // If your API doesn't need teacherId in path because it's derived from token, adjust accordingly.
+      const decoded = jwtDecode(token); // Ensure token is valid before decoding
+      const response = await API.get(`/api/lingguahey/classrooms/teacher/${decoded.userId}`);
+      setRooms(
+        response.data.map((room) => ({
+          id: room.classroomID,
+          name: room.classroomName || room.name || "Unnamed Room",
+          activities: room.activities || [], // Keep activities count if shown on card
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to fetch rooms:", err);
+      setError("Failed to load rooms. Please try again.");
+      setRooms([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [API, token]); // Added token dependency
+
+  // Fetch classrooms/rooms
+  useEffect(() => {
+    if (token && userData.userId) { // Ensure userData.userId is available if API needs it explicitly
+      fetchRooms();
+    }
+  }, [token, userData.userId, fetchRooms]);
+
+
+  const handleCreateRoom = async () => {
+    if (!newRoomName.trim() || !API) return;
+    
+    try {
+      // The classroom creation endpoint might associate the room with the logged-in teacher via token
+      const response = await API.post('/api/lingguahey/classrooms', {
+        classroomName: newRoomName
+        // teacherId: userData.userId, // Include if your API requires it explicitly
+      });
+      
+      setRooms(prev => [...prev, { 
+        id: response.data.classroomID, 
+        name: response.data.classroomName,
+        activities: response.data.activities || []
+      }]);
+      setNewRoomName("");
+    } catch (err) {
+      console.error("Failed to create room:", err);
+      // Add user feedback (e.g., toast notification)
+    }
   };
 
-  const handleAddStudent = (classroomId) => {
-    openAddStudentDialog(classroomId);
+  const handleDeleteClick = (e, room) => {
+    e.stopPropagation();
+    setRoomToDelete(room);
+    setDeleteModalOpen(true);
   };
 
-  const handleDeleteClassroom = (classroomId) => {
-    openConfirmationDialog(classroomId);
+  const handleDeleteRoom = async () => {
+    if (!API || !roomToDelete) return;
+    
+    try {
+      await API.delete(`/api/lingguahey/classrooms/${roomToDelete.id}`);
+      setRooms(prev => prev.filter(room => room.id !== roomToDelete.id));
+      setDeleteModalOpen(false);
+      setRoomToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete room:", err);
+      // Add user feedback
+    }
   };
 
+  const handleRoomClick = (room) => {
+    navigate(`/teacherdashboard/classroom/${room.id}`); // Navigate to the new classroom details page
+  };
+
+  if (isLoading && rooms.length === 0) { // Show loader only on initial load
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  
   return (
-    <Grid container direction="column" sx={{ minHeight: "100vh", backgroundColor: "#E1F5FE", p: 2 }}>
-      <Typography variant="h4" sx={{ mb: 4, color: "#4E342E" }}>
-        Teacher Dashboard
-      </Typography>
-
-      {/* Create Classroom Section */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2, color: "#6D4C41" }}>
-          Create a Classroom
-        </Typography>
-        <TextField
-          label="Classroom Name"
-          value={classroomName}
-          onChange={(e) => setClassroomName(e.target.value)}
-          variant="outlined"
-          sx={{ mr: 2, width: "300px" }}
-        />
-        <Button
-          variant="contained"
-          sx={{ backgroundColor: "#FFCCBC", "&:hover": { backgroundColor: "#FFAB91" } }}
-          onClick={handleCreateClassroom}
-        >
-          Create
-        </Button>
-      </Box>
-
-      {/* View Classrooms Section */}
-      <Box mt={4} sx={{ maxHeight: "340px", width: "100%", overflowY: "auto" }}>
-        <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: "#6D4C41" }}>
-              Your Classrooms
-            </Typography>
-            <Grid container spacing={2}>
-              {classrooms.length > 0 ? (
-                classrooms.map((classroom, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Paper
-                      sx={{
-                        p: 2,
-                        textAlign: "center",
-                        borderRadius: 2,
-                        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                        position: "relative",
-                      }}
-                    >
-                      <IconButton
-                        aria-label="delete"
-                        onClick={() => handleDeleteClassroom(classroom.id)}
-                        sx={{ position: "absolute", top: 5, right: 5, color: `grey[500]` }}
-                      >
-                        <CloseIcon />
-                      </IconButton>
-                      <Typography variant="h6" color="#4E342E">
-                        {classroom.name || "Unnamed Classroom"}
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        sx={{ mt: 2, color: "black", marginRight: 1, backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
-                        onClick={() => handleViewClassroom(classroom.id)} // Pass the classroom ID
-                      >
-                        View Classroom
-                      </Button>
-                      <Button
-                        variant="contained"
-                        sx={{ mt: 2, color: "black", backgroundColor: "#E3F2FD", "&:hover": { backgroundColor: "#BBDEFB" } }}
-                        onClick={() => handleAddStudent(classroom.id)} // Pass the classroom ID
-                      >
-                        Add Student
-                      </Button>
-                    </Paper>
-                  </Grid>
-                ))
-              ) : (
-                <Typography color="#4E342E" sx={{ mt: 2, textAlign: "center" }}>
-                  No classrooms found.
-                </Typography>
-              )}
-            </Grid>
-          </Box>
-        </Paper>
-      </Box>
-
-      {/* View Students Section */}
-      <Box mt={4} sx={{ width: "100%", maxWidth: 800 }}>
-        <Typography variant="h6" color="black" mb={2}>
-          List of Students
-        </Typography>
-        {error && (
-          <Typography color="error" sx={{ mb: 2 }}>
-            {error}
+    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
+      {/* Header */}
+      <Box 
+        sx={{ 
+          backgroundColor: "#fff", 
+          py: 2, 
+          px: 3, 
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          mb: 4,
+          display: "flex",
+          alignItems: "center"
+        }}
+      >
+        <DashboardIcon sx={{ mr: 2, color: "#3f51b5", fontSize: 32 }} />
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: "#3f51b5" }}>
+            Teacher Dashboard
           </Typography>
-        )}
-        <Paper sx={{ bgcolor: "#F4F8D3", p: 2, color: "black" }}>
-          <Box
-            sx={{
-              maxHeight: "300px",
-              overflowY: "auto",
+          <Typography variant="body1" sx={{ color: "#757575" }}>
+            {userData.firstName ? `Welcome, ${userData.firstName} ${userData.lastName}` : "LingguaHey Learning Platform"}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ maxWidth: 1600, mx: "auto", px: 3 }}>
+        {/* Create Room Section */}
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 4,
+            p: 3,
+            borderRadius: 2,
+            backgroundColor: "#fff",
+            border: "1px solid rgba(0, 0, 0, 0.12)"
+          }}
+        >
+          <Box 
+            sx={{ 
+              display: "flex", 
+              gap: 2, 
+              alignItems: 'center', 
+              width: { xs: '100%', md: '50%', lg: '40%' }
             }}
           >
-            <List>
-              {students.map((student, index) => (
-                <ListItem key={index} sx={{ borderBottom: "1px solid #444" }}>
-                  <ListItemText
-                    primary={`${index + 1}. ${student.firstName} ${student.lastName} - ID: ${student.userId}`}
-                    secondary={`Email: ${student.email}`}
-                  />
-                </ListItem>
-              ))}
-            </List>
+            <TextField
+              fullWidth
+              label="New Room Name"
+              variant="outlined"
+              value={newRoomName}
+              placeholder="Enter room name..."
+              onChange={(e) => setNewRoomName(e.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#fff",
+                  borderRadius: 1,
+                  "&:hover fieldset": {
+                    borderColor: "#3f51b5",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "#3f51b5",
+                  }
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleCreateRoom}
+              disabled={!newRoomName.trim()}
+              sx={{
+                height: 56,
+                px: 3,
+                backgroundColor: "#3f51b5",
+                "&:hover": {
+                  backgroundColor: "#303f9f"
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: "#e0e0e0"
+                },
+                whiteSpace: "nowrap"
+              }}
+              startIcon={<AddIcon />}
+            >
+              Create Room
+            </Button>
           </Box>
         </Paper>
+
+        {/* Rooms Grid */}
+        <Box sx={{ mb: 4 }}>
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3,
+                borderRadius: 2,
+                "& .MuiAlert-message": { fontSize: "0.95rem" }
+              }}
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={fetchRooms}
+                  sx={{ fontWeight: 500 }}
+                >
+                  RETRY
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
+          )}
+
+          {isLoading && rooms.length > 0 && (
+            <Box display="flex" justifyContent="center" my={4}>
+              <CircularProgress size={32} sx={{ color: "#3f51b5" }}/>
+            </Box>
+          )}
+
+          <Grid container spacing={3}>
+            {!isLoading && rooms.length > 0 ? (
+              rooms.map((room) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={room.id}>
+                  <Card
+                    sx={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 2,
+                      transition: "all 0.2s ease-in-out",
+                      border: "1px solid rgba(0, 0, 0, 0.12)",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
+                      }
+                    }}
+                    onClick={() => handleRoomClick(room)}
+                  >
+                    <CardContent sx={{ p: 3, position: "relative" }}>
+                      <Tooltip title="Delete Room" placement="top">
+                        <IconButton
+                          size="small"
+                          edge="end"
+                          aria-label={`Delete room ${room.name}`}
+                          sx={{
+                            position: "absolute",
+                            top: 8,
+                            right: 8,
+                            color: "#f44336",
+                            opacity: 0.7,
+                            "&:hover": {
+                              opacity: 1,
+                              backgroundColor: "rgba(244, 67, 54, 0.08)"
+                            }
+                          }}
+                          onClick={(e) => handleDeleteClick(e, room)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                        <Avatar 
+                          sx={{ 
+                            bgcolor: "#3f51b5",
+                            mr: 2,
+                            width: 40,
+                            height: 40
+                          }}
+                        >
+                          <ClassIcon />
+                        </Avatar>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 500,
+                            fontSize: "1.1rem",
+                            color: "#1a237e"
+                          }}
+                        >
+                          {room.name}
+                        </Typography>
+                      </Box>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: "text.secondary",
+                          display: "flex",
+                          alignItems: "center",
+                          mt: 1
+                        }}
+                      >
+                        {room.activities?.length || 0} Activities
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              !isLoading && (
+                <Grid item xs={12}>
+                  <Paper 
+                    sx={{ 
+                      p: 4, 
+                      textAlign: "center",
+                      borderRadius: 2,
+                      backgroundColor: "#f8f9fa",
+                      border: "1px solid rgba(0, 0, 0, 0.12)"
+                    }}
+                  >
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: "text.secondary",
+                        fontWeight: 500
+                      }}
+                    >
+                      No rooms created yet. Create your first room to get started.
+                    </Typography>
+                  </Paper>
+                </Grid>
+              )
+            )}
+          </Grid>
+        </Box>
       </Box>
 
-      {/* Confirmation Dialog */}
+      {/* Delete Confirmation Modal */}
       <Dialog
-        open={openDialog}
-        onClose={closeDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        onClick={(e) => e.stopPropagation()}
       >
-        <DialogTitle id="alert-dialog-title">{"Add Student"}</DialogTitle>
+        <DialogTitle id="delete-dialog-title">
+          {"Delete Room"}
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {dialogMessage}
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete "{roomToDelete?.name}"? This action cannot be undone.
           </DialogContentText>
-          <TextField
-            autoFocus
-            margin="dense"
-            id="studentId"
-            label="Student ID"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog} color="primary">
+          <Button 
+            onClick={() => setDeleteModalOpen(false)} 
+            sx={{ color: 'text.secondary' }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleConfirmAddStudent} color="primary" autoFocus>
-            Add Student
+          <Button 
+            onClick={handleDeleteRoom} 
+            color="error" 
+            variant="contained"
+            autoFocus
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
-    </Grid>
+    </Box>
   );
 };
 
