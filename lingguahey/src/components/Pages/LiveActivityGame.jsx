@@ -262,6 +262,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 background: selectedChar === char.value ? '#E3F2FD' : '#fff',
                 transition: 'border 0.2s, background 0.2s',
                 boxShadow: selectedChar === char.value ? '0 0 8px #90caf9' : 'none',
+                
               }}
               onClick={() => setSelectedChar(char.value)}
             >
@@ -305,7 +306,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     );
   }
 
-  // --- Lobby view UI (unchanged) ---
+  // --- Lobby view UI (modified to display characters side-by-side) ---
   function getCharImgByValue(val) {
     const found = CHARACTERS.find(c => c.value === val);
     return found ? found.img : null;
@@ -315,21 +316,71 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     <Box sx={{ p: 4 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>Lobby</Typography>
       <Typography variant="subtitle1" gutterBottom>Users in Lobby:</Typography>
-      <Box sx={{ mb: 2 }}>
-        {users.length === 0
-          ? <Typography variant="body2" color="text.secondary">No users in the lobby yet.</Typography>
-          : users.map(u => (
-            <Box key={u.userId} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <img
-                src={getCharImgByValue(u.character || u.profilePic || (u.userId === user ? localUserChar : null))}
-                alt="char"
-                style={{ width: 36, height: 36, marginRight: 8 }}
-              />
-              <Typography>{u.name || u.firstName || u.userId}</Typography>
-              {u.userId === user && <Typography sx={{ ml: 1, color: '#1E88E5' }}>(You)</Typography>}
-              {u.role && <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>{u.role}</Typography>}
-            </Box>
-          ))}
+      
+      {/* 
+        Changed the container to flex so that each user's avatar + name
+        is arranged horizontally. 
+      */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 3,
+          mb: 2,
+          justifyContent: 'center'
+        }}
+      >
+        {users.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No users in the lobby yet.
+          </Typography>
+        ) : (
+          users.map(u => {
+            // Decide which character image to show for this user
+            const charValue = u.character || u.profilePic || (u.userId === user ? localUserChar : null);
+            const imgSrc = getCharImgByValue(charValue);
+            return (
+              <Box
+                key={u.userId}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  p: 1,
+                  border: '1px solid #ddd',
+                  borderRadius: '12px',
+                  minWidth: 80
+                }}
+              >
+                {imgSrc ? (
+                  <img
+                    src={imgSrc}
+                    alt="char"
+                    style={{ width: 80, height: 80, objectFit: 'contain' }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      backgroundColor: '#f0f0f0',
+                      borderRadius: '50%',
+                    }}
+                  />
+                )}
+                <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+                  {u.name || u.firstName || u.userId}
+                  {u.userId === user && <span style={{ color: '#1E88E5' }}> (You)</span>}
+                </Typography>
+                {u.role && (
+                  <Typography variant="caption" color="text.secondary">
+                    {u.role}
+                  </Typography>
+                )}
+              </Box>
+            );
+          })
+        )}
       </Box>
 
       {joining && (
@@ -384,7 +435,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       </Dialog>
 
       {/* Deployed Activity Check (NEW) */}
-      {activityId===null && (
+      {activityId === null && (
         <Alert severity="warning" sx={{ mt: 2 }}>
           There is no activity deployed. Click return to go back.
         </Alert>
