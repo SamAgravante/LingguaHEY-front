@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -23,6 +23,7 @@ import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
 import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
 import speechBubble from '../../assets/images/objects/speech-bubble.png';
 import CloseIcon from '@mui/icons-material/Close';
+import { MusicContext } from '../../contexts/MusicContext';
 
 // Pastel color palette
 const pastels = [
@@ -90,6 +91,7 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [userId, setUserId] = useState(null);
+  const { setLevelClearMode } = useContext(MusicContext);  // Add this line
 
   // grab token and build TTS API client
   const token = localStorage.getItem('token');
@@ -160,8 +162,11 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
 
     const newScore = score + (isCorrect ? 1 : 0);
     setScore(newScore);
+    
+    // Update progress before changing index
     const nextIndex = index + 1;
-    setProgress((nextIndex / questions.length) * 100);
+    const newProgress = (nextIndex / questions.length) * 100;
+    setProgress(newProgress);
 
     if (userId && !isCompleted) {
       await API.post(
@@ -175,6 +180,13 @@ export default function PhraseTranslation({ activityId, onBack, isCompleted = fa
     } else {
       setFinalScore(newScore);
       setShowDialog(true);
+      setLevelClearMode(true); // Play level clear music
+      
+      // Revert to default music after 4 seconds
+      setTimeout(() => {
+        setLevelClearMode(false);
+      }, 4000);
+
       if (newScore === questions.length && userId && !isCompleted) {
         API.put(`/activities/${activityId}/completed/${userId}`).catch(console.error);
       }

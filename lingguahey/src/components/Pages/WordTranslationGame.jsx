@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -20,6 +20,7 @@ import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
 import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
 import speechBubble from '../../assets/images/objects/speech-bubble.png';
 import API from '../../api';
+import { MusicContext } from '../../contexts/MusicContext';
 
 // Pastel color palette for choice buttons
 const pastels = [
@@ -83,7 +84,7 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
   const [userId, setUserId] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
-
+  const { setLevelClearMode } = useContext(MusicContext);
 
   const token = localStorage.getItem('token');
 
@@ -142,32 +143,25 @@ export default function WordTranslation({ activityId, onBack, isCompleted = fals
 
   const q = questions[index];
 
-  const handleChoice = (choice) => {
+  const handleChoice = async (choice) => {
     const isCorrect = choice.correct;
     const earnedScore = isCorrect ? (q.score?.score || 1) : 0;
     const newScore = score + earnedScore;
 
     setScore(newScore);
-    const nextIndex = index + 1;
-    setProgress((nextIndex / questions.length) * 100);
 
-    if (!isCompleted && userId) {
-      API.post(
-        `scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${choice.choiceId}`
-      ).catch(err => console.error('Error awarding score:', err));
-    }
-
-    if (nextIndex < questions.length) {
-      setIndex(nextIndex);
-    } else {
+    // If this was the last question
+    if (index === questions.length - 1) {
       setFinalScore(newScore);
       setShowDialog(true);
-
-      if (!isCompleted && newScore === questions.length && userId) {
-        API.put(`activities/${activityId}/completed/${userId}`)
-          .then(() => console.log('Activity marked completed 🎯'))
-          .catch(err => console.error('Error marking activity as completed:', err));
-      }
+      setLevelClearMode(true); // Play level clear music
+      
+      // Revert to default music after 4 seconds
+      setTimeout(() => {
+        setLevelClearMode(false);
+      }, 4000);
+    } else {
+      setIndex(index + 1);
     }
   };
 
