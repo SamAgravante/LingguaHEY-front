@@ -18,6 +18,7 @@ import {
   Card,
   CardContent,
   Avatar,
+  Stack,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -41,39 +42,42 @@ const TeacherDashboardPopUp = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const [token, setToken] = useState(localStorage.getItem("token"));
-
   const [roomDetails, setRoomDetails] = useState(null);
   const [selectedRoomStudents, setSelectedRoomStudents] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [openStudentListModal, setOpenStudentListModal] = useState(false);
-
-  // const [selectedWeek, setSelectedWeek] = useState("Week 1"); // Removed
   const [activityStatus, setActivityStatus] = useState("Undeployed");
+  const [openScoresModal, setOpenScoresModal] = useState(false);
+  const [studentScores, setStudentScores] = useState([]);
+  const [scoreSort, setScoreSort] = useState("highest");
 
   const [activityStats, setActivityStats] = useState({
-    averageScore: 0,
-    lowestScore: 0,
-    highestScore: 0,
-    studentsReachedGoal: 0,
-    studentsFailed: 0,
+    averag: 0,
+    lowest: 0,
+    highest: 0,
   });
   const [progressData, setProgressData] = useState([]);
-
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [userData, setUserData] = useState({
     userId: "",
     firstName: "",
     lastName: "",
     role: null,
   });
-
   const [activities, setActivities] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState('');
   const [selectedActivityName, setSelectedActivityName] = useState('');
   const [isDeployed, setIsDeployed] = useState(false);
 
+  const getSortedScores = () => {
+  if (scoreSort === "highest") {
+    return [...studentScores].sort((a, b) => b.score - a.score);
+  } else if (scoreSort === "lowest") {
+    return [...studentScores].sort((a, b) => a.score - b.score);
+  }
+  return studentScores;
+  };
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -116,37 +120,84 @@ const TeacherDashboardPopUp = () => {
       const roomDetailsResponse = await API.get(`/classrooms/${roomId}`);
       setRoomDetails(roomDetailsResponse.data);
 
-      const enrolledStudentsResponse = await API.get(`/classrooms/${roomId}/students`);
-      setSelectedRoomStudents(enrolledStudentsResponse.data || []);
-
       const allStudentsResponse = await API.get('/users?role=USER');
       if (Array.isArray(allStudentsResponse.data)) {
         setAllStudents(allStudentsResponse.data.filter(student => student.role === "USER"));
       } else {
         setAllStudents([]);
       }
-
-      const activityStatsResponse = await API.get(`/activities/${roomId}/activities`);
-       setActivityStats(activityStatsResponse.data || { averageScore: 85, lowestScore: 60, highestScore: 95, studentsReachedGoal: 15, studentsFailed: 3 });
-
-
-      const progressDataResponse = await API.get(`/activities/${roomId}/progress`);
-      setProgressData(progressDataResponse.data || [
-        { userId: '1', firstName: 'Jake', lastName: 'Hoker Aves', completedActivities: 20, totalActivities: 25 },
-        { userId: '2', firstName: 'Jane', lastName: 'Doe', completedActivities: 22, totalActivities: 25 },
-      ]);
-
-
     } catch (err) {
       console.error("Failed to fetch classroom data:", err);
       setError(`Failed to load classroom data: ${err.message || "Unknown error"}`);
-      setActivityStats({ averageScore: 0, lowestScore: 0, highestScore: 0, studentsReachedGoal: 0, studentsFailed: 0 });
+      setActivityStats({ average: 0, lowest: 0, highest: 0});
       setProgressData([]);
-      setSelectedRoomStudents([]);
     } finally {
       setIsLoading(false);
     }
   }, [roomId, API]);
+  useEffect(() => {
+  const fetchEnrolledStudents = async () => {
+    if (!roomId || !API) return;
+    try {
+      const enrolledStudentsResponse = await API.get(`/classrooms/${roomId}/students`);
+      setSelectedRoomStudents(enrolledStudentsResponse.data || []);
+      console.log('Enrolled Students:', enrolledStudentsResponse.data);
+    } catch (err) {
+      console.error("Failed to fetch enrolled students:", err);
+      setSelectedRoomStudents([]);
+    }
+  };
+
+  fetchEnrolledStudents();
+}, [roomId, API]); 
+
+const fetchStudentScores = async (activityId) => {
+  if (!API || !activityId || !selectedRoomStudents.length) return;
+  try {
+    // Add admin token to the request
+    const adminToken = localStorage.getItem('token');
+    API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
+
+    // First, get the total possible score for the activity
+    const totalScoreResponse = await API.get(`/scores/live-activities/${activityId}/total-score`);
+    const totalPossibleScore = totalScoreResponse.data;
+
+    // Fetch scores for each enrolled student
+    const scores = await Promise.all(
+      selectedRoomStudents.map(async (student) => {
+        try {
+          const response = await API.get(`/scores/users/${student.userId}/total-live`);
+          const studentScore = response.data || 0;
+          // Calculate percentage
+          const percentage = totalPossibleScore > 0 
+            ? Math.round((studentScore / totalPossibleScore) * 100) 
+            : 0;
+
+          return {
+            userId: student.userId,
+            firstName: student.firstName,
+            lastName: student.lastName,
+            score: percentage
+          };
+        } catch (err) {
+          console.error(`Failed to fetch score for student ${student.firstName}:`, err);
+          return {
+            userId: student.userId,
+            firstName: student.firstName,
+            lastName: student.lastName,
+            score: 0
+          };
+        }
+      })
+    );
+
+    const sortedScores = scores.sort((a, b) => b.score - a.score);
+    setStudentScores(sortedScores);
+  } catch (err) {
+    console.error("Failed to fetch student scores:", err);
+    setStudentScores([]);
+  }
+};
 
   const fetchActivities = async () => {
     if (!API || !roomId) return;
@@ -169,6 +220,39 @@ const TeacherDashboardPopUp = () => {
       setActivities([]);
     }
   };
+
+  // New useEffect to fetch activity statistics
+  useEffect(() => {
+    const fetchActivityStatistics = async () => {
+      if (!API || !selectedActivity) {
+        setActivityStats({
+          average: 0,
+          lowest: 0,
+          highest: 0,
+        });
+        return;
+      }
+
+      try {
+        const response = await API.get(`/scores/live-activities/${selectedActivity}/stats`);
+        console.log("Acitivity Stats  :", response.data);
+        setActivityStats({
+          average: response.data.average || 0,
+          lowest: response.data.lowest || 0,
+          highest: response.data.highest || 0,
+        });
+      } catch (err) {
+        console.error("Failed to fetch activity statistics:", err);
+        setActivityStats({
+          average: 0,
+          lowest: 0,
+          highest: 0,
+        });
+      }
+    };
+
+    fetchActivityStatistics();
+  }, [selectedActivity, API]); // Re-run when selectedActivity or API changes
 
   useEffect(() => {
     fetchRoomData();
@@ -208,59 +292,25 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
-  // const handleWeekChange = (event) => { // Removed
-  //   setSelectedWeek(event.target.value);
-  // };
 
   const handleGoBack = () => {
     navigate("/teacherdashboard");
   };
-  const fetchActivityStats = async (activityId) => {
-    if (!API || !activityId) return;
-    try {
-      // Fetch updated activity stats for the selected activity
-      const statsResponse = await API.get(`/activities/${activityId}/stats`);
-      setActivityStats(statsResponse.data || { 
-        averageScore: 0, 
-        lowestScore: 0, 
-        highestScore: 0, 
-        studentsReachedGoal: 0, 
-        studentsFailed: 0 
-      });
-
-      // Fetch updated progress data for the selected activity
-      const progressResponse = await API.get(`/activities/${activityId}/progress`);
-      setProgressData(progressResponse.data || []);
-    } catch (err) {
-      console.error("Failed to fetch activity stats:", err);
-      setActivityStats({ 
-        averageScore: 0, 
-        lowestScore: 0, 
-        highestScore: 0, 
-        studentsReachedGoal: 0, 
-        studentsFailed: 0 
-      });
-      setProgressData([]);
-    }
-  };
+  
 
   const handleActivityChange = async (e) => {
-    const activityId = e.target.value;
-    setSelectedActivity(activityId);
+      const activityId = e.target.value;
+      setSelectedActivity(activityId);
 
-    // Find the selected activity from the activities array
-    const activity = activities.find(a => a.activity_ActivityId === activityId);
-    console.log('Selected activity:', activity); // Debug log
+      // Find the selected activity from the activities array
+      const activity = activities.find(a => a.activity_ActivityId === activityId);
+      
+      if (activity) {
+        setSelectedActivityName(activity.activity_ActivityName);
+        setIsDeployed(!!activity.deployed);
+        setActivityStatus(activity.deployed ? "Deployed" : "Undeployed");     
 
-    if (activity) {
-      setSelectedActivityName(activity.activity_ActivityName);
-      setIsDeployed(!!activity.deployed); // Ensure boolean value with !!
-      setActivityStatus(activity.deployed ? "Deployed" : "Undeployed");
-      console.log('Setting deployment status:', activity.deployed); // Debug log
-    }
-
-    // Fetch updated stats and progress data for the selected activity
-    await fetchActivityStats(activityId);
+      }
   };
 
   const handleDeploy = async () => {
@@ -327,9 +377,103 @@ const TeacherDashboardPopUp = () => {
     );
   }
 
-  const currentRoomName = roomDetails?.classroomName || roomDetails?.name || (isLoading ? "Loading..." : "Classroom Details");
+  const currentRoomName = roomDetails?.classroomName ||   
+  roomDetails?.name || (isLoading ? "Loading..." : "Classroom Details");
+  
+    const ScoresModalContent = () => (
+  <Modal
+    open={openScoresModal}
+    onClose={() => setOpenScoresModal(false)}
+    aria-labelledby="scores-modal-title"
+  >
+    <Box sx={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: { xs: '95%', sm: '80%', md: '60%' },
+      maxWidth: 600,
+      maxHeight: '90vh',
+      bgcolor: 'background.paper',
+      borderRadius: 2,
+      boxShadow: 24,
+      p: 0,
+    }}>
+      <Box sx={{
+        p: 2,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottom: '1px solid #e0e0e0',
+        bgcolor: '#f5f5f5',
+      }}>
+        <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+          Student Scores - {selectedActivityName}
+        </Typography>
+        <IconButton onClick={() => setOpenScoresModal(false)} size="small">
+          <CloseIcon />
+        </IconButton>
+      </Box>
 
-const StudentListModalContent = () => (
+      <Box sx={{ p: 2, display: 'flex', gap: 1, borderBottom: '1px solid #e0e0e0' }}>
+        <Chip
+          label="Highest First"
+          clickable
+          color={scoreSort === "highest" ? "primary" : "default"}
+          variant={scoreSort === "highest" ? "filled" : "outlined"}
+          onClick={() => setScoreSort("highest")}
+        />
+        <Chip
+          label="Lowest First"
+          clickable
+          color={scoreSort === "lowest" ? "primary" : "default"}
+          variant={scoreSort === "lowest" ? "filled" : "outlined"}
+          onClick={() => setScoreSort("lowest")}
+        />
+      </Box>
+
+      <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+        {getSortedScores().length > 0 ? (
+          <List disablePadding>
+            {getSortedScores().map((score, index) => (
+              <ListItem
+                key={score.userId}
+                sx={{
+                  borderBottom: '1px solid #e0e0e0',
+                  py: 1.5,
+                  backgroundColor: index % 2 === 0 ? '#fafafa' : 'white',
+                }}
+              >
+                <ListItemText
+                  primary={`${score.firstName} ${score.lastName}`}
+                  secondary={
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: score.score >= 70 ? '#4caf50' : '#f44336',
+                        fontWeight: 500 
+                      }}
+                    >
+                      Score: {score.score}%
+                    </Typography>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        ) : (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography color="text.secondary">
+              No scores available for this activity.
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    </Box>
+  </Modal>
+);
+
+  const StudentListModalContent = () => (
      <Modal
       open={openStudentListModal}
       onClose={handleCloseStudentListModal}
@@ -486,36 +630,21 @@ const StudentListModalContent = () => (
   const scoreStatsCards = [
     {
       label: "Average Score",
-      count: activityStats.averageScore,
+      count: activityStats.average,
       color: "#424242",
       icon: <TrendingUpIcon />,
     },
     {
       label: "Lowest Score",
-      count: activityStats.lowestScore,
+      count: activityStats.lowest,
       color: "#f44336",
       icon: <ArrowDownwardIcon />,
     },
     {
       label: "Highest Score",
-      count: activityStats.highestScore,
+      count: activityStats.highest,
       color: "#4caf50",
       icon: <ArrowUpwardIcon />,
-    },
-  ];
-
-  const progressSummaryCards = [
-    {
-      label: "Students Failed to Reach Goal",
-      count: activityStats.studentsFailed,
-      color: "#f44336",
-      icon: <CancelIcon />,
-    },
-    {
-      label: "Students Reached Goal",
-      count: activityStats.studentsReachedGoal,
-      color: "#4caf50",
-      icon: <SchoolIcon />,
     },
   ];
 
@@ -605,11 +734,13 @@ const StudentListModalContent = () => (
 
 
           </Box>
+          
           <Grid container sx={{flexGrow: 1, p: {xs:2, sm:3, md:4},pt:{md:0}}}>
 
             <Grid item xs={12} md={6} sx={{ pr: { md: 6 }, mb: {xs: 4, md: 0}, pl: { md: 10} }}>
               <Typography variant="h6" sx={{ mb: 3, color: '#3f51b5', fontWeight: 600 }}>Activity Data</Typography>
-
+              <Stack direction="row" spacing={30} sx={{ mb: 4, justifyContent: 'center' }}> 
+              <Box>
               <Box sx={{ mb: 4, p: 2, borderRadius: 1, bgcolor: 'background.paper', boxShadow: 1 }}>
                 <Typography variant="body2" color="text.secondary" id="select-activity-label" mb={1}>
                   Select Activity
@@ -668,6 +799,9 @@ const StudentListModalContent = () => (
                   </Typography>
                 </CardContent>
               </Card>
+
+              
+                <Stack direction="column" spacing={2} sx={{ mb: 2, justifyContent: 'center' }}>
               <Grid container spacing={3} mb={4}>
                 {scoreStatsCards.map((item, i) => (
                   <Grid item xs={12} sm={4} key={i}>
@@ -702,29 +836,20 @@ const StudentListModalContent = () => (
                     </Card>
                   </Grid>
                 ))}
-              </Grid>
+              </Grid>    
+             
 
               <Box sx={{ display: 'flex', gap: 2.4, mb: 4, paddingTop:0.1, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <Button
                   variant="contained"
                   sx={{ bgcolor: '#9e9e9e', '&:hover': {bgcolor: '#757575'}, flexGrow: {xs: 1, sm:0} }}
-                  disabled={!selectedActivity}
+                  disabled={!selectedActivity || selectedRoomStudents.length === 0}
+                  onClick={() => {
+                    fetchStudentScores(selectedActivity);
+                    setOpenScoresModal(true);
+                  }}
                 >
                   View Scores
-                </Button>
-                <Button
-                  variant="contained"
-                  sx={{ bgcolor: '#9e9e9e', '&:hover': {bgcolor: '#757575'}, flexGrow: {xs: 1, sm:0} }}
-                  disabled={!selectedActivity}
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="contained"
-                  sx={{ bgcolor: '#ff9800', '&:hover': {bgcolor: '#fb8c00'}, flexGrow: {xs: 1, sm:0} }}
-                  disabled={!selectedActivity}
-                >
-                  Edit
                 </Button>
                 <Button
                   variant="contained"
@@ -742,9 +867,14 @@ const StudentListModalContent = () => (
                 >
                   Deploy
                 </Button>
+                
               </Box>
-
-              <Box sx={{ p: 3, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
+               </Stack>          
+              </Box>
+              
+              
+                  
+              <Box sx={{ p: 3, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1,height: 300, overflowY: 'auto' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="subtitle1" fontWeight={600}>Enrolled Students ({selectedRoomStudents.length})</Typography>
                   <Button startIcon={<EditIcon />} size="small" sx={{ color: '#3f51b5', textTransform: 'none' }} onClick={handleOpenStudentListModal}>
@@ -757,68 +887,11 @@ const StudentListModalContent = () => (
                   )) : <Typography variant="body2" color="text.secondary">No students enrolled.</Typography>}
                 </Box>
               </Box>
-            </Grid>
-
-            <Grid item xs={12} md={6} sx={{ pl: { md: 21} }}>
-              <Typography variant="h6" sx={{ mb: 3, color: '#3f51b5', fontWeight: 600 }}>Activity Progress</Typography>
-
-              <Grid container spacing={3} sx={{ mb: 4 }}>
-                {progressSummaryCards.map((item, i) => (
-                  <Grid item xs={12} sm={6} key={i}>
-                    <Card
-                      elevation={2}
-                      sx={{
-                        width: "100%",
-                        minWidth: 220,
-                        maxWidth: 260,
-                        height: 140,
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        borderRadius: 3,
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-                        backgroundColor: "#fff",
-                      }}
-                    >
-                      <CardContent sx={{ width: "100%", p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <Avatar sx={{ bgcolor: item.color, width: 44, height: 44, mb: 1 }}>
-                          {item.icon}
-                        </Avatar>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#444", mb: 0.5, textAlign: "center" }}>
-                          {item.label}
-                        </Typography>
-                        <Typography variant="h4" sx={{ fontWeight: 700, color: item.color, textAlign: "center" }}>
-                          {item.count}
-                        </Typography>
-                         <Typography variant="caption" sx={{ opacity: 0.8, textAlign: 'center' }}>{item.description}</Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-
-              <Box sx={{ mt: 4, p: 3, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, bgcolor: '#e0e0e0', p: 1.5, borderRadius: '4px 4px 0 0' }}>
-                  <Typography variant="subtitle1" fontWeight={600}>Student Name</Typography>
-                  <Typography variant="subtitle1" fontWeight={600}>Progress Tracker</Typography>
-                </Box>
-                <Box sx={{ bgcolor: '#f5f5f5', borderRadius: '0 0 4px 4px', maxHeight: 300, overflowY: 'auto', border: '1px solid #e0e0e0', borderTop: 'none' }}>
-                  {progressData.length > 0 ? (
-                    progressData.map((student) => (
-                      <Box key={student.userId || student.id} sx={{ display: 'flex', justifyContent: 'space-between', p: 1.5, borderBottom: '1px solid #e0e0e0', '&:last-child': { borderBottom: 0 } }}>
-                        <Typography variant="body2">{`${student.firstName} ${student.lastName}`}</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: student.totalActivities > 0 && (student.completedActivities / student.totalActivities) >= 0.7 ? '#4caf50' : '#f44336' }}>
-                          {`${student.completedActivities || 0} / ${student.totalActivities || 0} Activities`}
-                        </Typography>
-                      </Box>
-                    ))
-                  ) : ( <Box sx={{ p: 2, textAlign: 'center' }}><Typography variant="body2" color="text.secondary">No progress data available.</Typography></Box> )}
-                </Box>
-              </Box>
+              </Stack>
             </Grid>
           </Grid>
         <StudentListModalContent />
+        <ScoresModalContent /> 
       </Box>
 
   );

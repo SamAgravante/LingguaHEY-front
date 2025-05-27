@@ -28,6 +28,7 @@ import ClassIcon from "@mui/icons-material/Class";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
+import EditIcon from "@mui/icons-material/Edit";
 import Classroom from "./Classroom";
 import LiveActClassroom from "./Live-Activity-Classroom/LiveActClassroom";
 
@@ -44,6 +45,9 @@ const TeacherDashboard = () => {
   const [error, setError] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [roomToEdit, setRoomToEdit] = useState(null);
+  const [editRoomName, setEditRoomName] = useState("");
   const navigate = useNavigate();
   const [token, setToken] = useState(localStorage.getItem("token"));
 
@@ -173,6 +177,32 @@ const TeacherDashboard = () => {
     } catch (err) {
       console.error("Failed to delete room:", err);
       // Add user feedback
+    }
+  };
+
+  const handleEditClick = (e, room) => {
+    e.stopPropagation();
+    setRoomToEdit(room);
+    setEditRoomName(room.name);
+    setEditModalOpen(true);
+  };
+
+  const handleEditRoom = async () => {
+    if (!API || !roomToEdit || !editRoomName.trim()) return;
+    
+    try {
+      const response = await API.put(`/api/lingguahey/classrooms/${roomToEdit.id}`, {
+        classroomName: editRoomName
+      });
+      
+      setRooms(prev => prev.map(room => 
+        room.id === roomToEdit.id ? { ...room, name: editRoomName } : room
+      ));
+      setEditModalOpen(false);
+      setRoomToEdit(null);
+      setEditRoomName("");
+    } catch (err) {
+      console.error("Failed to edit room:", err);
     }
   };
 
@@ -317,6 +347,7 @@ const TeacherDashboard = () => {
                       display: 'flex',
                       flexDirection: 'column',
                       borderRadius: 2,
+                      minWidth: 230,
                       transition: "all 0.2s ease-in-out",
                       border: "1px solid rgba(0, 0, 0, 0.12)",
                       "&:hover": {
@@ -327,27 +358,44 @@ const TeacherDashboard = () => {
                     onClick={() => handleRoomClick(room)}
                   >
                     <CardContent sx={{ p: 3, position: "relative" }}>
-                      <Tooltip title="Delete Room" placement="top">
-                        <IconButton
-                          size="small"
-                          edge="end"
-                          aria-label={`Delete room ${room.name}`}
-                          sx={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            color: "#f44336",
-                            opacity: 0.7,
-                            "&:hover": {
-                              opacity: 1,
-                              backgroundColor: "rgba(244, 67, 54, 0.08)"
-                            }
-                          }}
-                          onClick={(e) => handleDeleteClick(e, room)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Box sx={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 0 }}>
+                        <Tooltip title="Edit Room" placement="top">
+                          <IconButton
+                            size="small"
+                            edge="end"
+                            aria-label={`Edit room ${room.name}`}
+                            sx={{
+                              color: "rgb(73, 73, 73)",
+                              opacity: 0.34,
+                              "&:hover": {
+                                opacity: 1,
+                                backgroundColor: "rgba(33, 150, 243, 0.08)"
+                              }
+                            }}
+                            onClick={(e) => handleEditClick(e, room)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Room" placement="top">
+                          <IconButton
+                            size="small"
+                            edge="end"
+                            aria-label={`Delete room ${room.name}`}
+                            sx={{
+                              color: "#f44336",
+                              opacity: 0.7,
+                              "&:hover": {
+                                opacity: 1,
+                                backgroundColor: "rgba(244, 67, 54, 0.08)"
+                              }
+                            }}
+                            onClick={(e) => handleDeleteClick(e, room)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
 
                       <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                         <Avatar 
@@ -447,6 +495,62 @@ const TeacherDashboard = () => {
             autoFocus
           >
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Room Modal */}
+      <Dialog
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        aria-labelledby="edit-dialog-title"
+        aria-describedby="edit-dialog-description"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DialogTitle id="edit-dialog-title">
+          {"Edit Room Name"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="edit-dialog-description">
+            Update the name of the room.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Room Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={editRoomName}
+            onChange={(e) => setEditRoomName(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "#fff",
+                borderRadius: 1,
+                "&:hover fieldset": {
+                  borderColor: "#3f51b5",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#3f51b5",
+                }
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setEditModalOpen(false)} 
+            sx={{ color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditRoom} 
+            color="primary" 
+            variant="contained"
+            autoFocus
+          >
+            Save
           </Button>
         </DialogActions>
       </Dialog>
