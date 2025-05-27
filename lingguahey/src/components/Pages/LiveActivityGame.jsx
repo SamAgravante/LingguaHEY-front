@@ -79,13 +79,16 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const stompClientRef = useRef(null);
   const subscriptionRef = useRef(null);
   const didInitRef = useRef(false);
-  const skipCleanupRef = useRef(true);
   const onStartedRef = useRef(onStarted);
   const lastNonEmptyUsersRef = useRef([]); // Always keep the latest non-empty user list
-  useEffect(() => { onStartedRef.current = onStarted; }, [onStarted]);
+
+  useEffect(() => {
+    onStartedRef.current = onStarted;
+  }, [onStarted]);
 
   // ---- FETCH USER DETAILS ----
   useEffect(() => {
+    if (!user) return;
     USER_API.get(`/${user}`)
       .then(res => setUserDetails(res.data))
       .catch(() => setError('Could not load user profile'));
@@ -108,12 +111,18 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     setError('');
 
     // 1) Join via REST
-    LOBBY_API.post(`/${activityId}/join`, { character: selectedChar }, { params: { userId: user } })
+    LOBBY_API.post(
+      `/${activityId}/join`,
+      { character: selectedChar },
+      { params: { userId: user } }
+    )
       .then(() => LOBBY_API.get(`/${activityId}/users`))
       .then(res => {
         setUsers(res.data);
         const me = res.data.find(u => u.userId === user);
-        if (!me?.character && selectedChar) setLocalUserChar(selectedChar);
+        if (!me?.character && selectedChar) {
+          setLocalUserChar(selectedChar);
+        }
       })
       .catch(err => {
         if (err.response?.status === 409) {
@@ -133,53 +142,75 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     client.debug = () => {};
     stompClientRef.current = client;
 
-    client.connect({}, () => {
-      subscriptionRef.current = client.subscribe(
-        `/topic/lobby/${activityId}`,
-        msg => {
-          console.log('[STOMP] Received message:', msg.body); // Debug log
-          let payload;
-          try { payload = JSON.parse(msg.body); } catch { return; }
-          if (Array.isArray(payload.users)) {
-            setUsers(payload.users);
-            if (payload.users.length > 0) lastNonEmptyUsersRef.current = payload.users;
-            const me = payload.users.find(u => u.userId === user);
-            if (me?.role && role.current !== me.role.toUpperCase()) role.current = me.role.toUpperCase();
-            if (!me?.character && selectedChar) setLocalUserChar(selectedChar);
-            return;
+    client.connect(
+      {},
+      () => {
+        subscriptionRef.current = client.subscribe(
+          `/topic/lobby/${activityId}`,
+          msg => {
+            let payload;
+            try {
+              payload = JSON.parse(msg.body);
+            } catch {
+              return;
+            }
+            if (Array.isArray(payload.users)) {
+              setUsers(payload.users);
+              if (payload.users.length > 0) {
+                lastNonEmptyUsersRef.current = payload.users;
+              }
+              const me = payload.users.find(u => u.userId === user);
+              if (me?.role && role.current !== me.role.toUpperCase()) {
+                role.current = me.role.toUpperCase();
+              }
+              if (!me?.character && selectedChar) {
+                setLocalUserChar(selectedChar);
+              }
+              return;
+            }
+            if (payload.type === 'JOIN' && payload.user) {
+              setUsers(prev =>
+                prev.some(u => u.userId === payload.user.userId)
+                  ? prev
+                  : [...prev, payload.user]
+              );
+            }
+            if (payload.type === 'START') {
+              setFrozenInitialUsers(lastNonEmptyUsersRef.current);
+              setGameRoomOpen(true);
+              // Immediately tear down this lobby WS
+              subscriptionRef.current?.unsubscribe();
+              client.disconnect();
+            }
+          },
+          error => {
+            setError('WebSocket connection failed');
+            console.error('STOMP error:', error);
           }
-          if (payload.type === 'JOIN' && payload.user) {
-            setUsers(prev => prev.some(u => u.userId === payload.user.userId) ? prev : [...prev, payload.user]);
-          }
-          if (payload.type === 'START') {
-            console.log('users at START (from ref):', lastNonEmptyUsersRef.current); // Log the correct user list
-            setFrozenInitialUsers(lastNonEmptyUsersRef.current); // Freeze the latest non-empty user list
-            setGameRoomOpen(true);
-            // onStartedRef.current?.();
-            // navigate('/multiplayer', { state: { activityId } }); // <-- Remove this line to prevent redirect
-          }
-        }
-      );
-    }, () => setError('WebSocket connection failed'));
+        );
+      }
+    );
 
     return () => {
-      if (skipCleanupRef.current) { skipCleanupRef.current = false; return; }
-      LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } })
-        .finally(() => {
-          subscriptionRef.current?.unsubscribe();
-          stompClientRef.current?.disconnect();
-        });
+      // Always leave the lobby & fully tear down the WS
+      LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } }).finally(() => {
+        subscriptionRef.current?.unsubscribe();
+        stompClientRef.current?.disconnect();
+        didInitRef.current = false;
+      });
     };
   }, [activityId, user, hasJoined, selectedChar]);
 
   // ---- HANDLERS ----
   const handleStart = () => {
     setStarting(true);
-    LOBBY_API.post(`/${activityId}/start`, null, { params: { teacherId: user } })
+    LOBBY_API.post(
+      `/${activityId}/start`,
+      null,
+      { params: { teacherId: user } }
+    )
       .then(() => {
-        // Do NOT navigate here; let the STOMP 'START' message trigger navigation for everyone
-        // onStartedRef.current?.();
-        // navigate('/multiplayer', { state: { activityId } });
+        // Let STOMP “START” message trigger opening the game room
       })
       .catch(() => setError('Failed to start activity'))
       .finally(() => setStarting(false));
@@ -202,16 +233,13 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           try {
             stompClientRef.current.disconnect(() => {
               console.log('WebSocket disconnected');
-              // Call onReturn callback after disconnecting
               onReturn?.();
             });
           } catch (e) {
             console.error('Error disconnecting:', e);
-            // Still call onReturn even if disconnect fails
             onReturn?.();
           }
         } else {
-          // If no WebSocket, still call onReturn
           onReturn?.();
         }
       });
@@ -262,7 +290,6 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 role:        userDetails.role,
               };
               await USER_API.put(`/${user}`, payload);
-              console.log ('Profile updated:', payload.role);
               setHasJoined(true);
             } catch (err) {
               setError(err?.response?.data?.message || 'Failed to update profile');
@@ -328,7 +355,12 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
       {/* Multiplayer Game Room Modal */}
-      <Dialog open={gameRoomOpen} onClose={() => { disconnectWebsocket(); setGameRoomOpen(false); }} maxWidth="md" fullWidth>
+      <Dialog
+        open={gameRoomOpen}
+        onClose={() => { disconnectWebsocket(); setGameRoomOpen(false); }}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle sx={{ m: 0, p: 2 }}>
           Multiplayer Game Room
           <IconButton
@@ -340,13 +372,13 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           </IconButton>
         </DialogTitle>
         {/* Pass activityId and filtered users (excluding teachers) to MultiplayerGameRoom */}
-        <MultiplayerGameRoom 
-          activityId={activityId} 
-          initialUsers={frozenInitialUsers.filter(user => user.role?.toUpperCase() !== 'TEACHER')} 
+        <MultiplayerGameRoom
+          activityId={activityId}
+          initialUsers={frozenInitialUsers.filter(user => user.role?.toUpperCase() !== 'TEACHER')}
           onLeave={(e) => {
             disconnectWebsocket();
             setGameRoomOpen(false);
-          }} 
+          }}
         />
       </Dialog>
 

@@ -1,4 +1,4 @@
-// MultiplayerGameRoom.jsx
+// src/components/Pages/MultiplayerGameRoom.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getUserFromToken } from '../../utils/auth';
@@ -15,7 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Stack as MuiStack
 } from '@mui/material';
 import { styled } from '@mui/system';
 import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
@@ -31,7 +30,6 @@ const pastels = [
   '#D1C4E9', // light purple
 ];
 
-// --- PastelContainer: update to fit parent box strictly ---
 const PastelContainer = styled(Box)(() => ({
   backgroundImage: `url(${modalBg})`,
   backgroundSize: 'cover',
@@ -94,11 +92,12 @@ function shuffleArray(array) {
 }
 
 export default function MultiplayerGameRoom({ activityId: propActivityId, onLeave, initialUsers }) {
-  //console.log('Initial users:', initialUsers);
   const token = localStorage.getItem('token');
   let activityId = propActivityId;
   const { state } = useLocation();
-  if (!activityId && state?.activityId) activityId = state.activityId;
+  if (!activityId && state?.activityId) {
+    activityId = state.activityId;
+  }
   const userId = getUserFromToken()?.userId;
 
   const [userRole, setUserRole] = useState(null);
@@ -106,23 +105,33 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
   const stompClientRef = useRef(null);
   const subscriptionRef = useRef(null);
 
-  // State for managing game
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
   const [lastConfirmedIndex, setLastConfirmedIndex] = useState(-1);
   const [progress, setProgress] = useState(0);
   const [showDialog, setShowDialog] = useState(false);
-  const lastConfirmedRef = useRef(-1); // Add ref to track last confirmed index
+  const lastConfirmedRef = useRef(-1);
 
-  const [leaderboard, setLeaderboard] = useState([]); 
-  const [leaderboardInitialized, setLeaderboardInitialized] = useState(false); // Track if initialUsers have been used
-  
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboardInitialized, setLeaderboardInitialized] = useState(false);
+
   const [shuffledChoices, setShuffledChoices] = useState([]);
   const [selected, setSelected] = useState([]);
   const [shuffledOptions, setShuffledOptions] = useState([]);
-  const [pendingAnswer, setPendingAnswer] = useState(null); // Store answer until teacher advances
-  const [waitingForTeacher, setWaitingForTeacher] = useState(false); // For students after submitting
+  const [pendingAnswer, setPendingAnswer] = useState(null);
+  const [waitingForTeacher, setWaitingForTeacher] = useState(false);
 
+  // Keep a ref of the latest pendingAnswer so the STOMP callback can read it
+  const pendingAnswerRef = useRef(null);
+  useEffect(() => {
+    pendingAnswerRef.current = pendingAnswer;
+  }, [pendingAnswer]);
+
+  // Only open ONE WebSocket per “real mount” (skip the first StrictMode mount in dev)
+  const didConnectRef = useRef(false);
+  const skipFirstDevEffectRef = useRef(false);
+
+  // Determine userRole
   useEffect(() => {
     if (!userId) return;
     API.get(`/users/${userId}`)
@@ -133,61 +142,107 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       .catch(() => setUserRole(null));
   }, [userId]);
 
-  // --- WebSocket logic: listen for NEXT_QUESTION and submit answer then advance ---
+  // WebSocket / STOMP effect
   useEffect(() => {
-    if (!activityId) return;
+    // If no activityId, bail out immediately
+    if (!activityId) {
+      return;
+    }
+
+    // In development under React.StrictMode, the effect runs twice:
+    //   1) initial mount  → cleanup → remount  → cleanup
+    //   2) second mount   → real connect
+    // To avoid creating a “ghost” connection on that first StrictMode mount,
+    // we check process.env.NODE_ENV and skip only _one_ run of this effect.
+    if (
+      process.env.NODE_ENV === 'development' &&
+      skipFirstDevEffectRef.current === false
+    ) {
+      // Mark that we’ve “skipped” once, and do NOT connect on this first run
+      skipFirstDevEffectRef.current = true;
+      console.log('[GameRoom] (dev) skipped first StrictMode effect, next run will connect');
+      return;
+    }
+
+    // If we’ve already connected once, don’t connect again
+    if (didConnectRef.current) {
+      return;
+    }
+    didConnectRef.current = true;
+    console.log('[GameRoom] Effect mounted → opening STOMP…');
+
     const socket = new SockJS(`${import.meta.env.VITE_API_BASE_URL}/ws`);
     const client = Stomp.over(socket);
     client.debug = () => {};
     stompClientRef.current = client;
 
-    client.connect({}, () => {
-      subscriptionRef.current = client.subscribe(
-        `/topic/activity/${activityId}`,
-        async msg => {
-          const payload = JSON.parse(msg.body);
-          setLiveActivityUpdate(payload);
+    client.connect(
+      {},
+      () => {
+        console.log('[GameRoom] STOMP connected');
+        subscriptionRef.current = client.subscribe(
+          `/topic/activity/${activityId}`,
+          async (msg) => {
+            const payload = JSON.parse(msg.body);
+            setLiveActivityUpdate(payload);
 
-          // On NEXT_QUESTION, submit answer if present, then advance
-          if (payload.status === "NEXT_QUESTION" && payload.payload?.questionIndex !== undefined) {
-            if (pendingAnswer !== null) {
-              await submitPendingAnswer();
-            }
-            setPendingAnswer(null);
-            setWaitingForTeacher(false);
-            
-            // Update index and progress together to ensure they stay in sync
-            const nextIndex = payload.payload.questionIndex;
-            const confirmedIndex = lastConfirmedRef.current;
-            setIndex(nextIndex);
-            setLastConfirmedIndex(confirmedIndex);
-            setProgress(((confirmedIndex + 1) / questions.length) * 100);
-            
-            fetchLeaderboard();
-          }
-          // Handle FINISH_QUIZ event for all users
-          if (payload.status === "FINISH_QUIZ") {
-            if (pendingAnswer !== null) {
-              await submitPendingAnswer();
+            // NEXT_QUESTION
+            if (
+              payload.status === 'NEXT_QUESTION' &&
+              payload.payload?.questionIndex !== undefined
+            ) {
+              if (pendingAnswerRef.current !== null) {
+                await submitPendingAnswer();
+              }
               setPendingAnswer(null);
+              setWaitingForTeacher(false);
+
+              const nextIndex = payload.payload.questionIndex;
+              const confirmedIndex = lastConfirmedRef.current;
+              setIndex(nextIndex);
+              setLastConfirmedIndex(confirmedIndex);
+              setProgress(((confirmedIndex + 1) / questions.length) * 100);
+              fetchLeaderboard();
             }
-            lastConfirmedRef.current = questions.length - 1;
-            setLastConfirmedIndex(questions.length - 1);
-            setProgress(100);
-            setShowDialog(true);
-            fetchLeaderboard();
+
+            // FINISH_QUIZ
+            if (payload.status === 'FINISH_QUIZ') {
+              if (pendingAnswerRef.current !== null) {
+                await submitPendingAnswer();
+              }
+              lastConfirmedRef.current = questions.length - 1;
+              setLastConfirmedIndex(questions.length - 1);
+              setProgress(100);
+              setShowDialog(true);
+              fetchLeaderboard();
+            }
+          },
+          (error) => {
+            console.error('[GameRoom] STOMP connection error:', error);
           }
-        }
-      );
-    });
+        );
+      },
+      (error) => {
+        console.error('[GameRoom] STOMP failed to connect:', error);
+      }
+    );
 
     return () => {
+      console.log('[GameRoom] Cleanup → unsubscribing + trying to disconnect…');
       subscriptionRef.current?.unsubscribe();
-      if (stompClientRef.current?.connected) stompClientRef.current.disconnect();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activityId, questions.length, pendingAnswer]);
 
+      try {
+        client.disconnect();
+        console.log('[GameRoom] STOMP disconnected successfully');
+      } catch (err) {
+        console.warn('[GameRoom] Error while disconnecting (probably wasn’t connected):', err);
+      }
+
+      didConnectRef.current = false;
+    };
+  }, [activityId]);
+
+  // TTS API
   const APItts = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/tts`,
     timeout: 5000,
@@ -198,22 +253,27 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     },
   });
 
+  // Fetch questions on mount / when activityId changes
   useEffect(() => {
     if (!activityId) return;
     API.get(`/questions/liveactivities/${activityId}`)
       .then(res => {
-        setQuestions(Array.isArray(res.data) && res.data.length ? res.data : mockQuestions);
+        setQuestions(
+          Array.isArray(res.data) && res.data.length ? res.data : mockQuestions
+        );
       })
       .catch(() => setQuestions(mockQuestions));
   }, [activityId]);
 
-  // Fetch leaderboard from API and merge with initial users
+  // Fetch and merge leaderboard
   async function fetchLeaderboard() {
     if (!activityId) return;
     try {
-      const scoresRes = await API.get(`/scores/live-activities/${activityId}/leaderboard`);
+      const scoresRes = await API.get(
+        `/scores/live-activities/${activityId}/leaderboard`
+      );
       const scoresArr = Array.isArray(scoresRes.data) ? scoresRes.data : [];
-      // On first call, use initialUsers; after that, only update scores
+
       if (!leaderboardInitialized) {
         const usersArr = Array.isArray(initialUsers) ? initialUsers : [];
         const scoreMap = {};
@@ -222,23 +282,30 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
           const score = entry.score ?? entry.totalScore ?? 0;
           scoreMap[id] = {
             userId: id,
-            name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
-            score
+            name:
+              entry.name ||
+              `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
+            score,
           };
-        });          const merged = usersArr.map(user => {
+        });
+        const merged = usersArr.map(user => {
           const id = user.userId;
           return {
             userId: id,
-            name: user.name || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+            name:
+              user.name ||
+              `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
             score: scoreMap[id]?.score ?? 0,
             role: user.role,
           };
         });
-        // Add any scores for users not in initialUsers
         scoresArr.forEach(entry => {
-          if (!merged.find(u => u.userId === entry.userId)) {            merged.push({
+          if (!merged.find(u => u.userId === entry.userId)) {
+            merged.push({
               userId: entry.userId,
-              name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
+              name:
+                entry.name ||
+                `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
               score: entry.score ?? entry.totalScore ?? 0,
               role: entry.role,
             });
@@ -247,66 +314,76 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
         setLeaderboard(merged);
         setLeaderboardInitialized(true);
       } else {
-        // Only update scores for users already in leaderboard
         setLeaderboard(prev => {
           const prevMap = {};
-          prev.forEach(u => { prevMap[u.userId] = u; });
+          prev.forEach(u => {
+            prevMap[u.userId] = u;
+          });
           scoresArr.forEach(entry => {
             if (prevMap[entry.userId]) {
               prevMap[entry.userId] = {
                 ...prevMap[entry.userId],
-                score: entry.score ?? entry.totalScore ?? 0
+                score: entry.score ?? entry.totalScore ?? 0,
               };
             } else {
-              // New user (edge case)
               prevMap[entry.userId] = {
                 userId: entry.userId,
-                name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
+                name:
+                  entry.name ||
+                  `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
                 score: entry.score ?? entry.totalScore ?? 0,
+                role: entry.role,
               };
             }
           });
           return Object.values(prevMap);
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('[GameRoom] Error fetching leaderboard:', e);
+    }
   }
 
-  // Fetch leaderboard on mount, on question index change, and every 5 seconds
+  // Refresh leaderboard whenever index changes or on mount
   useEffect(() => {
     fetchLeaderboard();
     const interval = setInterval(fetchLeaderboard, 5000);
-    //Test Purposes
-    //const interval = setInterval(fetchLeaderboard, 500000);
     return () => clearInterval(interval);
   }, [activityId, index]);
 
-  // --- Helper to submit answer depending on game type ---
+  // Submit pending answer helper
   async function submitPendingAnswer() {
-    if (!userId || !q) return;
+    if (!userId) return;
+    const q = questions[index];
+    if (!q) return;
     try {
       if (q.gameType === 'GAME1' || q.gameType === 'GAME3') {
-        //console.log('Pending answer submitted:', pendingAnswer, 'userId:', userId, 'questionId:', q.questionId);
         await API.post(
-          `/scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${pendingAnswer}`
+          `/scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${pendingAnswerRef.current}`
         );
       } else if (q.gameType === 'GAME2') {
-        //console.log('Pending answer submitted:', pendingAnswer, 'userId:', userId, 'questionId:', q.questionId);
         await API.post(
           `/scores/award/translation/questions/${q.questionId}/users/${userId}`,
-          Array.isArray(pendingAnswer) ? pendingAnswer : []
+          Array.isArray(pendingAnswerRef.current)
+            ? pendingAnswerRef.current
+            : []
         );
       }
       await fetchLeaderboard();
     } catch (err) {
       if (err.response) {
-        console.error('Award score error:', err.response.status, err.response.data);
+        console.error(
+          '[GameRoom] Award score error:',
+          err.response.status,
+          err.response.data
+        );
       } else {
-        console.error('Award score error:', err);
+        console.error('[GameRoom] Award score error:', err);
       }
     }
   }
 
+  // Whenever questions or index changes, re-shuffle choices/options
   useEffect(() => {
     if (!questions.length) return;
     const q = questions[index];
@@ -320,42 +397,58 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     setWaitingForTeacher(false);
   }, [questions, index]);
 
-  if (!activityId) return <div style={{ padding: 24, color: 'red' }}>No activity ID provided.</div>;
-  if (!questions.length) return <Typography>Loading or no questions available.</Typography>;
+  if (!activityId) {
+    return (
+      <div style={{ padding: 24, color: 'red' }}>
+        No activity ID provided.
+      </div>
+    );
+  }
+  if (!questions.length) {
+    return <Typography>Loading or no questions available.</Typography>;
+  }
 
   const q = questions[index];
 
-  const synthesizeSpeech = async text => {
+  const synthesizeSpeech = async (text) => {
     try {
-      const response = await APItts.post('/synthesize', { text }, { responseType: 'blob' });
+      const response = await APItts.post(
+        '/synthesize',
+        { text },
+        { responseType: 'blob' }
+      );
       const url = URL.createObjectURL(response.data);
       new Audio(url).play();
     } catch {}
   };
 
-  // --- Choice handlers: store answer locally, disable input, show waiting for teacher ---
-  const handleChoice = choice => {
+  // Handlers for selecting / removing / submitting answers
+  const handleChoice = (choice) => {
     if (userRole !== 'TEACHER') {
       setPendingAnswer(choice.choiceId);
       setWaitingForTeacher(true);
     }
   };
 
-  // Update handleSelect and handleRemove to always update pendingAnswer for GAME2
-  const handleSelect = choice => {
+  const handleSelect = (choice) => {
     if (waitingForTeacher) return;
-    setSelected(prev => {
+    setSelected((prev) => {
       if (prev.includes(choice.choiceId)) return prev;
       const updated = [...prev, choice.choiceId];
-      if (q && q.gameType === 'GAME2') setPendingAnswer(updated);
+      if (q && q.gameType === 'GAME2') {
+        setPendingAnswer(updated);
+      }
       return updated;
     });
   };
-  const handleRemove = id => {
+
+  const handleRemove = (id) => {
     if (waitingForTeacher) return;
-    setSelected(prev => {
-      const updated = prev.filter(cid => cid !== id);
-      if (q && q.gameType === 'GAME2') setPendingAnswer(updated);
+    setSelected((prev) => {
+      const updated = prev.filter((cid) => cid !== id);
+      if (q && q.gameType === 'GAME2') {
+        setPendingAnswer(updated);
+      }
       return updated;
     });
   };
@@ -366,17 +459,16 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     setWaitingForTeacher(userRole !== 'TEACHER');
   };
 
+  // “Next” button for teacher
   const handleNext = () => {
     if (index < questions.length - 1) {
       const currentIndex = index;
       const nextIndex = currentIndex + 1;
-      
-      // Update progress immediately based on the current question being confirmed
+
       lastConfirmedRef.current = currentIndex;
       setLastConfirmedIndex(currentIndex);
       setProgress(((currentIndex + 1) / questions.length) * 100);
-      
-      // Then send the next question request
+
       API.post(
         `/lobby/${activityId}/next-question`,
         null,
@@ -385,6 +477,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     }
   };
 
+  // “Leave” button
   const handleLeave = async () => {
     if (!activityId || !userId) return;
     try {
@@ -394,104 +487,95 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     } catch {
       onLeave?.();
     }
-  };  const handleDialogClose = async () => {
+  };
+
+  // Closing the “Quiz Complete” dialog
+  const handleDialogClose = async () => {
     setShowDialog(false);
-    
     try {
-      // Only teachers can stop the activity
       if (userRole === 'TEACHER') {
-        // Stop the activity and clear scores
-        await API.post(`/lobby/${activityId}/stop`, null, { params: { teacherId: userId } });
+        // Teacher could optionally call /stop here
+        // await API.post(`/lobby/${activityId}/stop`, null, { params: { teacherId: userId } });
       }
-      
-      // Leave lobby/game room for all users after quiz finishes
       await API.delete(`/lobby/${activityId}/leave`, { params: { userId } });
-      
-      // Unsubscribe and disconnect WebSocket
-      if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
-      if (stompClientRef.current?.connected) stompClientRef.current.disconnect();
-      
-      // Return to lobby for all users
+      subscriptionRef.current?.unsubscribe();
+      try {
+        stompClientRef.current?.disconnect();
+      } catch (e) {
+        console.warn('[GameRoom] Error while final disconnect:', e);
+      }
       if (onLeave) onLeave({ completed: true });
       else window.location.reload();
     } catch (error) {
-      console.error('Error ending activity:', error);
-      // Even if there's an error, try to redirect
+      console.error('[GameRoom] Error ending activity:', error);
       if (onLeave) onLeave({ completed: true });
       else window.location.reload();
     }
   };
-  // --- Leaderboard block, now with profile characters ---
+
+  // Leaderboard rendering
   const leaderboardBlock = (
-    <Box sx={{ 
-      mt: 3, 
-      mb: 2, 
-      width: '100%', 
-      height: '85vh', // Make height taller relative to viewport
-      minHeight: '600px', // Increase minimum height
-      position: 'relative', 
-      overflow: 'visible',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      <Typography variant="h6" sx={{ 
-        mb: '2vh', 
-        fontWeight: 'bold', 
-        color: '#2E2E34',
-        fontSize: 'clamp(1rem, 2vw, 1.5rem)' // Responsive font size
-      }}>
-        Leaderboard - King of the Hill
-      </Typography>
-      {/* Hill background with enhanced gradient */}
-      <Box sx={{
-        position: 'absolute',
-        left: 0,
-        bottom: 0,
+    <Box
+      sx={{
+        mt: 3,
+        mb: 2,
         width: '100%',
-        height: '90%', // Taller hill background
-        zIndex: 0,
-        pointerEvents: 'none',
-        background: 'linear-gradient(180deg, #81d4fa 0%, #a5d6a7 60%, #8bc34a 100%)',
-        borderTopLeftRadius: '35%',
-        borderTopRightRadius: '35%',
-        boxShadow: 'inset 0 4px 20px rgba(0,0,0,0.1)'
-      }} />
-      {/* Crown marker */}
-      <Box sx={{
-        position: 'absolute',
-        left: '50%',
-        top: '12%', // Position crown higher
-        transform: 'translateX(-50%)',
-        width: 'clamp(35px, 6vw, 55px)', // Slightly larger crown
-        height: 'clamp(35px, 6vw, 55px)',
-        backgroundImage: 'url(/crown.png)',
-        backgroundSize: 'contain',
-        backgroundRepeat: 'no-repeat',
-        zIndex: 1,
-        filter: 'drop-shadow(0 2px 8px rgba(255,215,0,0.6))',
-      }} />
-      {/* Characters climbing the hill */}      <Box sx={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: '90%', zIndex: 1 }}>
+        height: '85vh',
+        minHeight: '600px',
+        position: 'relative',
+        overflow: 'visible',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Typography
+        variant="h6"
+        sx={{
+          mb: '2vh',
+          fontWeight: 'bold',
+          color: '#2E2E34',
+          fontSize: 'clamp(1rem, 2vw, 1.5rem)',
+        }}
+      >
+        Leaderboard – King of the Hill
+      </Typography>
+      {/* Hill background */}
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 0,
+          bottom: 0,
+          width: '100%',
+          height: '90%',
+          zIndex: 0,
+          pointerEvents: 'none',
+          background: 'linear-gradient(180deg, #81d4fa 0%, #a5d6a7 60%, #8bc34a 100%)',
+          borderTopLeftRadius: '35%',
+          borderTopRightRadius: '35%',
+          boxShadow: 'inset 0 4px 20px rgba(0,0,0,0.1)',
+        }}
+      />
+      <Box
+        sx={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: '90%', zIndex: 1 }}
+      >
         {[...leaderboard]
-          .filter(entry => entry.role?.toUpperCase() !== 'TEACHER') // Exclude teacher from leaderboard
+          .filter((entry) => entry.role?.toUpperCase() !== 'TEACHER')
           .sort((a, b) => b.score - a.score)
-          .map((entry, idx, arr) => {            // Calculate height based on score relative to total questions
-            const maxPossiblePoints = questions.length; // One point per question
+          .map((entry, idx, arr) => {
+            const maxPossiblePoints = questions.length;
             const heightPercent = Math.min(1, entry.score / maxPossiblePoints);
-            const maxHeight = '70%'; // Maximum climb height as percentage of container
-            const y = `calc(${maxHeight} * ${heightPercent})`; // Height increases with score
-              // Calculate horizontal position with unique path for each character
+            const maxHeight = '70%';
+            const y = `calc(${maxHeight} * ${heightPercent})`;
             const angle = (idx * (2 * Math.PI / arr.length)) + (heightPercent * Math.PI * 2);
-            const radius = `${30 - (heightPercent * 10)}%`; // Radius decreases as they climb
+            const radius = `${30 - (heightPercent * 10)}%`;
             const horizontalOffset = `calc(${Math.sin(angle)} * ${radius})`;
-            const baseX = `calc(50% + ${horizontalOffset} + ${idx * 2}%)`; // Center-based positioning
-            
-            // Is this character the leader?
+            const baseX = `calc(50% + ${horizontalOffset} + ${idx * 2}%)`;
             const isLeader = idx === 0 && entry.score > 0;
-            
+
             return (
-              <Box 
-                key={entry.userId} 
-                sx={{ 
+              <Box
+                key={entry.userId}
+                sx={{
                   position: 'absolute',
                   left: baseX,
                   bottom: y,
@@ -504,40 +588,44 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
                   zIndex: isLeader ? 2 : 1,
                 }}
               >
-                <Typography sx={{ 
-                  fontSize: 12, 
-                  fontWeight: 600, 
-                  color: isLeader ? '#ffd700' : '#2E2E34',
-                  textAlign: 'center', 
-                  maxWidth: 70, 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
-                  whiteSpace: 'nowrap',
-                  textShadow: isLeader ? '0 0 4px rgba(255,215,0,0.5)' : 'none',
-                  mb: 0.5 
-                }}>
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: isLeader ? '#ffd700' : '#2E2E34',
+                    textAlign: 'center',
+                    maxWidth: 70,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    textShadow: isLeader ? '0 0 4px rgba(255,215,0,0.5)' : 'none',
+                    mb: 0.5,
+                  }}
+                >
                   {entry.name}
                 </Typography>
                 <Box
                   component="img"
                   src={entry.profileCharacterUrl || bunnyStand}
                   alt="character"
-                  sx={{ 
+                  sx={{
                     height: 60,
                     width: 'auto',
                     objectFit: 'contain',
                     filter: isLeader ? 'drop-shadow(0 0 8px #ffd700)' : 'none',
                     transform: isLeader ? 'scale(1.1)' : 'scale(1)',
-                    transition: 'all 0.3s ease'
+                    transition: 'all 0.3s ease',
                   }}
                 />
-                <Typography sx={{ 
-                  fontSize: 14, 
-                  fontWeight: 700, 
-                  color: isLeader ? '#ffd700' : '#2E2E34',
-                  textShadow: isLeader ? '0 0 4px rgba(255,215,0,0.5)' : 'none',
-                  mt: 0.5 
-                }}>
+                <Typography
+                  sx={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: isLeader ? '#ffd700' : '#2E2E34',
+                    textShadow: isLeader ? '0 0 4px rgba(255,215,0,0.5)' : 'none',
+                    mt: 0.5,
+                  }}
+                >
                   {entry.score}
                 </Typography>
               </Box>
@@ -585,9 +673,34 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       >
         Leave
       </Button>
-      <Box sx={{ display: 'flex', flexDirection: 'row', width: 1920, height: 520, justifyContent: 'center', alignItems: 'center', gap: 0 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          width: 1920,
+          height: 520,
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 0,
+        }}
+      >
         {/* Left: Activity/Game Content */}
-        <Box sx={{ width: 850, height: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 4, boxShadow: 2, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, p: 3, ml: 0 }}>
+        <Box
+          sx={{
+            width: 850,
+            height: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#fff',
+            borderRadius: 4,
+            boxShadow: 2,
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            minWidth: 0,
+            p: 3,
+            ml: 0,
+          }}
+        >
           <MultiplayerGameRoomGameContent
             q={q}
             progress={progress}
@@ -607,18 +720,42 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
           />
         </Box>
         {/* Right: Leaderboard Only */}
-        <Box sx={{ width: 850, height: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 4, boxShadow: 2, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, p: 3, ml: 0 }}>
+        <Box
+          sx={{
+            width: 850,
+            height: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#fff',
+            borderRadius: 4,
+            boxShadow: 2,
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            minWidth: 0,
+            p: 3,
+            ml: 0,
+          }}
+        >
           {leaderboardBlock}
         </Box>
       </Box>
-      {/* Teacher-only Next/Finish button, only if not in completion dialog */}
+      {/* Teacher-only Next/Finish button */}
       {userRole === 'TEACHER' && !showDialog && (
         index < questions.length - 1 ? (
           <Button
             variant="contained"
             color="primary"
             onClick={handleNext}
-            sx={{ position: 'fixed', bottom: 40, right: 60, zIndex: 1500, fontSize: 22, px: 4, py: 2, borderRadius: 3 }}
+            sx={{
+              position: 'fixed',
+              bottom: 40,
+              right: 60,
+              zIndex: 1500,
+              fontSize: 22,
+              px: 4,
+              py: 2,
+              borderRadius: 3,
+            }}
           >
             Next
           </Button>
@@ -627,14 +764,26 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
             variant="contained"
             color="primary"
             onClick={async () => {
-              // Teacher triggers FINISH_QUIZ for all users
               if (userRole === 'TEACHER') {
-                setLastConfirmedIndex(questions.length - 1); // Mark all questions as confirmed
-                setProgress(100); // Set progress to 100%
-                await API.post(`/lobby/${activityId}/finish-quiz`, null, { params: { teacherId: userId } }).catch(() => {});
+                setLastConfirmedIndex(questions.length - 1);
+                setProgress(100);
+                await API.post(
+                  `/lobby/${activityId}/finish-quiz`,
+                  null,
+                  { params: { teacherId: userId } }
+                ).catch(() => {});
               }
             }}
-            sx={{ position: 'fixed', bottom: 40, right: 60, zIndex: 1500, fontSize: 22, px: 4, py: 2, borderRadius: 3 }}
+            sx={{
+              position: 'fixed',
+              bottom: 40,
+              right: 60,
+              zIndex: 1500,
+              fontSize: 22,
+              px: 4,
+              py: 2,
+              borderRadius: 3,
+            }}
           >
             Finish
           </Button>
@@ -654,7 +803,8 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
             Array.isArray(initialUsers) && initialUsers.length > 0 ? (
               initialUsers.map(user => (
                 <Typography key={user.userId}>
-                  {(user.name || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim())}: 0
+                  {(user.name ||
+                    `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim())}: 0
                 </Typography>
               ))
             ) : (
