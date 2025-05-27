@@ -378,14 +378,15 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           onLeave={(e) => {
             disconnectWebsocket();
             setGameRoomOpen(false);
+            handleReturn();
           }}
         />
       </Dialog>
 
       {/* Deployed Activity Check (NEW) */}
-      {!hasDeployedActivity && (
+      {activityId===null && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          This activity is not deployed. Please contact your administrator.
+          There is no activity deployed. Click return to go back.
         </Alert>
       )}
     </Box>

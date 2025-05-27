@@ -220,11 +220,14 @@ export default function Homepage() {
       if (section === 'Activity' && classroom) {
         try {
           const res = await API.get(`/live-activities/classrooms/${classroom}/deployed`);
-          //console.log('Deployed activity:', res.data);
           setDeployedActivityId(res.data);
         } catch (err) {
-          console.error('Failed to fetch deployed activity:', err);
-          setDeployedActivityId(null);
+          if (err.response && err.response.status === 403) {
+            setDeployedActivityId(null);
+          } else {
+            console.error('Failed to fetch deployed activity:', err);
+            setDeployedActivityId(null);
+          }
         }
       }
     };
