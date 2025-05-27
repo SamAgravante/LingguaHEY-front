@@ -195,8 +195,8 @@ const Activities = () => {
         </Button>
       </Box>
 
-      {/* Activities List */}
-      <Grid container spacing={3} p={3}>
+      
+      <Grid container spacing={3} p={3} sx={{justifyContent: "center"}}>{/* Activities List 
         <Grid container spacing={3} mb={4}>
           <Grid item xs={12} md={4}>
             <Card elevation={2} sx={{ borderRadius: 2, p: 2, height: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -224,7 +224,7 @@ const Activities = () => {
               </ResponsiveContainer>
             </Card>
           </Grid>
-        </Grid>
+        </Grid>*/}
 
         <Grid item xs={12} width={550}>
           <Card elevation={2} sx={{ borderRadius: 2 }}>
