@@ -120,7 +120,8 @@ const Layout = () => {
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <Grid container sx={{ width: "100%", height: "100%", backgroundColor: "#C8E6C9" }}>
+      <Grid container sx={{ width: "100%", height: "100%", backgroundColor: "#00092d" }}>
+        {/* Sidebar Navigation 
         <Drawer
           variant="permanent"
           anchor="left"
@@ -180,16 +181,17 @@ const Layout = () => {
             ))}
           </List>
         </Drawer>
-
+*/}
         <Box
           component="main"
           sx={{
-            flexGrow: 1,
-            width: `calc(100% - ${drawerWidth}px)`,
-            height: "100%",
-            overflow: "auto",
-            p: 3,
-            paddingLeft: 33,
+            //flexGrow: 1,
+            //width: `calc(100% - ${drawerWidth}px)`,
+            width: "1920px",
+            height: "1080px",
+            //overflow: "auto",
+            //p: 3,
+            //paddingLeft: 33,
           }}
         >
           <Outlet />

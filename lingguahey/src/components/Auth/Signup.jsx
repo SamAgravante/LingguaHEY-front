@@ -25,6 +25,16 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { MusicContext } from "../../contexts/MusicContext";
 
+// Background assets
+import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
+import MenuBoxHor from "../../assets/images/backgrounds/MenuBox1var.png";
+import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
+import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
+
 export default function Signup() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,11 +50,13 @@ export default function Signup() {
     confirmPassword: "",
     role,
     subscriptionStatus: false,
-    idNumber: ''
+    idNumber: "",
   });
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [agreed, setAgreed] = useState(false);
+
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackSeverity, setSnackSeverity] = useState("error");
@@ -55,7 +67,6 @@ export default function Signup() {
     "Please wait while we process your registration..."
   );
   const [dialogLoading, setDialogLoading] = useState(true);
-  
 
   useEffect(() => {
     setIntroMode(true);
@@ -65,8 +76,10 @@ export default function Signup() {
   const handleChange = (e) =>
     setUser((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   const handleCheckbox = (e) => setAgreed(e.target.checked);
+
   const toggleShow = () => setShowPassword((s) => !s);
   const toggleShowConfirm = () => setShowConfirm((s) => !s);
+
   const showSnack = (msg, sev = "error") => {
     setSnackMessage(msg);
     setSnackSeverity(sev);
@@ -84,8 +97,6 @@ export default function Signup() {
       showSnack("Email must end with @cit.edu", "warning");
       return;
     }
-    
-    // basic validations
     if (user.password.length < 8) {
       showSnack("Password must be at least 8 characters.", "warning");
       return;
@@ -99,7 +110,6 @@ export default function Signup() {
       return;
     }
 
-    // open loading dialog
     setDialogMessage("Please wait while we process your registration...");
     setDialogLoading(true);
     setDialogOpen(true);
@@ -125,11 +135,17 @@ export default function Signup() {
           "Registration successful! Please check your email to verify your account."
         );
       } else if (res.status === 400) {
-        showSnack(data.message || "Registration failed. Please check your input.", "error");
+        showSnack(
+          data.message || "Registration failed. Please check your input.",
+          "error"
+        );
         setDialogOpen(false);
         return;
       } else {
-        showSnack(data.message || "Unexpected error during registration.", "error");
+        showSnack(
+          data.message || "Unexpected error during registration.",
+          "error"
+        );
         setDialogOpen(false);
         return;
       }
@@ -142,21 +158,22 @@ export default function Signup() {
     }
   };
 
-  // styling
-  const pageBg = "linear-gradient(135deg, #FFECB3 30%, #E1F5FE 90%)";
-  const panelBg = "#FFFFFF";
-  const primaryBtn = "#FFCC80";
+  // styling tokens
   const textColor = "#5D4037";
+  const primaryBtn = "#FFCC80";
 
   return (
     <>
       <Grid
         container
         sx={{
-          minHeight: "100vh",
-          minWidth: "100vw",
-          background: pageBg,
-          p: 2,
+          backgroundImage: `url(${LandingBackgroundPic})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    minHeight: '100vh',
+                    minWidth: '100vw',
+                    display: 'flex',
+                    justifyContent: 'center',
         }}
         alignItems="center"
         justifyContent="center"
@@ -166,42 +183,83 @@ export default function Signup() {
           onSubmit={handleSignUp}
           sx={{
             width: "100%",
-            maxWidth: 800,
-            backgroundColor: panelBg,
+            minWidth: 1000,
+            minHeight: 800,
+            backgroundImage: `url(${MenuBoxHor})`,
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            color: textColor,
             borderRadius: 2,
-            p: 4,
-            boxShadow: 3,
+            paddingLeft: 51,
+            paddingRight: 51,
+            paddingTop: 15,
           }}
         >
-          <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
+          <Stack direction={"row"} alignItems="center" spacing={70}>
+            <IconButton onClick={() => navigate("/roleselect")}>
+            <ArrowBackIcon sx={{ color: textColor }} />
+            <Typography
+              sx={{ cursor: "pointer", color: textColor }}
+              onClick={() => navigate("/roleselect")}
+            >
+              Back
+            </Typography>
+            </IconButton>
+                {role && (
+                  <Typography variant="h6" sx={{ color: textColor, mt: 2 }}>
+                    Selected Role: {role === "USER" ? "Student" : "Teacher"}
+                  </Typography>
+                )}
+            </Stack>
+          
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={4}
+            sx={{ mt: 2 }}
+          >
             {/* Left - form fields */}
-            <Stack spacing={2} sx={{ flex: 1 }}>
-              <Typography variant="h4" sx={{ color: textColor }}>
+            <Stack spacing={2} sx={{ flex: 1 }} alignItems="center">
+              <Typography variant="h4" sx={{ color: textColor, mb: 2 }}>
                 Sign Up
               </Typography>
-              {["firstName", "middleName", "lastName", "email", "idNumber"].map((name) => (
-                <TextField
-                  key={name}
-                  label={name.charAt(0).toUpperCase() + name.slice(1)}
-                  name={name}
-                  type="text"
-                  value={user[name]}
-                  onChange={handleChange}
-                  fullWidth
-                  variant="outlined"
-                  sx={{ backgroundColor: panelBg }}
-                  required={name !== "middleName"}
-                />
-              ))}
+              {["firstName", "middleName", "lastName", "email", "idNumber"].map(
+                (name) => (
+                  <TextField
+                    key={name}
+                    label={name.charAt(0).toUpperCase() + name.slice(1)}
+                    name={name}
+                    type="text"
+                    value={user[name]}
+                    onChange={handleChange}
+                    variant="outlined"
+                    sx={{
+                      backgroundImage: `url(${GameTextField})`,
+                      backgroundSize: "cover",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center",
+                      width: 300,
+                      maxHeight: 100,
+                    }}
+                    required={name !== "middleName"}
+                  />
+                )
+              )}
               <TextField
                 label="Password"
                 name="password"
                 type={showPassword ? "text" : "password"}
                 value={user.password}
                 onChange={handleChange}
-                fullWidth
                 variant="outlined"
-                sx={{ backgroundColor: panelBg }}
+                sx={{
+                  backgroundImage: `url(${GameTextField})`,
+                      backgroundSize: "cover",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center",
+                      width: 300,
+                      maxHeight: 100,
+                }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -219,9 +277,15 @@ export default function Signup() {
                 type={showConfirm ? "text" : "password"}
                 value={user.confirmPassword}
                 onChange={handleChange}
-                fullWidth
                 variant="outlined"
-                sx={{ backgroundColor: panelBg }}
+                sx={{
+                  backgroundImage: `url(${GameTextField})`,
+                      backgroundSize: "cover",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center",
+                      width: 300,
+                      maxHeight: 100,
+                }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -233,32 +297,29 @@ export default function Signup() {
                 }}
                 required
               />
-              {role && (
-                <TextField
-                  label="Role"
-                  value={role}
-                  disabled
-                  fullWidth
-                  variant="outlined"
-                  sx={{ backgroundColor: panelBg }}
-                />
-              )}
+              
             </Stack>
 
             {/* Right - terms & actions */}
-            <Stack spacing={2} sx={{ flex: 1 }}>
+            <Stack spacing={2} sx={{ flex: 1 }} alignItems="center">
+              
               <Typography variant="h6" sx={{ color: textColor }}>
                 Terms and Conditions
               </Typography>
               <Box
                 sx={{
-                  backgroundColor: "#F5F5F5",
+                  backgroundImage: `url(${GameTextFieldMedium})`,
+                  backgroundSize: "cover",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
                   p: 2,
                   borderRadius: 1,
-                  height: 200,
+                  height: 280,
                   overflow: "auto",
+                  width: 370,
                 }}
               >
+                <Stack spacing={2} sx={{ flex: 1 }}>
                 <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
                   Welcome to <strong>LingguaHEY</strong>! These Terms and Conditions outline the rules for using our services. By accessing this website or using our services, you accept these terms in full.
                 </Typography>
@@ -312,9 +373,8 @@ export default function Signup() {
                 <Typography variant="body2" sx={{ fontStyle: "italic", color: "black", mt: 1 }}>
                   By using our services, you agree to these Terms & Conditions.
                 </Typography>
-                <Typography variant="body2" sx={{ color: "black", mb: 1 }}>
-                  Welcome to <strong>LingguaHEY</strong>! These Terms …
-                </Typography>
+
+            </Stack>
               </Box>
               <FormControlLabel
                 control={<Checkbox checked={agreed} onChange={handleCheckbox} />}
@@ -323,22 +383,19 @@ export default function Signup() {
               />
               <Button
                 type="submit"
+                fullWidth
                 variant="contained"
-                sx={{ backgroundColor: primaryBtn, color: textColor }}
+                sx={{
+                  backgroundImage: `url(${GameTextBox})`,
+                  backgroundSize: "cover",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  height: 80,
+                  width: 400,
+                }}
               >
                 Register
               </Button>
-              <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
-                <IconButton onClick={() => navigate("/roleselect")}>
-                  <ArrowBackIcon sx={{ color: textColor }} />
-                </IconButton>
-                <Typography
-                  sx={{ cursor: "pointer", color: primaryBtn }}
-                  onClick={() => navigate("/roleselect")}
-                >
-                  Return to Role Selection
-                </Typography>
-              </Box>
             </Stack>
           </Stack>
         </Box>

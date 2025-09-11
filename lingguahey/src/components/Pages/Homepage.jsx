@@ -10,6 +10,8 @@ import {
   Backdrop,
   IconButton,
   LinearProgress,
+  Button,
+  Divider,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -29,6 +31,32 @@ import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png'
 import { MusicContext } from '../../contexts/MusicContext';
 import { useScore } from '../../contexts/ScoreContext';
 import { styled } from '@mui/system';
+import DungeonGame from './DungeonGame';
+import { useNavigate } from 'react-router-dom';
+
+// Background assets
+import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
+import MenuBoxHor from "../../assets/images/backgrounds/MenuBox1var.png";
+import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
+import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
+import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
+import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
+import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
+import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
+import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
+import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
+import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
+import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
+import NameTab from "../../assets/images/backgrounds/NameTab.png";
+import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
+import HealthPotion from "../../assets/images/objects/HealthPotion.png";
+import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
+import SkipPotion from "../../assets/images/objects/SkipPotion.png";
+import GoldCoins from "../../assets/images/objects/GoldCoins.png";
 
 
 const PastelProgress = styled(LinearProgress)(() => ({
@@ -55,6 +83,11 @@ export default function Homepage() {
   const [progressGrammar, setProgressGrammar] = useState(0);
   const [secVisibility, setSecVisibility] = useState(true);
   const liveActivityRef = useRef(null);
+  const [shopHealthPotion, setShopHealthPotion] = useState(0);
+  const [shopShieldPotion, setShopShieldPotion] = useState(0);
+  const [shopSkipPotion, setShopSkipPotion] = useState(0);
+  const [shopTotal, setShopTotal] = useState(0);
+  const navigate = useNavigate();
 
   // Decode token → user
   useEffect(() => {
@@ -240,216 +273,302 @@ export default function Homepage() {
       // If in Activity section → multiplayer lobby
       if (section === 'Activity') {
         return (
-          <LiveActivityGame
-            ref={liveActivityRef}
-            activityId={deployedActivityId}
-            userId={user?.userId}
-            onStarted={closeModal}
-            onReturn={closeModal}
-          />
+          <Grid container direction="column" alignItems="center" sx={{ width: '100%', height: '100%' }}>
+            <Typography variant="h4" align="center" sx={{ paddingTop: 2, paddingBottom: 2 }}>
+              asda
+              </Typography>
+            <Button
+              onClick={() => {
+                closeModal(); // Close the modal first
+                navigate('/dungeon'); // Then navigate to dungeon game
+              }}
+              sx={{
+                width: '250px',
+                height: '200px',
+                borderRadius: '16px',
+                opacity: 0.9,
+                position: 'absolute',
+                top: '50%',
+                '&:hover': {
+                  transform: 'scale(1.1)',
+                  opacity: 1
+                }
+              }}
+            >
+            </Button>
+          </Grid>
         );
       }
-
-      // Otherwise, Vocabulary/Grammar lists
-      const flatList =
-        section === 'Vocabulary'
-          ? activities.filter(a => ['GAME1', 'GAME3'].includes(a.gameType))
-          : activities.filter(a => a.gameType === 'GAME2');
-
-      // Group by lessonNumber + lessonName
-      const lessonsMap = flatList.reduce((acc, act) => {
-        const key = `${act.lessonNumber}__${act.lessonName}`;
-        if (!acc[key]) {
-          acc[key] = {
-            lessonNumber: act.lessonNumber,
-            lessonName: act.lessonName,
-            topics: [],
-          };
-        }
-        acc[key].topics.push(act);
-        return acc;
-      }, {});
-
-      // Convert to array and sort by lessonNumber
-      const groupedLessons = Object.values(lessonsMap)
-        .sort((a, b) => a.lessonNumber - b.lessonNumber)
-        .map(lesson => ({
-          ...lesson,
-          topics: lesson.topics.sort((x, y) => x.topicNumber - y.topicNumber),
-        }));
-
-      // Helper function to check if an activity is accessible
-      const isActivityAccessible = (activity, lessonIndex, activityIndex) => {
-        // Teachers can access all activities
-        if (userDetails.role === 'TEACHER') return true;
-
-        // First activity of first lesson is always accessible
-        if (lessonIndex === 0 && activityIndex === 0) return true;
-
-        // Get all previous activities in current lesson
-        const currentLessonActivities = groupedLessons[lessonIndex].topics;
-        const previousActivitiesInLesson = currentLessonActivities.slice(0, activityIndex);
-
-        // Get activities from previous lessons
-        const previousLessonsActivities = groupedLessons
-          .slice(0, lessonIndex)
-          .flatMap(lesson => lesson.topics);
-
-        // Calculate required completions
-        const requiredCompletions = [
-          ...previousLessonsActivities,
-          ...previousActivitiesInLesson
-        ].map(act => act.activityId);
-
-        // Check if all required activities are completed
-        const isUnlocked = requiredCompletions.every(actId =>
-          userActivities.some(ua => ua.activity_ActivityId === actId && ua.completed)
-        );
-
-        return isUnlocked;
-      };
-
+    else if (section === 'Shop'){
+    
       return (
-        <Stack
-          spacing={3}
-          sx={{
-            mt: 4,
-            px: 2,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          {groupedLessons.map((lesson, lessonIndex) => (
-            <Box 
-              key={`${lesson.lessonNumber}-${lesson.lessonName}`} 
-              sx={{ width: '100%', maxWidth: 800 }}
-            >
-              {/* Lesson Header */}
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 'bold', mb: 1, textAlign: 'center' }}
-              >
-                Lesson {lesson.lessonNumber}: {lesson.lessonName}
+        <Grid container direction="column" alignItems="center" >
+            <Box sx={{ position: 'absolute', top: 150, right: 150, 
+              backgroundImage: `url(${GameShopField})`, 
+              backgroundSize: 'cover',
+              width: 538, 
+              height: 738, 
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Stack direction={'column'} sx={{alignItems: 'center', textAlign: 'center'}}>
+              <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming',fontSize: 60 }}>
+                Potions
               </Typography>
-
-              {/* Vertical list of activity cards, centered */}
-              <Stack
-                direction="column"
-                spacing={2}
-                sx={{ alignItems: 'center' }}
-              >
-                {lesson.topics.map((act, activityIndex) => {
-                  const isCompleted = userActivities.some(
-                    ua => ua.activity_ActivityId === act.activityId && ua.completed
-                  );
-                  const isAccessible = isActivityAccessible(act, lessonIndex, activityIndex);
-                  const hasPrerequisites = !(lessonIndex === 0 && activityIndex === 0);
-
-                  const getStatusMessage = () => {
-                    if (isCompleted) return 'Activity completed!';
-                    if (!isAccessible && hasPrerequisites) return 'Complete previous activities to unlock';
-                    return 'Ready to start!';
-                  };
-
-                  return (
-                    <Box
-                      key={act.activityId}
-                      onClick={() => isAccessible && startActivity(act)}
-                      title={getStatusMessage()}
-                      sx={{
-                        backgroundColor: isCompleted
-                          ? '#C8E6C9'  // Green for completed
-                          : isAccessible
-                            ? '#FFF8E1' // Yellow for accessible
-                            : '#ECEFF1', // Grey for locked
-                        borderRadius: 4,
-                        p: 3,
-                        width: '80%',
-                        paddingBottom: 2,
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                        cursor: isAccessible ? 'pointer' : 'not-allowed',
-                        opacity: isAccessible ? 1 : 0.7,
-                        position: 'relative',
-                        transition: 'all 0.2s ease',
-                        '&:hover': isAccessible ? { 
-                          transform: 'scale(1.02)',
-                          boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-                        } : {}
-                      }}
-                    >
-                      {/* Activity Name & Game Mode */}
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {act.activityName}
-                      </Typography>
-                      <Typography variant="body2">
-                        {act.gameType === 'GAME1'
-                          ? 'One Pic Four Words'
-                          : act.gameType === 'GAME2'
-                          ? 'Phrase Translation'
-                          : 'Word Translation'}
-                      </Typography>
-                      {/* Status indicator */}
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          display: 'block',
-                          mt: 1,
-                          color: isCompleted 
-                            ? '#2E7D32'  // Dark green
-                            : isAccessible 
-                              ? '#1565C0'  // Blue
-                              : '#757575'  // Grey
-                        }}
-                      >
-                        {getStatusMessage()}
-                      </Typography>
-                    </Box>
-                  );
-                })}
+              <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming',fontSize: 60 }}>
+                For Sale
+              </Typography>
+              <Divider sx={{ borderBottomWidth: 5, borderColor: '#5D4037', my: 1, width:400 }} />
+              <Stack direction="row" spacing={.5} sx={{alignItems: 'center', justifyContent: 'center'}}>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  backgroundImage: `url(${GameShopBoxSmall})`, 
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  width: 290,
+                  height: 80,
+                  justifyContent: 'center',
+                  }}>
+                  <img src={HealthPotion} alt="Health Potion" style={{ width: '40px', height: '50px' }} />
+                  <Stack direction="column" spacing={0} sx={{alignItems: 'center', justifyContent: 'center', marginLeft: 1}}>
+                  
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    Health Potion
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'center'}}>
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    100 Gold
+                  </Typography>
+                  <img src={GoldCoins} alt="Gold Coins" style={{ width: '20px', height: '20px', marginTop: 2 }} />
+                  </Stack>
+                  </Stack>
+                </Box>
+                  <Button variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 10,
+                    height: 60,
+                    color: '#5D4037',}}
+                    disabled={shopHealthPotion <= 0}
+                    onClick={() => {setShopHealthPotion(shopHealthPotion - 1); setShopTotal(shopTotal - 100); }}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      -
+                    </Typography>
+                  </Button>
+                  <Box variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 60,
+                    height: 60,
+                    color: '#5D4037',}}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      {shopHealthPotion}
+                    </Typography>
+                  </Box>
+                  <Button variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 10,
+                    height: 60,
+                    color: '#5D4037',}}
+                    onClick={() => {setShopHealthPotion(shopHealthPotion + 1); setShopTotal(shopTotal + 100); }}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      +
+                    </Typography>
+                  </Button>
               </Stack>
-            </Box>
-          ))}
-        </Stack>
+              <Stack direction="row" spacing={.5} sx={{alignItems: 'center', justifyContent: 'center', marginTop: 1}}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  backgroundImage: `url(${GameShopBoxSmall})`, 
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  width: 290,
+                  height: 80,
+                  justifyContent: 'center',
+                  }}>
+                  <img src={ShieldPotion} alt="Shield Potion" style={{ width: '40px', height: '50px' }} />
+                  <Stack direction="column" spacing={0} sx={{alignItems: 'center', justifyContent: 'center', marginLeft: 1}}>
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    Shield Potion
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'center'}}>
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    200 Gold
+                  </Typography>
+                  <img src={GoldCoins} alt="Gold Coins" style={{ width: '20px', height: '20px', marginTop: 2 }} />
+                  </Stack>
+                  </Stack>
+                  
+                </Box>
+                  <Button variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 10,
+                    height: 60,
+                    color: '#5D4037',}}
+                    disabled={shopShieldPotion <= 0}
+                    onClick={() => {setShopShieldPotion(shopShieldPotion - 1); setShopTotal(shopTotal - 200); }}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      -
+                    </Typography>
+                  </Button>
+                  <Box variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 60,
+                    height: 60,
+                    color: '#5D4037',}}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      {shopShieldPotion}
+                    </Typography>
+                  </Box>
+                  <Button variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 10,
+                    height: 60,
+                    color: '#5D4037',}}
+                    onClick={() => {setShopShieldPotion(shopShieldPotion + 1); setShopTotal(shopTotal + 200); }}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      +
+                    </Typography>
+                  </Button>
+              </Stack>
+              <Stack direction="row" spacing={.5} sx={{alignItems: 'center', justifyContent: 'center', marginTop: 1}}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  backgroundImage: `url(${GameShopBoxSmall})`, 
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  width: 290,
+                  height: 80,
+                  justifyContent: 'center',
+                  }}>
+                  <img src={SkipPotion} alt="Skip Potion" style={{ width: '40px', height: '50px' }} />
+                  <Stack direction="column" spacing={0} sx={{alignItems: 'center', justifyContent: 'center', marginLeft: 1}}>
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    Skip Potion
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'center'}}>
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    300 Gold
+                  </Typography>
+                  <img src={GoldCoins} alt="Gold Coins" style={{ width: '20px', height: '20px', marginTop: 2 }} />
+                  </Stack>
+                  </Stack>
+                </Box>
+                  <Button variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 10,
+                    height: 60,
+                    color: '#5D4037',}}
+                    disabled={shopSkipPotion <= 0}
+                    onClick={() => {setShopSkipPotion(shopSkipPotion - 1); setShopTotal(shopTotal - 300); }}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      -
+                    </Typography>
+                  </Button>
+                  <Box variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 60,
+                    height: 60,
+                    color: '#5D4037',}}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      {shopSkipPotion}
+                    </Typography>
+                  </Box>
+                  <Button variant="contained" sx={{
+                    backgroundImage:`url(${ItemBox})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 10,
+                    height: 60,
+                    color: '#5D4037',}}
+                    onClick={() => { setShopSkipPotion(shopSkipPotion + 1); setShopTotal(shopTotal + 300); }}>
+                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                      +
+                    </Typography>
+                  </Button>
+              </Stack>
+
+              <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', marginTop: 2 }}>
+                Total: {shopTotal} Gold
+              </Typography>
+              <Button 
+                sx={{ 
+                  width: 400,
+                  height: 80,
+                  marginTop: 2,
+                  backgroundImage:`url(${GameTextField})`,
+                  backgroundSize: 'cover',
+                }}>
+                <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                  Buy
+                </Typography>
+              </Button>
+            </Stack>
+          </Box>
+        </Grid>
       );
     }
-
-    // 2) Once an item is selected
-    const isCompleted = userActivities.some(
-      ua => ua.activity_ActivityId === current.activityId && ua.completed
-    );
-
-    if (section === 'Activity') {
+    else {
       return (
-        <LiveActivityGame
-          ref={liveActivityRef}
-          activityId={current.activityId}
-          userId={user?.userId}
-          onStarted={closeModal}
-          onReturn={closeModal}
-        />
+        <Grid container direction="column" alignItems="center" sx={{ mt: 2 }}> 
+        <Button sx={{ mt: 2,
+          position: 'absolute',
+          top: '75%',
+          left: '39%',
+          backgroundImage:`url(${GameTextField})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          width: 400,
+          height: 80,
+          }} 
+          variant="contained">
+          <Stack direction="column" alignItems="center">
+            <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+              Summon for
+            </Typography>
+            <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+              100 Gems
+            </Typography>
+          </Stack>
+        </Button>
+        </Grid>
       );
-    } else if (section === 'Grammar') {
-      return (
-        <PhraseTranslation
-          activityId={current.activityId}
-          onBack={backToList}
-          isCompleted={isCompleted}
-        />
-      );
-    } else if (section === 'Vocabulary') {
-      return current.gameType === 'GAME1' ? (
-        <OnePicFourWord
-          activityId={current.activityId}
-          onBack={backToList}
-          isCompleted={isCompleted}
-        />
-      ) : (
-        <WordTranslation
-          activityId={current.activityId}
-          onBack={backToList}
-          isCompleted={isCompleted}
-        />
-      );
+    }
     }
 
     return null;
@@ -458,13 +577,13 @@ export default function Homepage() {
 
   const sections = [
     {
-      key: 'Vocabulary',
+      key: 'Shop',
       icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />,
       bg: '#FFEBEE',
       progress: progressVocab,
     },
     {
-      key: 'Grammar',
+      key: 'Summon',
       icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />,
       bg: '#E3F2FD',
       progress: progressGrammar,
@@ -478,72 +597,110 @@ export default function Homepage() {
   ];
 
   return (
-    <Grid container direction="column" alignItems="center" sx={{ p: 2, bgcolor: '#E1F5FE' }}>
-      {/* Header */}
-      <Stack direction="row" alignItems="center" sx={{ mb: 4 }}>
-        <Grid container direction="column" alignItems="center" sx={{ p: 2 }}>
-          <Typography variant="h4" sx={{ mb: 2 }}>
-            {userDetails.firstName ? `Welcome, ${userDetails.firstName}!` : 'Welcome!'}
-          </Typography>
-          {classroom ? (
-            <Typography variant="h5" sx={{ mb: 4 }}>
-              Choose a section to start learning:
+    <Grid 
+      container 
+      direction="column" 
+      alignItems="center" 
+      sx={{ 
+        backgroundImage: `url(${ForestwithShops})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        width: '100vw',
+        height: '56.25vw', // This maintains 16:9 aspect ratio (9/16 = 0.5625)
+        maxHeight: '100vh',
+        maxWidth: '177.78vh', // This maintains 16:9 aspect ratio (16/9 = 1.7778)
+        margin: 'auto',
+        position: 'relative',
+        overflow: 'auto'
+      }}
+    >
+      <Box sx={{ position: 'absolute', top: 16, left: 16, 
+        backgroundImage: `url(${NameTab})`, 
+        backgroundSize: 'cover', 
+        backgroundRepeat: 'no-repeat', 
+        backgroundPosition: 'center', 
+        width: 700, 
+        height: 150, 
+        display: 'flex', 
+        alignItems: 'center', 
+        paddingLeft: 2 }}>
+          <Stack direction={'column'}>
+            <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 25 }}>
+              {userDetails.firstName}
             </Typography>
-          ) : (
-            <Typography variant="h5" sx={{ mb: 4, color: '#666' }}>
-              {userDetails.role === 'TEACHER' 
-                ? 'Please create a classroom.'
-                : 'Please wait for a teacher to assign you to a classroom.'}
+            <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 25 }}>
+              Rank: Mage
             </Typography>
-          )}
-        </Grid>
-        <img src={bunnyWave} alt="Bunny Wave" width={80} height={120} />
-      </Stack>
+          </Stack>
+  
+      </Box>
+      <Stack 
+        direction="row" 
+        spacing={4} 
+        sx={{ 
+          position: 'absolute',
+          width: '100%',
+          justifyContent: 'space-around',
+          top: '60%',
+          transform: 'translateY(-50%)'
+        }}
+      >
+        {/* Left structure button */}
+        <Button
+          onClick={() => openModal('Shop')}
+          sx={{
+            width: '200px',
+            height: '200px',
+            borderRadius: '16px',
+            opacity: 0.9,
+            position: 'relative',
+            left: '1%',  // Adjust this value to align with left structure
+            '&:hover': {
+              transform: 'scale(1.1)',
+              opacity: 1
+            }
+          }}
+        >
+        </Button>
 
-      {/* Section Cards - only show if classroom exists */}
-      {classroom && (
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
-          {sections.map(s => (
-            <Box
-              key={s.key}
-              onClick={() => openModal(s.key)}
-              sx={{
-                backgroundColor: s.bg,
-                width: 360,
-                height: 560,
-                borderRadius: 3,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s',
-                '&:hover': { transform: 'scale(1.05)' },
-              }}
-            >
-              {s.icon}
-              <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
-                {s.key}
-              </Typography>
-              {s.key !== 'Activity' && userDetails.role !== 'TEACHER' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <PastelProgress
-                      variant="determinate"
-                      value={s.progress}
-                      sx={{ width: '100%' }}
-                    />
-                    <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
-                      {s.progress.toFixed(0)}% Completed
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          ))}
-        </Stack>
-      )}
+        {/* Middle structure button */}
+        <Button
+          onClick={() => openModal('Summon')}
+          sx={{
+            width: '200px',
+            height: '200px',
+            borderRadius: '16px',
+            opacity: 0.9,
+            position: 'relative',
+            right: '-2%',  // Adjust this value to align with middle structure
+            '&:hover': {
+              transform: 'scale(1.1)',
+              opacity: 1
+            }
+          }}
+        >
+
+        </Button>
+
+        {/* Right structure button */}
+        <Button
+          onClick={() => openModal('Activity')}
+          sx={{
+            width: '200px',
+            height: '200px',
+            borderRadius: '16px',
+            opacity: 0.9,
+            position: 'relative',
+            right: '-8%',  // Adjust this value to align with right structure
+            '&:hover': {
+              transform: 'scale(1.1)',
+              opacity: 1
+            }
+          }}
+        >
+        </Button>
+      </Stack>
+      
 
       {/* Modal */}
       <Modal
@@ -556,15 +713,20 @@ export default function Homepage() {
         <Fade in={open}>
           <Box
             sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '98vw',
-              height: '100vh',
-              backgroundImage: `url(${modalBg})`,
-              backroundRepeat: 'no-repeat',
-              p: 3,
-              overflowY: 'auto',
+              backgroundImage: `url(${section === 'Shop' 
+              ? ShopUI 
+              : section === 'Summon' 
+                ? SummonUI 
+                : DungeonOpen})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              width: '100vw',
+              height: '56.25vw', // This maintains 16:9 aspect ratio (9/16 = 0.5625)
+              maxHeight: '100vh',
+              maxWidth: '177.78vh', // This maintains 16:9 aspect ratio (16/9 = 1.7778)
+              margin: 'auto',
+              position: 'relative',
+              overflow: 'auto'
             }}
           >
             <Stack direction="row" justifyContent="space-between">
@@ -575,9 +737,10 @@ export default function Homepage() {
                 <CloseIcon />
               </IconButton>
             </Stack>            
+            {/* Modal Content 
             <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
               {section === 'Activity' ? 'King of the Hill!' : `${section} Activities!`}
-            </Typography>
+            </Typography>*/}
             <Box
               sx={{
                 flexGrow: 1,

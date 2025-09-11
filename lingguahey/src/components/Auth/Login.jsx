@@ -19,6 +19,13 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useAuth } from "../../contexts/AuthContext";
 import { MusicContext } from "../../contexts/MusicContext";
+import LandingBackgroundPic from '../../assets/images/backgrounds/CrystalOnly.png';
+import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
+import MenuBoxHor from '../../assets/images/backgrounds/MenuBox1var.png';
+import GameTextField from '../../assets/images/backgrounds/GameTextField.png';
+import GameTextbox from '../../assets/images/backgrounds/GameTextBox.png';
+import GameTextFieldLong from '../../assets/images/backgrounds/GameTextFieldLong.png';
+import GameTextBoxLong from '../../assets/images/backgrounds/GameTextBoxLong.png';
 
 // Axios instance
 const API = axios.create({
@@ -94,7 +101,7 @@ export default function Login() {
   };
 
   // styling tokens
-  const pageBg = "linear-gradient(135deg, #FFECB3 30%, #E1F5FE 90%)";
+
   const panelBg = "#FFFFFF";
   const primaryBtn = "#FFCC80";
   const textColor = "#5D4037";
@@ -104,22 +111,38 @@ export default function Login() {
       <Grid
         container
         sx={{
-          minHeight: "100vh",
-          minWidth: "100vw",
-          background: pageBg,
-          p: 2,
+          backgroundImage: `url(${LandingBackgroundPic})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    minHeight: '100vh',
+                    minWidth: '100vw',
+                    display: 'flex',
+                    justifyContent: 'center',
         }}
         alignItems="center"
         justifyContent="center"
       >
-        <Box component="form" onSubmit={handleLogin} sx={{ width: '100%', maxWidth: 400, backgroundColor: panelBg, borderRadius: 2, p: 4, boxShadow: 3 }}>
+        <Box component="form" onSubmit={handleLogin} 
+          sx={{ 
+            minWidth: 700, 
+            Height: 600,
+            backgroundImage: `url(${MenuBoxHor})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            color: textColor, 
+            borderRadius: 2,
+            padding:20,
+            //border: '4px solid #FFF3E0',
+            alignContent: 'center',
+            }}>
           <IconButton onClick={()=>navigate('/')}><ArrowBackIcon sx={{ color:textColor }}/>
           <Typography sx={{ cursor:'pointer', color: textColor }} onClick={()=>navigate('/')}>Back</Typography>
           </IconButton>
           
 
 
-          <Stack spacing={3}>
+          <Stack spacing={3} sx={{ mt: 2 }} alignItems="center">
             <Typography
               variant="h4"
               align="center"
@@ -135,7 +158,13 @@ export default function Login() {
               onChange={handleChange}
               fullWidth
               variant="outlined"
-              sx={{ backgroundColor: panelBg }}
+              sx={{ 
+                backgroundImage: `url(${GameTextFieldLong})`,
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                width: 500,
+          }}
             />
 
             <TextField
@@ -144,9 +173,14 @@ export default function Login() {
               type={showPassword ? "text" : "password"}
               value={form.password}
               onChange={handleChange}
-              fullWidth
-              variant="outlined"
-              sx={{ backgroundColor: panelBg }}
+
+              sx={{ 
+                backgroundImage: `url(${GameTextFieldLong})`,
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                width: 500,
+              }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -166,9 +200,12 @@ export default function Login() {
               fullWidth
               variant="contained"
               sx={{
-                backgroundColor: primaryBtn,
-                color: textColor,
-                textTransform: "none",
+                backgroundImage: `url(${GameTextBoxLong})`,
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                height: 55,
+                width: 500,
               }}
             >
               Log in
