@@ -30,6 +30,10 @@ import LiveActivityGame from "./components/Pages/LiveActivityGame";
 import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
 import MultiplayerGameRoom from "./components/Pages/MultiplayerGameRoom";
 
+import LevelEditor from "./components/Pages/Editors/LevelEditor";
+import LevelEditorDetails from "./components/Pages/Editors/LevelEditorDetails";
+import MonsterEditor from "./components/Pages/Editors/MonsterEditor";
+
 function App() {
   const { token } = useAuth();
 
@@ -41,6 +45,9 @@ function App() {
       <Route path="/roleselect" element={<RoleSelect />} />
       <Route path="/verify-status" element={<VerificationStatusPage />} />
       <Route path="/resend-verification" element={<ResendVerification />} />
+
+      {/* For Testing */}
+      <Route path="/testing1" element={<LevelEditor />} />
     
 
       {/* Protected routes */}
@@ -69,8 +76,12 @@ function App() {
         <Route path="/teacher/live-activities/:roomId" element={<LiveActClassroom />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
 
-        {/* Lesson Activities */}
+        {/* Game Editors */}
+        {/* Change Name Later */}
         <Route path="/activities" element={<Activities />} />
+        <Route path="/leveleditor" element={<LevelEditor />} />
+        <Route path="/edit-level/:id" element={<LevelEditorDetails />} />
+        <Route path="/monstereditor" element={<MonsterEditor />} />
 
         {/* Live Activities under a classroom context */}
         <Route
