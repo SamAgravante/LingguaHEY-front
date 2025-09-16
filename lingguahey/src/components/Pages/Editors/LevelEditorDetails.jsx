@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -6,72 +6,94 @@ import {
   Button,
   Card,
   CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Grid,
+  CircularProgress,
 } from "@mui/material";
+import axios from "axios";
 
 const LevelEditorDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { level } = location.state || {};
+  const { level } = location.state || {}; // level passed from LevelEditor.jsx
 
-  const [monsters, setMonsters] = useState([]);
-  const [openTypeDialog, setOpenTypeDialog] = useState(false);
-  const [openMonsterDialog, setOpenMonsterDialog] = useState(false);
-  const [selectedMonsterSlot, setSelectedMonsterSlot] = useState(null);
+  const [levelDetails, setLevelDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const monsterPool = {
-    Normal: [
-      { id: 1, name: "Aso" },
-      { id: 2, name: "Tikbalang" },
-      { id: 3, name: "Kapre" },
-    ],
-    Boss: [
-      { id: 101, name: "Manananggal" },
-      { id: 102, name: "Aswang Queen" },
-    ],
-  };
+  const token = localStorage.getItem("token");
 
-  const handleAddMonsterClick = () => {
-    setOpenTypeDialog(true);
-  };
+  // Axios instance
+  const API = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/levels`,
+    timeout: 5000,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-  const handleCloseDialog = () => {
-    setOpenTypeDialog(false);
-    setOpenMonsterDialog(false);
-  };
+  useEffect(() => {
+    const fetchLevelDetails = async () => {
+      try {
+        const response = await API.get(`/${level.id}`);
+        const fetchedLevel = response.data;
 
-  const handleSelectType = (type) => {
-    const newMonster = {
-      id: monsters.length + 1,
-      type: type,
-      name: "Add +",
+        const mapped = {
+          id: fetchedLevel.levelId,
+          name: fetchedLevel.levelName,
+          coins: fetchedLevel.coinsReward,
+          gems: fetchedLevel.gemsReward,
+          monsters: fetchedLevel.levelMonsters.map((m) => ({
+            id: m.id,
+            type: m.monsterType,
+            name: m.monster?.tagalogName || "Unknown Monster",
+            image: m.monster?.imageData
+              ? `data:image/png;base64,${m.monster.imageData}`
+              : "👾",
+            bossForms: m.bossForms || [],
+          })),
+        };
+
+        setLevelDetails(mapped);
+      } catch (error) {
+        console.error("Error fetching level details:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    setMonsters([...monsters, newMonster]);
-    setOpenTypeDialog(false);
-  };
 
-  const handleOpenMonsterList = (monster) => {
-    setSelectedMonsterSlot(monster);
-    setOpenMonsterDialog(true);
-  };
-
-  const handleChooseMonster = (chosen) => {
-    setMonsters(
-      monsters.map((m) =>
-        m.id === selectedMonsterSlot.id ? { ...m, name: chosen.name } : m
-      )
-    );
-    setOpenMonsterDialog(false);
-    setSelectedMonsterSlot(null);
-  };
+    if (level?.id) {
+      fetchLevelDetails();
+    }
+  }, [level]);
 
   const handleBack = () => {
     navigate(-1);
   };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!levelDetails) {
+    return (
+      <Box sx={{ textAlign: "center", mt: 4 }}>
+        <Typography variant="h6" color="error">
+          Failed to load level details.
+        </Typography>
+        <Button onClick={handleBack}>Back</Button>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -81,7 +103,6 @@ const LevelEditorDetails = () => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "flex-start",
         padding: 4,
       }}
     >
@@ -95,12 +116,12 @@ const LevelEditorDetails = () => {
           color: "#3f51b5",
         }}
       >
-        {level?.name || "Unknown Level"} - Monsters
+        {levelDetails.name} - Monsters
       </Typography>
 
       {/* Monsters List */}
       <Grid container spacing={3} justifyContent="center" maxWidth="600px">
-        {monsters.map((monster) => (
+        {levelDetails.monsters.map((monster) => (
           <Grid item xs={12} key={monster.id}>
             <Card
               sx={{
@@ -116,32 +137,23 @@ const LevelEditorDetails = () => {
                   alignItems: "center",
                 }}
               >
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 600, color: "#3f51b5" }}
-                >
-                  {monster.type} Type - {monster.name}
-                </Typography>
-                <Button
-                  variant="outlined"
-                  sx={{
-                    borderColor: "#aaa",
-                    color: "#3f51b5",
-                    fontWeight: "bold",
-                  }}
-                  onClick={() => handleOpenMonsterList(monster)}
-                >
-                  Add
-                </Button>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 600, color: "#3f51b5" }}
+                  >
+                    {monster.type} - {monster.name}
+                  </Typography>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      {/* Add Monster Button */}
+      {/* Back Button */}
       <Button
-        onClick={handleAddMonsterClick}
+        onClick={handleBack}
         sx={{
           marginTop: 4,
           backgroundColor: "#3f51b5",
@@ -152,84 +164,6 @@ const LevelEditorDetails = () => {
           "&:hover": {
             backgroundColor: "#5c6bc0",
           },
-        }}
-      >
-        Add Monster
-      </Button>
-
-      {/* Dialog for selecting monster type */}
-      <Dialog open={openTypeDialog} onClose={handleCloseDialog}>
-        <DialogTitle>Select Monster Type</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-            <Button
-              fullWidth
-              sx={{
-                backgroundColor: "#fff",
-                color: "#3f51b5",
-                fontWeight: "bold",
-                "&:hover": { backgroundColor: "#f5f5f5" },
-              }}
-              onClick={() => handleSelectType("Normal")}
-            >
-              Normal Type
-            </Button>
-            <Button
-              fullWidth
-              sx={{
-                backgroundColor: "#e53935",
-                color: "#fff",
-                fontWeight: "bold",
-                "&:hover": { backgroundColor: "#d32f2f" },
-              }}
-              onClick={() => handleSelectType("Boss")}
-            >
-              Boss Type
-            </Button>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog for selecting monster from pool */}
-      <Dialog open={openMonsterDialog} onClose={handleCloseDialog} fullWidth>
-        <DialogTitle>Choose a {selectedMonsterSlot?.type} Monster</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            {monsterPool[selectedMonsterSlot?.type || "Normal"].map((m) => (
-              <Grid item xs={6} key={m.id}>
-                <Button
-                  fullWidth
-                  sx={{
-                    backgroundColor: "#fff",
-                    color: "#3f51b5",
-                    fontWeight: "bold",
-                    "&:hover": { backgroundColor: "#f5f5f5" },
-                  }}
-                  onClick={() => handleChooseMonster(m)}
-                >
-                  {m.name}
-                </Button>
-              </Grid>
-            ))}
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Back Button */}
-      <Button
-        onClick={handleBack}
-        sx={{
-          marginTop: 2,
-          backgroundColor: "#3f51b5",
-          color: "#fff",
-          fontWeight: "bold",
-          "&:hover": { backgroundColor: "#5c6bc0" },
         }}
       >
         Back

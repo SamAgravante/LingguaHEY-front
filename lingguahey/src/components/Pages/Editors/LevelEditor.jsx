@@ -1,14 +1,55 @@
-import React, { useState } from "react";
-import { Box, Typography, Button, Card, CardContent, Grid } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Grid,
+  CircularProgress,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import AddLevelForm from "./AddLevelForm";
 
 const LevelEditor = () => {
   const navigate = useNavigate();
+  const [levels, setLevels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
 
-  const [levels, setLevels] = useState([
-    { id: 1, name: "Level 1", category: "Animals" },
-    { id: 2, name: "Level 2", category: "Animals" },
-  ]);
+  const token = localStorage.getItem("token");
+
+  // Axios instance
+  const API = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/levels`,
+    timeout: 5000,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  useEffect(() => {
+    const fetchLevels = async () => {
+      try {
+        const response = await API.get("");
+        const fetchedLevels = response.data.map((level) => ({
+          id: level.levelId,
+          name: level.levelName,
+          coins: level.coinsReward,
+          gems: level.gemsReward,
+          monsters: level.levelMonsters || [],
+        }));
+        setLevels(fetchedLevels);
+      } catch (error) {
+        console.error("Error fetching levels:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLevels();
+  }, []);
 
   const handleReturn = () => {
     navigate(-1);
@@ -22,13 +63,28 @@ const LevelEditor = () => {
     setLevels(levels.filter((level) => level.id !== id));
   };
 
-  const handleAddNewLevel = () => {
-    const newId = levels.length + 1;
-    setLevels([
-      ...levels,
-      { id: newId, name: `Level ${newId}`, category: "New Category" },
-    ]);
+  const handleOpenAdd = () => {
+    setOpenAddDialog(true);
   };
+
+  const handleCloseAdd = () => {
+    setOpenAddDialog(false);
+  };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -73,7 +129,7 @@ const LevelEditor = () => {
       {/* Level List */}
       <Grid container direction="column" spacing={3} alignItems="center">
         {levels.map((level) => (
-          <Grid item key={level.id} sx={{ width: "100%", maxWidth: 600 }}>
+          <Grid item key={level.id} sx={{ width: "100%", maxWidth: 700 }}>
             <Card
               sx={{
                 backgroundColor: "#fff",
@@ -89,11 +145,14 @@ const LevelEditor = () => {
                 }}
               >
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: "#3f51b5" }}>
+                  <Typography
+                    variant="h5"
+                    sx={{ fontWeight: 600, color: "#3f51b5" }}
+                  >
                     {level.name}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#666" }}>
-                    {level.category}
+                  <Typography variant="body2" color="text.secondary">
+                    Coins: {level.coins} | Gems: {level.gems}
                   </Typography>
                 </Box>
                 <Box>
@@ -108,7 +167,7 @@ const LevelEditor = () => {
                     }}
                     onClick={() => handleEdit(level)}
                   >
-                    Edit
+                    View Monsters
                   </Button>
                   <Button
                     variant="contained"
@@ -127,24 +186,33 @@ const LevelEditor = () => {
           </Grid>
         ))}
 
-        {/* Add New Level */}
-        <Grid item sx={{ width: "100%", maxWidth: 600 }}>
-          <Button
-            fullWidth
-            variant="outlined"
+        {/* Add New Level Card */}
+        <Grid item sx={{ width: "100%", maxWidth: 700 }}>
+          <Card
             sx={{
-              padding: 2,
-              fontWeight: "bold",
+              backgroundColor: "#f0f0f0",
               border: "2px dashed #aaa",
-              color: "#3f51b5",
-              "&:hover": { backgroundColor: "#f5f5f5" },
+              borderRadius: 2,
+              cursor: "pointer",
+              textAlign: "center",
+              "&:hover": { backgroundColor: "#e0e0e0" },
             }}
-            onClick={handleAddNewLevel}
+            onClick={handleOpenAdd}
           >
-            Add New Level +
-          </Button>
+            <CardContent>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 600, color: "#3f51b5" }}
+              >
+                + Add New Level
+              </Typography>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
+
+      {/* Add Level Dialog */}
+      <AddLevelForm open={openAddDialog} onClose={handleCloseAdd} />
     </Box>
   );
 };

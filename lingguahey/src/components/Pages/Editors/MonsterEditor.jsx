@@ -299,9 +299,10 @@ const MonsterEditor = () => {
                           <Typography>
                             <strong>Tagalog:</strong> {monster.tagalog}
                           </Typography>
-                          <Typography color="text.secondary">
+                          {/* Commented out description, might delete later */}
+                          {/*<Typography color="text.secondary">
                             <strong>Description:</strong> {monster.description}
-                          </Typography>
+                          </Typography>*/}
                         </Box>
                       </Box>
 
