@@ -7,20 +7,38 @@ import {
   CardContent,
   Grid,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  IconButton,
 } from "@mui/material";
+import { AddCircle, Delete } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import AddLevelForm from "./AddLevelForm";
 
 const LevelEditor = () => {
   const navigate = useNavigate();
   const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Dialog states
   const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+
+  // Form state
+  const [levelForm, setLevelForm] = useState({
+    id: null,
+    name: "",
+    coins: "",
+    gems: "",
+    monsters: [],
+  });
 
   const token = localStorage.getItem("token");
 
-  // Axios instance
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/levels`,
     timeout: 5000,
@@ -29,9 +47,21 @@ const LevelEditor = () => {
     },
   });
 
+  const MonsterAPI = axios.create({
+    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/monsters`,
+    timeout: 5000,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  // Available monsters to pick from
+  const [monsterPool, setMonsterPool] = useState([]);
+
   useEffect(() => {
-    const fetchLevels = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch levels
         const response = await API.get("");
         const fetchedLevels = response.data.map((level) => ({
           id: level.levelId,
@@ -41,34 +71,132 @@ const LevelEditor = () => {
           monsters: level.levelMonsters || [],
         }));
         setLevels(fetchedLevels);
+
+        // Fetch monster pool
+        const monsterRes = await MonsterAPI.get("");
+        const fetchedMonsters = monsterRes.data.map((m) => ({
+          id: m.monsterId,
+          name: m.tagalogName,
+        }));
+        setMonsterPool(fetchedMonsters);
       } catch (error) {
-        console.error("Error fetching levels:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLevels();
+    fetchData();
   }, []);
 
   const handleReturn = () => {
     navigate(-1);
   };
 
-  const handleEdit = (level) => {
-    navigate(`/edit-level/${level.id}`, { state: { level } });
+  const handleDelete = async (id) => {
+    try {
+      await API.delete(`/${id}`);
+      setLevels(levels.filter((level) => level.id !== id));
+    } catch (error) {
+      console.error("Error deleting level:", error);
+    }
   };
 
-  const handleDelete = (id) => {
-    setLevels(levels.filter((level) => level.id !== id));
-  };
-
+  // Open Add Dialog
   const handleOpenAdd = () => {
+    setLevelForm({ id: null, name: "", coins: "", gems: "", monsters: [] });
     setOpenAddDialog(true);
   };
 
-  const handleCloseAdd = () => {
+  // Open Edit Dialog
+  const handleOpenEdit = (level) => {
+    setLevelForm({
+      id: level.id,
+      name: level.name,
+      coins: level.coins,
+      gems: level.gems,
+      monsters: level.monsters.map((m) => ({
+        monsterId: m.monster?.monsterId,
+        monsterType: m.monsterType,
+      })),
+    });
+    setOpenEditDialog(true);
+  };
+
+  const handleCloseDialog = () => {
     setOpenAddDialog(false);
+    setOpenEditDialog(false);
+  };
+
+  const handleFormChange = (field, value) => {
+    setLevelForm({ ...levelForm, [field]: value });
+  };
+
+  const handleAddMonsterField = () => {
+    setLevelForm({
+      ...levelForm,
+      monsters: [...levelForm.monsters, { monsterId: "", monsterType: "MINION" }],
+    });
+  };
+
+  const handleRemoveMonsterField = (index) => {
+    const updated = [...levelForm.monsters];
+    updated.splice(index, 1);
+    setLevelForm({ ...levelForm, monsters: updated });
+  };
+
+  const handleMonsterFieldChange = (index, field, value) => {
+    const updated = [...levelForm.monsters];
+    updated[index][field] = value;
+    setLevelForm({ ...levelForm, monsters: updated });
+  };
+
+  const handleSave = async () => {
+    const payload = {
+      levelName: levelForm.name,
+      coinsReward: Number(levelForm.coins),
+      gemsReward: Number(levelForm.gems),
+      monsters: levelForm.monsters.map((m) => ({
+        monsterId: Number(m.monsterId),
+        monsterType: m.monsterType,
+      })),
+    };
+
+    try {
+      if (levelForm.id) {
+        // Edit existing level
+        const response = await API.put(`/${levelForm.id}`, payload);
+        setLevels(
+          levels.map((lvl) =>
+            lvl.id === levelForm.id
+              ? {
+                  ...lvl,
+                  name: response.data.levelName,
+                  coins: response.data.coinsReward,
+                  gems: response.data.gemsReward,
+                  monsters: response.data.levelMonsters,
+                }
+              : lvl
+          )
+        );
+      } else {
+        // Add new level
+        const response = await API.post("", payload);
+        setLevels([
+          ...levels,
+          {
+            id: response.data.levelId,
+            name: response.data.levelName,
+            coins: response.data.coinsReward,
+            gems: response.data.gemsReward,
+            monsters: response.data.levelMonsters,
+          },
+        ]);
+      }
+      handleCloseDialog();
+    } catch (error) {
+      console.error("Error saving level:", error);
+    }
   };
 
   if (loading) {
@@ -145,13 +273,10 @@ const LevelEditor = () => {
                 }}
               >
                 <Box>
-                  <Typography
-                    variant="h5"
-                    sx={{ fontWeight: 600, color: "#3f51b5" }}
-                  >
+                  <Typography variant="h5" sx={{ fontWeight: 600, color: "#3f51b5" }}>
                     {level.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2">
                     Coins: {level.coins} | Gems: {level.gems}
                   </Typography>
                 </Box>
@@ -165,9 +290,9 @@ const LevelEditor = () => {
                       fontWeight: "bold",
                       "&:hover": { backgroundColor: "#f9a825" },
                     }}
-                    onClick={() => handleEdit(level)}
+                    onClick={() => handleOpenEdit(level)}
                   >
-                    View Monsters
+                    Edit
                   </Button>
                   <Button
                     variant="contained"
@@ -186,33 +311,112 @@ const LevelEditor = () => {
           </Grid>
         ))}
 
-        {/* Add New Level Card */}
+        {/* Add Level Box */}
         <Grid item sx={{ width: "100%", maxWidth: 700 }}>
-          <Card
+          <Button
+            fullWidth
+            variant="outlined"
             sx={{
-              backgroundColor: "#f0f0f0",
+              padding: 2,
+              fontWeight: "bold",
               border: "2px dashed #aaa",
-              borderRadius: 2,
-              cursor: "pointer",
-              textAlign: "center",
-              "&:hover": { backgroundColor: "#e0e0e0" },
+              color: "#3f51b5",
+              "&:hover": { backgroundColor: "#f5f5f5" },
             }}
             onClick={handleOpenAdd}
           >
-            <CardContent>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 600, color: "#3f51b5" }}
-              >
-                + Add New Level
-              </Typography>
-            </CardContent>
-          </Card>
+            Add New Level +
+          </Button>
         </Grid>
       </Grid>
 
-      {/* Add Level Dialog */}
-      <AddLevelForm open={openAddDialog} onClose={handleCloseAdd} />
+      {/* Add/Edit Dialog */}
+      <Dialog
+        open={openAddDialog || openEditDialog}
+        onClose={handleCloseDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{levelForm.id ? "Edit Level" : "Add New Level"}</DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+          <TextField
+            label="Level Name"
+            value={levelForm.name}
+            onChange={(e) => handleFormChange("name", e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Coins Reward"
+            type="number"
+            value={levelForm.coins}
+            onChange={(e) => handleFormChange("coins", e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Gems Reward"
+            type="number"
+            value={levelForm.gems}
+            onChange={(e) => handleFormChange("gems", e.target.value)}
+            fullWidth
+          />
+
+          <Typography variant="h6">Monsters</Typography>
+          {levelForm.monsters.map((monster, index) => (
+            <Box
+              key={index}
+              sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
+            >
+              <TextField
+                select
+                label="Monster"
+                value={monster.monsterId}
+                onChange={(e) =>
+                  handleMonsterFieldChange(index, "monsterId", e.target.value)
+                }
+                sx={{ flex: 2 }}
+              >
+                {monsterPool.map((m) => (
+                  <MenuItem key={m.id} value={m.id}>
+                    {m.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Type"
+                value={monster.monsterType}
+                onChange={(e) =>
+                  handleMonsterFieldChange(index, "monsterType", e.target.value)
+                }
+                sx={{ flex: 1 }}
+              >
+                <MenuItem value="MINION">Minion</MenuItem>
+                <MenuItem value="BOSS">Boss</MenuItem>
+              </TextField>
+              <IconButton color="error" onClick={() => handleRemoveMonsterField(index)}>
+                <Delete />
+              </IconButton>
+            </Box>
+          ))}
+          <Button
+            startIcon={<AddCircle />}
+            onClick={handleAddMonsterField}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            Add Monster
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button
+            variant="contained"
+            sx={{ backgroundColor: "#3f51b5", color: "#fff" }}
+            onClick={handleSave}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
