@@ -1,5 +1,5 @@
 // src/components/Pages/Homepage.jsx
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, use } from 'react';
 import {
   Grid,
   Stack,
@@ -33,6 +33,10 @@ import { useScore } from '../../contexts/ScoreContext';
 import { styled } from '@mui/system';
 import DungeonGame from './DungeonGame';
 import { useNavigate } from 'react-router-dom';
+import DungeonSection from '../sections/DungeonSection';
+import ShopSection from '../sections/ShopSection';
+import SummonSection from '../sections/SummonSection';
+import SettingsNav from '../sections/SettingsNav';
 
 // Background assets
 import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
@@ -57,6 +61,14 @@ import HealthPotion from "../../assets/images/objects/HealthPotion.png";
 import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
 import SkipPotion from "../../assets/images/objects/SkipPotion.png";
 import GoldCoins from "../../assets/images/objects/GoldCoins.png";
+import Tablet from "../../assets/images/objects/Tablet.png";
+import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
+import MCHeadshot from "../../assets/images/objects/MCHeadshot.png";
+import Gems from "../../assets/images/objects/Gems.png";
+import Gears from "../../assets/images/objects/gears.png";
+import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
+import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
+import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
 
 
 const PastelProgress = styled(LinearProgress)(() => ({
@@ -74,10 +86,10 @@ export default function Homepage() {
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState('');
-  const [activities, setActivities] = useState([]);  const [current, setCurrent] = useState(null);
+  const [activities, setActivities] = useState([]); const [current, setCurrent] = useState(null);
   const [classroom, setClassroom] = useState(null);
   const [userDetails, setUserDetails] = useState({});
-  const [userActivities, setUserActivities] = useState([]);  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const [userActivities, setUserActivities] = useState([]);
   const { refreshScore } = useScore();
   const [progressVocab, setProgressVocab] = useState(0);
   const [progressGrammar, setProgressGrammar] = useState(0);
@@ -87,7 +99,66 @@ export default function Homepage() {
   const [shopShieldPotion, setShopShieldPotion] = useState(0);
   const [shopSkipPotion, setShopSkipPotion] = useState(0);
   const [shopTotal, setShopTotal] = useState(0);
+  const [coins, setCoins] = useState(0);
+  const [gems, setGems] = useState(0);
   const navigate = useNavigate();
+
+  const [makeMessageAppear, setMakeMessageAppear] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState(0);
+  const [levelDetails, setLevelDetails] = useState([]);
+  const [dungeonPreperatory, setDungeonPreparatory] = useState(false);
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [monsterIndex, setMonsterIndex] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  //function 
+  async function buyPotion() {
+    console.log('buyPotion Function is called');
+    try {
+      //Health Potion Loop
+      for (let count = 0; count < shopHealthPotion; count++) {
+        const buyResp = await API.post(`/potion-shop/buy`, {
+          userId: userDetails.userId,
+          potionType: 'HEALTH',
+          cost: 100
+        });
+        console.log(buyResp.data);
+      }
+
+      //Shield Potion Loop
+      for (let count = 0; count < shopShieldPotion; count++) {
+        const buyResp = await API.post(`/potion-shop/buy`, {
+          userId: userDetails.userId,
+          potionType: 'SHIELD',
+          cost: 200
+        });
+        console.log(buyResp.data);
+      }
+
+      //Skip Potion Loop
+      for (let count = 0; count < shopSkipPotion; count++) {
+        const buyResp = await API.post(`/potion-shop/buy`, {
+          userId: userDetails.userId,
+          potionType: 'SKIP',
+          cost: 300
+        });
+        console.log(buyResp.data);
+      }
+
+      // Fetch updated user details after purchase
+      const userResp = await API.get(`/users/${userDetails.userId}`);
+      setUserDetails(userResp.data);
+      setCoins(userResp.data.coins); // Update coins state
+
+      setShopHealthPotion(0);
+      setShopShieldPotion(0);
+      setShopSkipPotion(0);
+      setMakeMessageAppear(false);
+      setShopTotal(0);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   // Decode token → user
   useEffect(() => {
@@ -101,19 +172,21 @@ export default function Homepage() {
     if (!user) return;
     let isMounted = true;
     (async () => {
-      try {        
+      try {
         const userResp = await API.get(`/users/${user.userId}`);
         setUserDetails(userResp.data);
-        
+        setCoins(userResp.data.coins); // Initialize coins state
+        setGems(userResp.data.gems);
+
         //console.log('User details:', userResp.data);        
-        const endpoint = userResp.data.role === 'TEACHER' 
+        const endpoint = userResp.data.role === 'TEACHER'
           ? `classrooms/teacher/${user.userId}`
           : `classrooms/user/${user.userId}`;
         //console.log('Fetching classroom from endpoint:', endpoint);
         const classResp = await API.get(endpoint);
-        //console.log ('Classroom response:', classResp.data);
+        console.log('Classroom response:', classResp.data);
         if (!isMounted) return;
-        
+
         // Handle teacher vs student response differently
         if (userResp.data.role === 'TEACHER') {
           // For teachers, take the first classroom if they have any
@@ -127,9 +200,15 @@ export default function Homepage() {
           setClassroom(classResp.data.classroomID);
         }
 
-        const prog = await API.get(`/activities/${user.userId}/progress`);
-        setProgressVocab(prog.data.gameSet1Progress * 100);
-        setProgressGrammar(prog.data.gameSet2Progress * 100);
+        //const prog = await API.get(`/activities/${user.userId}/progress`);
+        //setProgressVocab(prog.data.gameSet1Progress * 100);
+        //setProgressGrammar(prog.data.gameSet2Progress * 100);
+
+        //Level Details
+        const levelResp = await API.get(`/levels`);
+        console.log(levelResp);
+        setLevelDetails(levelResp.data);
+        console.log(levelResp.data);
 
         await fetchUserActivities();
       } catch (err) {
@@ -187,7 +266,9 @@ export default function Homepage() {
     setSection(key);
     setCurrent(null);
     setOpen(true);
-  };  const closeModal = async () => {
+    setCoins(userDetails.coins);
+    setGems(userDetails.gems);
+  }; const closeModal = async () => {
     try {
       // Fetch updated progress
       if (user) {
@@ -267,308 +348,140 @@ export default function Homepage() {
     fetchDeployedActivity();
   }, [section, classroom]);
 
+  function renderGemAndCoinsTab() {
+    return (
+      <>
+        {/* Gem Tab */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 180,
+            backgroundImage: `url(${ItemBox})`,
+            backgroundSize: 'cover',
+            width: 90,
+            height: 120,
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: 2,
+            justifyContent: 'center',
+            paddingRight: 2,
+            paddingTop: 1,
+          }}
+        >
+          <Box sx={{ width: 1000, height: 400, right: '1000%', top: '360%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+            <Stack direction='row'>
+              <Box sx={{
+                width: '220px', height: '215px', position: 'absolute', bottom: 0, left: 0,
+                //border: '2px solid red' 
+              }}>
+                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <img src={MCNoWeapon} alt="Player" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
+                  <img src={WeaponBasicStaff} alt="Weapon" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
+                </Box>
+              </Box>
+            </Stack>
+          </Box>
+
+          <Stack
+            direction="column"
+            sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}
+          >
+            <img src={Gems} alt="Gems" style={{ width: '17px', height: '42px' }} />
+            <Typography
+              variant="h4"
+              color="#5D4037"
+              sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}
+            >
+              {userDetails.gems || 0}
+            </Typography>
+          </Stack>
+        </Box>
+
+        {/* Gold Tab */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            backgroundImage: `url(${ItemBox})`,
+            backgroundSize: 'cover',
+            width: 90,
+            height: 120,
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: 2,
+            justifyContent: 'center',
+            paddingRight: 2,
+            paddingTop: 1,
+          }}
+        >
+          <Stack
+            direction="column"
+            sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}
+          >
+            <img
+              src={GoldCoins}
+              alt="Gold Coins"
+              style={{ width: '42px', height: '42px' }}
+            />
+            <Typography
+              variant="h4"
+              color="#5D4037"
+              sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}
+            >
+              {coins || 0}  {/* Use coins state instead of userDetails.coins */}
+            </Typography>
+          </Stack>
+        </Box>
+      </>
+    );
+  }
+
+
   function renderBody() {
     // 1) Before selecting any item
     if (!current) {
-      // If in Activity section → multiplayer lobby
-      if (section === 'Activity') {
+      if (section === 'Dungeon') {
+        const currentLevel = levelDetails[currentLevelIndex];
         return (
-          <Grid container direction="column" alignItems="center" sx={{ width: '100%', height: '100%' }}>
-            <Typography variant="h4" align="center" sx={{ paddingTop: 2, paddingBottom: 2 }}>
-              asda
-              </Typography>
-            <Button
-              onClick={() => {
-                closeModal(); // Close the modal first
-                navigate('/dungeon'); // Then navigate to dungeon game
-              }}
-              sx={{
-                width: '250px',
-                height: '200px',
-                borderRadius: '16px',
-                opacity: 0.9,
-                position: 'absolute',
-                top: '50%',
-                '&:hover': {
-                  transform: 'scale(1.1)',
-                  opacity: 1
-                }
-              }}
-            >
-            </Button>
-          </Grid>
+          <DungeonSection
+            closeModal={closeModal}
+            currentLevel={currentLevel}
+            currentLevelIndex={currentLevelIndex}
+            setCurrentLevelIndex={setCurrentLevelIndex}
+            levelDetails={levelDetails}
+            dungeonPreperatory={dungeonPreperatory}
+            setDungeonPreparatory={setDungeonPreparatory}
+            user={user}
+          />
+        );
+      } else if (section === 'Shop') {
+        return (
+          <ShopSection
+            shopHealthPotion={shopHealthPotion}
+            setShopHealthPotion={setShopHealthPotion}
+            shopShieldPotion={shopShieldPotion}
+            setShopShieldPotion={setShopShieldPotion}
+            shopSkipPotion={shopSkipPotion}
+            setShopSkipPotion={setShopSkipPotion}
+            shopTotal={shopTotal}
+            setShopTotal={setShopTotal}
+            makeMessageAppear={makeMessageAppear}
+            setMakeMessageAppear={setMakeMessageAppear}
+            buyPotion={buyPotion}
+            handleBackClick={handleBackClick}
+            renderGemAndCoinsTab={renderGemAndCoinsTab}
+          />
+        );
+      } else if (section === 'Summon') {
+        return (
+          <SummonSection
+            handleBackClick={handleBackClick}
+            renderGemAndCoinsTab={renderGemAndCoinsTab}
+          />
         );
       }
-    else if (section === 'Shop'){
-    
-      return (
-        <Grid container direction="column" alignItems="center" >
-            <Box sx={{ position: 'absolute', top: 150, right: 150, 
-              backgroundImage: `url(${GameShopField})`, 
-              backgroundSize: 'cover',
-              width: 538, 
-              height: 738, 
-              display: 'flex', 
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <Stack direction={'column'} sx={{alignItems: 'center', textAlign: 'center'}}>
-              <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming',fontSize: 60 }}>
-                Potions
-              </Typography>
-              <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming',fontSize: 60 }}>
-                For Sale
-              </Typography>
-              <Divider sx={{ borderBottomWidth: 5, borderColor: '#5D4037', my: 1, width:400 }} />
-              <Stack direction="row" spacing={.5} sx={{alignItems: 'center', justifyContent: 'center'}}>
-                
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'row', 
-                  alignItems: 'center',
-                  backgroundImage: `url(${GameShopBoxSmall})`, 
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                  width: 290,
-                  height: 80,
-                  justifyContent: 'center',
-                  }}>
-                  <img src={HealthPotion} alt="Health Potion" style={{ width: '40px', height: '50px' }} />
-                  <Stack direction="column" spacing={0} sx={{alignItems: 'center', justifyContent: 'center', marginLeft: 1}}>
-                  
-                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                    Health Potion
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'center'}}>
-                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                    100 Gold
-                  </Typography>
-                  <img src={GoldCoins} alt="Gold Coins" style={{ width: '20px', height: '20px', marginTop: 2 }} />
-                  </Stack>
-                  </Stack>
-                </Box>
-                  <Button variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 10,
-                    height: 60,
-                    color: '#5D4037',}}
-                    disabled={shopHealthPotion <= 0}
-                    onClick={() => {setShopHealthPotion(shopHealthPotion - 1); setShopTotal(shopTotal - 100); }}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      -
-                    </Typography>
-                  </Button>
-                  <Box variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 60,
-                    height: 60,
-                    color: '#5D4037',}}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      {shopHealthPotion}
-                    </Typography>
-                  </Box>
-                  <Button variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 10,
-                    height: 60,
-                    color: '#5D4037',}}
-                    onClick={() => {setShopHealthPotion(shopHealthPotion + 1); setShopTotal(shopTotal + 100); }}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      +
-                    </Typography>
-                  </Button>
-              </Stack>
-              <Stack direction="row" spacing={.5} sx={{alignItems: 'center', justifyContent: 'center', marginTop: 1}}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'row', 
-                  alignItems: 'center',
-                  backgroundImage: `url(${GameShopBoxSmall})`, 
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                  width: 290,
-                  height: 80,
-                  justifyContent: 'center',
-                  }}>
-                  <img src={ShieldPotion} alt="Shield Potion" style={{ width: '40px', height: '50px' }} />
-                  <Stack direction="column" spacing={0} sx={{alignItems: 'center', justifyContent: 'center', marginLeft: 1}}>
-                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                    Shield Potion
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'center'}}>
-                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                    200 Gold
-                  </Typography>
-                  <img src={GoldCoins} alt="Gold Coins" style={{ width: '20px', height: '20px', marginTop: 2 }} />
-                  </Stack>
-                  </Stack>
-                  
-                </Box>
-                  <Button variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 10,
-                    height: 60,
-                    color: '#5D4037',}}
-                    disabled={shopShieldPotion <= 0}
-                    onClick={() => {setShopShieldPotion(shopShieldPotion - 1); setShopTotal(shopTotal - 200); }}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      -
-                    </Typography>
-                  </Button>
-                  <Box variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 60,
-                    height: 60,
-                    color: '#5D4037',}}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      {shopShieldPotion}
-                    </Typography>
-                  </Box>
-                  <Button variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 10,
-                    height: 60,
-                    color: '#5D4037',}}
-                    onClick={() => {setShopShieldPotion(shopShieldPotion + 1); setShopTotal(shopTotal + 200); }}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      +
-                    </Typography>
-                  </Button>
-              </Stack>
-              <Stack direction="row" spacing={.5} sx={{alignItems: 'center', justifyContent: 'center', marginTop: 1}}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'row', 
-                  alignItems: 'center',
-                  backgroundImage: `url(${GameShopBoxSmall})`, 
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                  width: 290,
-                  height: 80,
-                  justifyContent: 'center',
-                  }}>
-                  <img src={SkipPotion} alt="Skip Potion" style={{ width: '40px', height: '50px' }} />
-                  <Stack direction="column" spacing={0} sx={{alignItems: 'center', justifyContent: 'center', marginLeft: 1}}>
-                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                    Skip Potion
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'center'}}>
-                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                    300 Gold
-                  </Typography>
-                  <img src={GoldCoins} alt="Gold Coins" style={{ width: '20px', height: '20px', marginTop: 2 }} />
-                  </Stack>
-                  </Stack>
-                </Box>
-                  <Button variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 10,
-                    height: 60,
-                    color: '#5D4037',}}
-                    disabled={shopSkipPotion <= 0}
-                    onClick={() => {setShopSkipPotion(shopSkipPotion - 1); setShopTotal(shopTotal - 300); }}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      -
-                    </Typography>
-                  </Button>
-                  <Box variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 60,
-                    height: 60,
-                    color: '#5D4037',}}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      {shopSkipPotion}
-                    </Typography>
-                  </Box>
-                  <Button variant="contained" sx={{
-                    backgroundImage:`url(${ItemBox})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    width: 10,
-                    height: 60,
-                    color: '#5D4037',}}
-                    onClick={() => { setShopSkipPotion(shopSkipPotion + 1); setShopTotal(shopTotal + 300); }}>
-                    <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                      +
-                    </Typography>
-                  </Button>
-              </Stack>
-
-              <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', marginTop: 2 }}>
-                Total: {shopTotal} Gold
-              </Typography>
-              <Button 
-                sx={{ 
-                  width: 400,
-                  height: 80,
-                  marginTop: 2,
-                  backgroundImage:`url(${GameTextField})`,
-                  backgroundSize: 'cover',
-                }}>
-                <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-                  Buy
-                </Typography>
-              </Button>
-            </Stack>
-          </Box>
-        </Grid>
-      );
-    }
-    else {
-      return (
-        <Grid container direction="column" alignItems="center" sx={{ mt: 2 }}> 
-        <Button sx={{ mt: 2,
-          position: 'absolute',
-          top: '75%',
-          left: '39%',
-          backgroundImage:`url(${GameTextField})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          width: 400,
-          height: 80,
-          }} 
-          variant="contained">
-          <Stack direction="column" alignItems="center">
-            <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-              Summon for
-            </Typography>
-            <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-              100 Gems
-            </Typography>
-          </Stack>
-        </Button>
-        </Grid>
-      );
-    }
     }
 
     return null;
@@ -597,11 +510,11 @@ export default function Homepage() {
   ];
 
   return (
-    <Grid 
-      container 
-      direction="column" 
-      alignItems="center" 
-      sx={{ 
+    <Grid
+      container
+      direction="column"
+      alignItems="center"
+      sx={{
         backgroundImage: `url(${ForestwithShops})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -614,30 +527,51 @@ export default function Homepage() {
         overflow: 'auto'
       }}
     >
-      <Box sx={{ position: 'absolute', top: 16, left: 16, 
-        backgroundImage: `url(${NameTab})`, 
-        backgroundSize: 'cover', 
-        backgroundRepeat: 'no-repeat', 
-        backgroundPosition: 'center', 
-        width: 700, 
-        height: 150, 
-        display: 'flex', 
-        alignItems: 'center', 
-        paddingLeft: 2 }}>
-          <Stack direction={'column'}>
-            <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 25 }}>
-              {userDetails.firstName}
-            </Typography>
-            <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 25 }}>
-              Rank: Mage
-            </Typography>
-          </Stack>
-  
+      <Box sx={{
+        position: 'absolute', top: 16, left: 16,
+        backgroundImage: `url(${NameTab})`,
+        backgroundSize: 'cover',
+        width: 730,
+        height: 150,
+        display: 'flex',
+        alignItems: 'center',
+        paddingLeft: 2
+      }}>
+        <img src={MCHeadshot} alt="Player" style={{ width: 100, height: 100, marginLeft: 10 }} />
+        <Stack direction={'column'}>
+          <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
+            {userDetails.firstName || 'Player Name'}
+          </Typography>
+          <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
+            Rank: Mage
+          </Typography>
+        </Stack>
       </Box>
-      <Stack 
-        direction="row" 
-        spacing={4} 
-        sx={{ 
+      {renderGemAndCoinsTab()}
+
+      {/* Settings */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 200,
+          left: 16,
+          backgroundImage: `url(${Gears})`,
+          backgroundSize: 'cover',
+          width: 50,
+          height: 65,
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: 2,
+          cursor: 'pointer'  // Add this to show it's clickable
+        }}
+        onClick={() => setSettingsOpen(!settingsOpen)}
+      >
+      </Box>
+
+      <Stack
+        direction="row"
+        spacing={4}
+        sx={{
           position: 'absolute',
           width: '100%',
           justifyContent: 'space-around',
@@ -684,7 +618,7 @@ export default function Homepage() {
 
         {/* Right structure button */}
         <Button
-          onClick={() => openModal('Activity')}
+          onClick={() => openModal('Dungeon')}
           sx={{
             width: '200px',
             height: '200px',
@@ -700,7 +634,7 @@ export default function Homepage() {
         >
         </Button>
       </Stack>
-      
+
 
       {/* Modal */}
       <Modal
@@ -713,11 +647,11 @@ export default function Homepage() {
         <Fade in={open}>
           <Box
             sx={{
-              backgroundImage: `url(${section === 'Shop' 
-              ? ShopUI 
-              : section === 'Summon' 
-                ? SummonUI 
-                : DungeonOpen})`,
+              backgroundImage: `url(${section === 'Shop'
+                ? ShopUI
+                : section === 'Summon'
+                  ? SummonUI
+                  : DungeonOpen})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               width: '100vw',
@@ -736,7 +670,7 @@ export default function Homepage() {
               <IconButton onClick={closeModal}>
                 <CloseIcon />
               </IconButton>
-            </Stack>            
+            </Stack>
             {/* Modal Content 
             <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
               {section === 'Activity' ? 'King of the Hill!' : `${section} Activities!`}
@@ -775,25 +709,37 @@ export default function Homepage() {
         </Fade>
       </Modal>
 
-      {/* Music Toggle */}
-      <button
-        style={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          background: '#FFCC80',
-          color: '#5D4037',
-          border: 'none',
-          borderRadius: 8,
-          padding: '0.6em 1.2em',
-          fontSize: '1em',
-          fontWeight: 500,
-          cursor: 'pointer',
+      {/* Settings Modal */}
+      <Modal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        closeAfterTransition
+        BackdropProps={{
+          timeout: 500,
         }}
-        onClick={toggleMusic}
       >
-        {musicOn ? '🎵 Mute Music' : '🔇 Play Music'}
-      </button>
+        <Fade in={settingsOpen}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 370,
+              backgroundImage: `url(${MenuBoxVert})`,
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              height: 600,
+              borderRadius: 2,
+              p: 16,
+            }}
+          >
+            <SettingsNav onClose={() => setSettingsOpen(false)} />
+          </Box>
+        </Fade>
+      </Modal>
+
     </Grid>
   );
 }
