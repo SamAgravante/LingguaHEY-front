@@ -31,7 +31,6 @@ import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
 import MultiplayerGameRoom from "./components/Pages/MultiplayerGameRoom";
 
 import LevelEditor from "./components/Pages/Editors/LevelEditor";
-import LevelEditorDetails from "./components/Pages/Editors/LevelEditorDetails";
 import MonsterEditor from "./components/Pages/Editors/MonsterEditor";
 import AddLevelForm from "./components/Pages/Editors/AddLevelForm";
 
@@ -78,7 +77,6 @@ function App() {
         {/* Change Name Later */}
         <Route path="/activities" element={<Activities />} />
         <Route path="/leveleditor" element={<LevelEditor />} />
-        <Route path="/edit-level/:id" element={<LevelEditorDetails />} />
         <Route path="/add-level" element={<AddLevelForm />} />
         <Route path="/monstereditor" element={<MonsterEditor />} />
 
