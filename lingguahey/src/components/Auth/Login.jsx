@@ -26,6 +26,7 @@ import GameTextField from '../../assets/images/backgrounds/GameTextField.png';
 import GameTextbox from '../../assets/images/backgrounds/GameTextBox.png';
 import GameTextFieldLong from '../../assets/images/backgrounds/GameTextFieldLong.png';
 import GameTextBoxLong from '../../assets/images/backgrounds/GameTextBoxLong.png';
+import { getUserFromToken } from "../../utils/auth";
 
 // Axios instance
 const API = axios.create({
@@ -76,10 +77,34 @@ export default function Login() {
 
     try {
       const res = await API.post("/login", form);
-      // success: 200 OK
-      setToken(res.data.token);
-      showSnack("Logged in successfully!", "success");
-      setTimeout(() => navigate("/homepage"), 500);
+      // Set token first
+      await setToken(res.data.token);
+      
+      // Wait a moment for token to be stored
+      setTimeout(async () => {
+        const userObj = getUserFromToken();
+        console.log("Decoded user from token:", userObj);
+        
+        if (!userObj) {
+          showSnack("Error getting user details. Please try again.", "error");
+          return;
+        }
+
+        showSnack("Logged in successfully!", "success");
+
+        // Navigate based on current token decode
+        switch(userObj.role) {
+          case "ADMIN":
+            navigate("/admindashboard");
+            break;
+          case "TEACHER":
+            navigate("/teacherdashboard");
+            break;
+          default:
+            navigate("/homepage");
+        }
+      }, 100); // Small delay to ensure token is stored
+
     } catch (err) {
       const status = err.response?.status;
 

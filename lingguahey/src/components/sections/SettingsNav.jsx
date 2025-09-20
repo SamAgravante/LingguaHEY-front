@@ -18,10 +18,10 @@ import { getUserFromToken } from '../../utils/auth';
 import { MusicContext } from '../../contexts/MusicContext';
 
 import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
+import ProfileModal from '../Profile/ProfileModal';
 
 const allRoutes = [
   { label: "Home", path: "/homepage", roles: ["USER", "ADMIN", "TEACHER"] },
-  { label: "Profile", path: "/profilepage", roles: ["USER", "ADMIN", "TEACHER"] },
   { label: "Subscriptions", path: "/subscriptions", roles: ["TEACHER", "ADMIN"] },
   { label: "Contact Us", path: "/contact", roles: ["USER", "TEACHER", "ADMIN"] },
   { label: "Admin DB", path: "/admindashboard", roles: ["ADMIN"] },
@@ -40,7 +40,7 @@ const SettingsNav = ({ onClose }) => {
     lastName: "",
     role: null,
   });
-  const [totalPoints, setTotalPoints] = useState(0);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -53,10 +53,8 @@ const SettingsNav = ({ onClose }) => {
       try {
         const userRes = await API.get(`/users/${userId}`);
         setUserData(userRes.data);
-        const ptsRes = await API.get(`/scores/users/${userId}/total`);
-        setTotalPoints(ptsRes.data);
       } catch (err) {
-        console.error("Failed to fetch user or points:", err);
+        console.error("Failed to fetch user:", err);
       }
     };
 
@@ -94,11 +92,6 @@ const SettingsNav = ({ onClose }) => {
         {userData.lastName}
       </Typography>
 
-      {userData.role !== "TEACHER" && (
-        <Typography variant="body1" align="center" sx={{ color: '#5D4037', mb: 2 }}>
-          {totalPoints} Total Points
-        </Typography>
-      )}
 
       <Divider sx={{ mb: 2 }} />
 
@@ -106,7 +99,7 @@ const SettingsNav = ({ onClose }) => {
         <Button
           fullWidth
           variant="contained"
-          onClick={() => handleRoute({ label: "Profile", path: "/profilepage" })}
+          onClick={() => setProfileModalOpen(true)}
           sx={{
             backgroundColor: "#AED581",
             color: '#5D4037',
@@ -114,7 +107,7 @@ const SettingsNav = ({ onClose }) => {
             textTransform: "none",
           }}
         >
-          Edit Profile
+          View Profile Details
         </Button>
       </Box>
 
@@ -150,6 +143,11 @@ const SettingsNav = ({ onClose }) => {
           </ListItemButton>
         </ListItem>
       </List>
+
+      <ProfileModal 
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+      />
     </Box>
   );
 };
