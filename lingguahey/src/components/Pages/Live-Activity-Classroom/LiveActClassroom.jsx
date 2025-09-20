@@ -34,6 +34,20 @@ import LiveActOnePicFourWords from "./LiveActOnePicFourWords";
 import LiveActPhraseTranslation from "./LiveActPhraseTranslation";
 import LiveActWordTranslation from "./LiveActWordTranslation";
 
+// Background assets
+import LandingBackgroundPic from "../../../assets/images/backgrounds/CrystalOnly.png";
+import MenuBoxHor from "../../../assets/images/backgrounds/MenuBox1var.png";
+import GameTextFieldLong from "../../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextField from "../../../assets/images/backgrounds/GameTextField.png";
+import GameTextBoxLong from "../../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../../assets/images/backgrounds/GameTextBox.png";
+import GameTextBoxBig from "../../../assets/images/backgrounds/GameTextBoxBig.png";
+import GameTextFieldBig from "../../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldMedium from "../../../assets/images/backgrounds/GameTextFieldMedium.png";
+import MonsterEditUIOuter from "../../../assets/images/backgrounds/MonsterEditUIOuter.png";
+import MonsterEditUIOuterLight from "../../../assets/images/backgrounds/MonsterEditUIOuterLight.png";
+
+
 const LiveActClassroom = () => {
   const navigate = useNavigate();
   const { roomId: classroomId, classroomName } = useParams();
@@ -328,7 +342,20 @@ const LiveActClassroom = () => {
   }
 
   return (
-    <Box sx={{ backgroundColor: "#f0f2f5", minHeight: "100vh", p: 3 }}>
+    <Box sx={{
+            minHeight: "96.5%",
+            width: "98%",
+            overflow: "hidden",
+            backgroundImage: `url(${MonsterEditUIOuterLight})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            //alignItems: "center",
+            p: 2,
+          }}>
       {/* Header Section */}
       <Box
         sx={{
@@ -439,7 +466,7 @@ const LiveActClassroom = () => {
                           onClick={() => handleGoToActivity(activity)}
                           sx={{ mr: 1, borderRadius: 1.5 }}
                         >
-                          Configure
+                          Edit
                         </Button>
                         <IconButton
                           size="small"
@@ -470,59 +497,7 @@ const LiveActClassroom = () => {
           </Paper>
         </Grid>
 
-        {/* Right Column (for Enrolled Students) */}
-        <Grid item xs={12} md={6}> {/* Occupy half width on medium and up screens */}
-          {/* List of Students Section */}
-          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, backgroundColor: "#fff",marginLeft:5,width:500,minHeight: 342 }}>
-            <Typography variant="h6" color="text.primary" mb={3}>
-              Enrolled Students
-            </Typography>
-            <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
-              <List>
-                {students.length > 0 ? (
-                  students.map((student, index) => (
-                    <ListItem
-                      key={index}
-                      divider
-                      sx={{ py: 1.5, px: 0 }}
-                    >
-                      <ListItemText
-                        primary={
-                          <Typography variant="subtitle1" fontWeight="medium">
-                            {`${index + 1}. ${student.firstName} ${student.lastName}`}
-                          </Typography>
-                        }
-                        secondary={`Email: ${student.email}`}
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton
-                          size="small"
-                          edge="end"
-                          aria-label={`Remove student ${student.firstName} ${student.lastName}`}
-                          sx={{
-                            color: "#f44336",
-                            opacity: 0.7,
-                            "&:hover": {
-                              opacity: 1,
-                              backgroundColor: "rgba(244, 67, 54, 0.08)"
-                            }
-                          }}
-                          onClick={() => handleRemoveStudent(student)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography variant="body1" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
-                    No students enrolled in this classroom.
-                  </Typography>
-                )}
-              </List>
-            </Box>
-          </Paper>
-        </Grid>
+        
       </Grid> 
 
       {/* Confirmation Dialogs */}

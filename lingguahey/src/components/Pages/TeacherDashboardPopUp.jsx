@@ -19,6 +19,7 @@ import {
   CardContent,
   Avatar,
   Stack,
+  Divider
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -37,6 +38,39 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import BlockIcon from '@mui/icons-material/Block';
 import API from "../../api"; // Adjust the import path as necessary
 
+// Background assets
+import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
+import MenuBoxHor from "../../assets/images/backgrounds/MenuBox1var.png";
+import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
+import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
+import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
+import MonsterEditUIOuter from "../../assets/images/backgrounds/MonsterEditUIOuter.png";
+import MonsterEditUIOuterLight from "../../assets/images/backgrounds/MonsterEditUIOuterLight.png";
+import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
+import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
+import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
+import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
+import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
+import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
+import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
+import NameTab from "../../assets/images/backgrounds/NameTab.png";
+import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
+import HealthPotion from "../../assets/images/objects/HealthPotion.png";
+import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
+import SkipPotion from "../../assets/images/objects/SkipPotion.png";
+import GoldCoins from "../../assets/images/objects/GoldCoins.png";
+import Tablet from "../../assets/images/objects/Tablet.png";
+import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
+import MCHeadshot from "../../assets/images/objects/MCHeadshot.png";
+import Gems from "../../assets/images/objects/Gems.png";
+import Gears from "../../assets/images/objects/gears.png";
+import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
+import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
+import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
 
 const TeacherDashboardPopUp = () => {
   const { roomId } = useParams();
@@ -69,14 +103,20 @@ const TeacherDashboardPopUp = () => {
   const [selectedActivity, setSelectedActivity] = useState('');
   const [selectedActivityName, setSelectedActivityName] = useState('');
   const [isDeployed, setIsDeployed] = useState(false);
+  const [openActivityCreateModal, setOpenActivityCreateModal] = useState(false);
+  const [openActivityEditModal, setOpenActivityEditModal] = useState(false);
+  const [newActivityName, setNewActivityName] = useState("");
+  const [selectedQuestionType, setSelectedQuestionType] = useState(null);
+  const [activityQuestions, setActivityQuestions] = useState([]);
+  const [questionToEdit, setQuestionToEdit] = useState(null);
 
   const getSortedScores = () => {
-  if (scoreSort === "highest") {
-    return [...studentScores].sort((a, b) => b.score - a.score);
-  } else if (scoreSort === "lowest") {
-    return [...studentScores].sort((a, b) => a.score - b.score);
-  }
-  return studentScores;
+    if (scoreSort === "highest") {
+      return [...studentScores].sort((a, b) => b.score - a.score);
+    } else if (scoreSort === "lowest") {
+      return [...studentScores].sort((a, b) => a.score - b.score);
+    }
+    return studentScores;
   };
 
   useEffect(() => {
@@ -129,75 +169,75 @@ const TeacherDashboardPopUp = () => {
     } catch (err) {
       console.error("Failed to fetch classroom data:", err);
       setError(`Failed to load classroom data: ${err.message || "Unknown error"}`);
-      setActivityStats({ average: 0, lowest: 0, highest: 0});
+      setActivityStats({ average: 0, lowest: 0, highest: 0 });
       setProgressData([]);
     } finally {
       setIsLoading(false);
     }
   }, [roomId, API]);
   useEffect(() => {
-  const fetchEnrolledStudents = async () => {
-    if (!roomId || !API) return;
+    const fetchEnrolledStudents = async () => {
+      if (!roomId || !API) return;
+      try {
+        const enrolledStudentsResponse = await API.get(`/classrooms/${roomId}/students`);
+        setSelectedRoomStudents(enrolledStudentsResponse.data || []);
+        console.log('Enrolled Students:', enrolledStudentsResponse.data);
+      } catch (err) {
+        console.error("Failed to fetch enrolled students:", err);
+        setSelectedRoomStudents([]);
+      }
+    };
+
+    fetchEnrolledStudents();
+  }, [roomId, API]);
+
+  const fetchStudentScores = async (activityId) => {
+    if (!API || !activityId || !selectedRoomStudents.length) return;
     try {
-      const enrolledStudentsResponse = await API.get(`/classrooms/${roomId}/students`);
-      setSelectedRoomStudents(enrolledStudentsResponse.data || []);
-      console.log('Enrolled Students:', enrolledStudentsResponse.data);
+      // Add admin token to the request
+      const adminToken = localStorage.getItem('token');
+      API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
+
+      // First, get the total possible score for the activity
+      const totalScoreResponse = await API.get(`/scores/live-activities/${activityId}/total-score`);
+      const totalPossibleScore = totalScoreResponse.data;
+
+      // Fetch scores for each enrolled student
+      const scores = await Promise.all(
+        selectedRoomStudents.map(async (student) => {
+          try {
+            const response = await API.get(`/scores/users/${student.userId}/total-live`);
+            const studentScore = response.data || 0;
+            // Calculate percentage
+            const percentage = totalPossibleScore > 0
+              ? Math.round((studentScore / totalPossibleScore) * 100)
+              : 0;
+
+            return {
+              userId: student.userId,
+              firstName: student.firstName,
+              lastName: student.lastName,
+              score: percentage
+            };
+          } catch (err) {
+            console.error(`Failed to fetch score for student ${student.firstName}:`, err);
+            return {
+              userId: student.userId,
+              firstName: student.firstName,
+              lastName: student.lastName,
+              score: 0
+            };
+          }
+        })
+      );
+
+      const sortedScores = scores.sort((a, b) => b.score - a.score);
+      setStudentScores(sortedScores);
     } catch (err) {
-      console.error("Failed to fetch enrolled students:", err);
-      setSelectedRoomStudents([]);
+      console.error("Failed to fetch student scores:", err);
+      setStudentScores([]);
     }
   };
-
-  fetchEnrolledStudents();
-}, [roomId, API]); 
-
-const fetchStudentScores = async (activityId) => {
-  if (!API || !activityId || !selectedRoomStudents.length) return;
-  try {
-    // Add admin token to the request
-    const adminToken = localStorage.getItem('token');
-    API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
-
-    // First, get the total possible score for the activity
-    const totalScoreResponse = await API.get(`/scores/live-activities/${activityId}/total-score`);
-    const totalPossibleScore = totalScoreResponse.data;
-
-    // Fetch scores for each enrolled student
-    const scores = await Promise.all(
-      selectedRoomStudents.map(async (student) => {
-        try {
-          const response = await API.get(`/scores/users/${student.userId}/total-live`);
-          const studentScore = response.data || 0;
-          // Calculate percentage
-          const percentage = totalPossibleScore > 0 
-            ? Math.round((studentScore / totalPossibleScore) * 100) 
-            : 0;
-
-          return {
-            userId: student.userId,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            score: percentage
-          };
-        } catch (err) {
-          console.error(`Failed to fetch score for student ${student.firstName}:`, err);
-          return {
-            userId: student.userId,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            score: 0
-          };
-        }
-      })
-    );
-
-    const sortedScores = scores.sort((a, b) => b.score - a.score);
-    setStudentScores(sortedScores);
-  } catch (err) {
-    console.error("Failed to fetch student scores:", err);
-    setStudentScores([]);
-  }
-};
 
   const fetchActivities = async () => {
     if (!API || !roomId) return;
@@ -205,7 +245,7 @@ const fetchStudentScores = async (activityId) => {
       const response = await API.get(`/live-activities/${roomId}/live-activities`);
       console.log('Fetched activities:', response.data);
       setActivities(response.data || []);
-      
+
       // If we have a selected activity, update its deployment status
       if (selectedActivity) {
         const selectedAct = response.data.find(act => act.activity_ActivityId === selectedActivity);
@@ -283,8 +323,8 @@ const fetchStudentScores = async (activityId) => {
       setSelectedRoomStudents(prev => prev.filter(student => student.userId !== studentId));
       if (studentToRemove) {
         const studentExistsInAll = allStudents.find(s => s.userId === studentToRemove.userId);
-        if(!studentExistsInAll) {
-            setAllStudents(prev => [...prev, studentToRemove]);
+        if (!studentExistsInAll) {
+          setAllStudents(prev => [...prev, studentToRemove]);
         }
       }
     } catch (err) {
@@ -296,21 +336,21 @@ const fetchStudentScores = async (activityId) => {
   const handleGoBack = () => {
     navigate("/teacherdashboard");
   };
-  
+
 
   const handleActivityChange = async (e) => {
-      const activityId = e.target.value;
-      setSelectedActivity(activityId);
+    const activityId = e.target.value;
+    setSelectedActivity(activityId);
 
-      // Find the selected activity from the activities array
-      const activity = activities.find(a => a.activity_ActivityId === activityId);
-      
-      if (activity) {
-        setSelectedActivityName(activity.activity_ActivityName);
-        setIsDeployed(!!activity.deployed);
-        setActivityStatus(activity.deployed ? "Deployed" : "Undeployed");     
+    // Find the selected activity from the activities array
+    const activity = activities.find(a => a.activity_ActivityId === activityId);
 
-      }
+    if (activity) {
+      setSelectedActivityName(activity.activity_ActivityName);
+      setIsDeployed(!!activity.deployed);
+      setActivityStatus(activity.deployed ? "Deployed" : "Undeployed");
+
+    }
   };
 
   const handleDeploy = async () => {
@@ -353,9 +393,9 @@ const fetchStudentScores = async (activityId) => {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default', p:3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default', p: 3 }}>
         <CircularProgress />
-        <Typography sx={{ml: 2}}>Loading Classroom Data...</Typography>
+        <Typography sx={{ ml: 2 }}>Loading Classroom Data...</Typography>
       </Box>
     );
   }
@@ -377,104 +417,101 @@ const fetchStudentScores = async (activityId) => {
     );
   }
 
-  const currentRoomName = roomDetails?.classroomName ||   
-  roomDetails?.name || (isLoading ? "Loading..." : "Classroom Details");
-  
-    const ScoresModalContent = () => (
-  <Modal
-    open={openScoresModal}
-    onClose={() => setOpenScoresModal(false)}
-    aria-labelledby="scores-modal-title"
-  >
-    <Box sx={{
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: { xs: '95%', sm: '80%', md: '60%' },
-      maxWidth: 600,
-      maxHeight: '90vh',
-      bgcolor: 'background.paper',
-      borderRadius: 2,
-      boxShadow: 24,
-      p: 0,
-    }}>
+  const currentRoomName = roomDetails?.classroomName ||
+    roomDetails?.name || (isLoading ? "Loading..." : "Classroom Details");
+
+  const ScoresModalContent = () => (
+    <Modal
+      open={openScoresModal}
+      onClose={() => setOpenScoresModal(false)}
+      aria-labelledby="scores-modal-title"
+    >
       <Box sx={{
-        p: 2,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid #e0e0e0',
-        bgcolor: '#f5f5f5',
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: { xs: '95%', sm: '80%', md: '60%' },
+        maxWidth: 600,
+        maxHeight: '90vh',
+
+        boxShadow: 24,
+        p: 0,
       }}>
-        <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
-          Student Scores - {selectedActivityName}
-        </Typography>
-        <IconButton onClick={() => setOpenScoresModal(false)} size="small">
-          <CloseIcon />
-        </IconButton>
-      </Box>
+        <Box sx={{
+          p: 2,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+            Student Scores - {selectedActivityName}
+          </Typography>
+          <IconButton onClick={() => setOpenScoresModal(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </Box>
 
-      <Box sx={{ p: 2, display: 'flex', gap: 1, borderBottom: '1px solid #e0e0e0' }}>
-        <Chip
-          label="Highest First"
-          clickable
-          color={scoreSort === "highest" ? "primary" : "default"}
-          variant={scoreSort === "highest" ? "filled" : "outlined"}
-          onClick={() => setScoreSort("highest")}
-        />
-        <Chip
-          label="Lowest First"
-          clickable
-          color={scoreSort === "lowest" ? "primary" : "default"}
-          variant={scoreSort === "lowest" ? "filled" : "outlined"}
-          onClick={() => setScoreSort("lowest")}
-        />
-      </Box>
+        <Box sx={{ p: 2, display: 'flex', gap: 1, }}>
+          <Chip
+            label="Highest First"
+            clickable
+            color={scoreSort === "highest" ? "primary" : "default"}
+            variant={scoreSort === "highest" ? "filled" : "outlined"}
+            onClick={() => setScoreSort("highest")}
+          />
+          <Chip
+            label="Lowest First"
+            clickable
+            color={scoreSort === "lowest" ? "primary" : "default"}
+            variant={scoreSort === "lowest" ? "filled" : "outlined"}
+            onClick={() => setScoreSort("lowest")}
+          />
+        </Box>
 
-      <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
-        {getSortedScores().length > 0 ? (
-          <List disablePadding>
-            {getSortedScores().map((score, index) => (
-              <ListItem
-                key={score.userId}
-                sx={{
-                  borderBottom: '1px solid #e0e0e0',
-                  py: 1.5,
-                  backgroundColor: index % 2 === 0 ? '#fafafa' : 'white',
-                }}
-              >
-                <ListItemText
-                  primary={`${score.firstName} ${score.lastName}`}
-                  secondary={
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: score.score >= 70 ? '#4caf50' : '#f44336',
-                        fontWeight: 500 
-                      }}
-                    >
-                      Score: {score.score}%
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        ) : (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="text.secondary">
-              No scores available for this activity.
-            </Typography>
-          </Box>
-        )}
+        <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+          {getSortedScores().length > 0 ? (
+            <List disablePadding>
+              {getSortedScores().map((score, index) => (
+                <ListItem
+                  key={score.userId}
+                  sx={{
+                    borderBottom: '1px solid #e0e0e0',
+                    py: 1.5,
+
+                  }}
+                >
+                  <ListItemText
+                    primary={`${score.firstName} ${score.lastName}`}
+                    secondary={
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: score.score >= 70 ? '#4caf50' : '#f44336',
+                          fontWeight: 500
+                        }}
+                      >
+                        Score: {score.score}%
+                      </Typography>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography color="text.secondary">
+                No scores available for this activity.
+              </Typography>
+            </Box>
+          )}
+        </Box>
       </Box>
-    </Box>
-  </Modal>
-);
+    </Modal>
+  );
 
   const StudentListModalContent = () => (
-     <Modal
+    <Modal
       open={openStudentListModal}
       onClose={handleCloseStudentListModal}
       aria-labelledby="student-list-modal-title"
@@ -489,7 +526,7 @@ const fetchStudentScores = async (activityId) => {
         maxHeight: '90vh',
         overflowY: 'auto',
         bgcolor: 'background.paper',
-        borderRadius: 2,
+
         boxShadow: 24,
         display: 'flex',
         flexDirection: 'column',
@@ -527,12 +564,12 @@ const fetchStudentScores = async (activityId) => {
             </Typography>
             <Box sx={{
               bgcolor: '#ffffff',
-              borderRadius: 1,
-              border: '1px solid #e0e0e0',
+
+              //border: '1px solid #e0e0e0',
               maxHeight: 350,
               overflowY: 'auto',
               minHeight: 120,
-              width:300
+              width: 300
             }}>
               <List dense disablePadding>
                 {selectedRoomStudents.length > 0 ? selectedRoomStudents.map((student) => (
@@ -570,14 +607,14 @@ const fetchStudentScores = async (activityId) => {
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={6} sx={{ p: {xs:2, md:3},pl: { md: 15} }}>
+          <Grid item xs={12} md={6} sx={{ p: { xs: 2, md: 3 }, pl: { md: 15 } }}>
             <Typography variant="h6" sx={{ mb: 2, color: '#3f51b5', fontWeight: 500 }}>
               Add Students from School
             </Typography>
             <Box sx={{
-              bgcolor: '#ffffff',
-              borderRadius: 1,
-              border: '1px solid #e0e0e0',
+              //bgcolor: '#ffffff',
+
+              //border: '1px solid #e0e0e0',
               maxHeight: 350,
               width: 300,
               overflowY: 'auto',
@@ -590,23 +627,23 @@ const fetchStudentScores = async (activityId) => {
                     <ListItem
                       key={student.userId}
                       secondaryAction={
-                         <Button
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            onClick={() => handleAddStudentToClassroom(student)}
-                            sx={{ minWidth: 60, whiteSpace: 'nowrap',marginLeft: 20 }}
-                         >
-                           Add
-                         </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          onClick={() => handleAddStudentToClassroom(student)}
+                          sx={{ minWidth: 60, whiteSpace: 'nowrap', marginLeft: 20 }}
+                        >
+                          Add
+                        </Button>
                       }
-                       sx={{
-                         py: 1.5,
-                         px: 2,
-                         borderBottom: '1px solid #eeeeee',
-                         '&:last-child': { borderBottom: 'none' },
-                         '&:hover': { bgcolor: 'rgba(63, 81, 181, 0.05)'}
-                       }}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        borderBottom: '1px solid #eeeeee',
+                        '&:last-child': { borderBottom: 'none' },
+                        '&:hover': { bgcolor: 'rgba(63, 81, 181, 0.05)' }
+                      }}
                     >
                       <ListItemText
                         primary={<Typography variant="body1" fontWeight={500}>{`${student.firstName} ${student.lastName}`}</Typography>}
@@ -631,180 +668,221 @@ const fetchStudentScores = async (activityId) => {
     {
       label: "Average Score",
       count: activityStats.average,
-      color: "#424242",
+      color: "#5D4037",
       icon: <TrendingUpIcon />,
     },
     {
       label: "Lowest Score",
       count: activityStats.lowest,
-      color: "#f44336",
+      color: "#5D4037",
       icon: <ArrowDownwardIcon />,
     },
     {
       label: "Highest Score",
       count: activityStats.highest,
-      color: "#4caf50",
+      color: "#5D4037",
       icon: <ArrowUpwardIcon />,
     },
   ];
 
+  // First, create a reusable button style object
+  const commonButtonStyle = {
+    backgroundImage: `url(${GameTextBox})`,
+    backgroundSize: "cover",
+    backgroundRepeat: "no-repeat",
+    color: "#5D4037",
+    '&:hover': {
+      backgroundImage: `url(${GameTextBox})`,
+      opacity: 0.9
+    },
+    // Remove any existing backgroundColor
+    backgroundColor: 'transparent',
+    // Ensure text is visible
+    textTransform: 'none',
+    fontWeight: 'bold'
+  };
+
   return (
-    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
+    <Box
+      sx={{
+        minHeight: "96.5%",
+        width: "98%",
+        overflow: "hidden",
+        backgroundImage: `url(${MonsterEditUIOuterLight})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        //alignItems: "center",
+        p: 2,
+      }}>
       <Box
         sx={{
-          backgroundColor: "#fff",
+
           py: 2,
           px: 3,
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
           mb: 4,
           display: "flex",
           alignItems: "center"
         }}
       >
-        <DashboardIcon sx={{ mr: 2, color: "#3f51b5", fontSize: 32 }} />
+        <DashboardIcon sx={{ mr: 2, color: "#5D4037", fontSize: 32 }} />
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, color: "#3f51b5" }}>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: "#5D4037" }}>
             Teacher Dashboard
           </Typography>
-          <Typography variant="body1" sx={{ color: "#757575" }}>
+          <Typography variant="body1" sx={{ color: "#5D4037" }}>
             {userData.firstName ? `Welcome, ${userData.firstName} ${userData.lastName}` : "LingguaHey Learning Platform"}
           </Typography>
         </Box>
       </Box>
+      <Divider />
+
+      <Box
+        sx={{
+          py: 0,
+          px: 0,
+          display: 'flex',
+          justifyContent: 'space-between', // Changed from 'flex-start' to 'space-between'
+          alignItems: 'center',
 
 
-          <Box
-            sx={{
-              py: 0,
-              px: 0,
-              display: 'flex',
-              justifyContent: 'space-between', // Changed from 'flex-start' to 'space-between'
-              alignItems: 'center',
-              borderBottom: '1px solid #e0e0e0',
-              bgcolor: '#f5f5f5',
-              borderRadius: '8px 8px 0 0',
-              pt:{md:0}
-            }}
-          >
-            <Button 
+          pt: { md: 0 }
+        }}
+      >
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          //borderStyle: "solid",
+          ml: 10
+        }}>
+
+          <Stack direction="column">
+            <Typography
+              variant="h3"
               sx={{
-                borderRadius: 6, 
-                ml: "20px",
-                backgroundColor: "#3f51b5", 
-                color: "#fff"
-              }} 
-              onClick={() => navigate(`/teacherdashboard`)}
+                color: "#5D4037",
+                letterSpacing: "0.02em",
+                fontSize: 40, // ✅ number = px, so this is 40px
+                textAlign: "left",
+                flex: 1,
+                mx: 2,
+
+              }}
             >
-              <Typography variant="body1" sx={{ color: "white" }}>
-                Back to Dashboard
-              </Typography>
-            </Button>  
-            
-            <Typography 
-              variant="h4" 
-              component="h1" 
+              Classroom 1
+            </Typography>
+
+            <Typography
+              variant="h4"
+              component="h1"
               sx={{
-                color: '#3f51b5',
+                color: '#5D4037',
                 fontWeight: 700,
                 letterSpacing: '0.02em',
                 fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                textAlign: 'center', // Added textAlign center
+                textAlign: 'left', // Added textAlign center
                 flex: 1, // Added flex 1 to ensure it takes available space
-                mx: 2 // Added horizontal margin for spacing
+                mx: 2, // Added horizontal margin for spacing
+
+                //borderStyle: "solid"
               }}
             >
               {currentRoomName}
             </Typography>
+          </Stack>
 
-            <Button 
-              sx={{
-                borderRadius: 6, 
-                mr:"20px",
-                backgroundColor: "#3f51b5", 
-                color: "#fff"
-              }} 
-              onClick={() => navigate(`/teacher/live-activities/${roomId}`)}
-            >
-              <Typography variant="body1" sx={{ color: "white" }}>
-                Activity Creation
-              </Typography>
-            </Button>         
-          </Box>
-            <Box sx={{ width: '100%', textAlign: 'center', my: 3 }}>
+          <Button
+            sx={{
+              ...commonButtonStyle,
+
+              ml:100
+            }}
+            onClick={() => navigate(`/teacherdashboard`)}
+          >
+            <Typography variant="body1">
+              Back to Dashboard
+            </Typography>
+          </Button>
+        </Box>
+      </Box>
+      <Divider />
+
+      <Grid container sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 4 }, pt: { md: 0 }, mt:3}}>
+
+        <Grid item xs={12} md={6} sx={{ pr: { md: 6 }, mb: { xs: 4, md: 0 }, pl: { md: 10 } }}>
+          <Stack direction="column" sx={{
+            //borderStyle: "solid" 
+          }}>
+            <Stack direction="row" spacing={30} >
+              <Stack direction="column" >
+                <Box sx={{
+                  mb: 4, justifyContent: 'center',
+                  backgroundImage: `url(${GameTextFieldBig})`,
+                  backgroundSize: "contain",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  width:600,
+                  height:750,
+                  p: 5,
+
+                }}>
 
 
-          </Box>
-          
-          <Grid container sx={{flexGrow: 1, p: {xs:2, sm:3, md:4},pt:{md:0}}}>
+                  <Stack direction="row" sx={{
+                    width: 500, justifyContent: 'center',
+                    //borderStyle: "solid", 
+                    height: 50,
+                  }}>
+                    <Typography variant="h6" sx={{ mb: 3, color: '#5D4037', ml: 5 }}>Activity Data</Typography>
+                    <Button
+                      sx={{
+                        ...commonButtonStyle,
+                        ml: 20,
+                        height: 40
+                      }}
+                      onClick={() => navigate(`/teacher/live-activities/${roomId}`)}
+                    >
+                      <Typography sx={{}}>
+                        Add New Activity
+                      </Typography>
+                    </Button>
+                  </Stack>
 
-            <Grid item xs={12} md={6} sx={{ pr: { md: 6 }, mb: {xs: 4, md: 0}, pl: { md: 10} }}>
-              <Typography variant="h6" sx={{ mb: 3, color: '#3f51b5', fontWeight: 600 }}>Activity Data</Typography>
-              <Stack direction="row" spacing={30} sx={{ mb: 4, justifyContent: 'center' }}> 
-              <Box>
-              <Box sx={{ mb: 4, p: 2, borderRadius: 1, bgcolor: 'background.paper', boxShadow: 1 }}>
-                <Typography variant="body2" color="text.secondary" id="select-activity-label" mb={1}>
-                  Select Activity
-                </Typography>
-                <FormControl fullWidth>                  <Select
-                    labelId="select-activity-label"
-                    value={selectedActivity}
-                    onChange={handleActivityChange}
-                    displayEmpty
-                    sx={{ bgcolor: 'background.paper' }}
-                  >
-                    <MenuItem value="" disabled>
-                      <em>Select an activity</em>
-                    </MenuItem>
-                    {activities && activities.map((activity) => (
-                      <MenuItem key={activity.activity_ActivityId} value={activity.activity_ActivityId}>
-                        {activity.activity_ActivityName || 'Untitled Activity'}
-                      </MenuItem>
-                    ))}
-                    {(!activities || activities.length === 0) && (
-                      <MenuItem value="" disabled>
-                        No activities available
-                      </MenuItem>
-                    )}
-                  </Select>
-                </FormControl>
-              </Box>
+                  <Divider sx={{mb:2,mt:2}}/>
+                  <Box sx={{
+                    //borderStyle: "solid" 
+                  }}>
+                    <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', boxShadow: 1 }}>
+                      <Typography variant="body2" color="text.secondary" id="select-activity-label" mb={1}>
+                        Select Activity
+                      </Typography>
+                      <FormControl fullWidth>                  <Select
+                        labelId="select-activity-label"
+                        value={selectedActivity}
+                        onChange={handleActivityChange}
+                        displayEmpty
+                        sx={{ bgcolor: 'background.paper' }}
+                      >
+                        <MenuItem value="" disabled>
+                          <em>Select an activity</em>
+                        </MenuItem>
+                        {activities && activities.map((activity) => (
+                          <MenuItem key={activity.activity_ActivityId} value={activity.activity_ActivityId}>
+                            {activity.activity_ActivityName || 'Untitled Activity'}
+                          </MenuItem>
+                        ))}
+                        {(!activities || activities.length === 0) && (
+                          <MenuItem value="" disabled>
+                            No activities available
+                          </MenuItem>
+                        )}
+                      </Select>
+                      </FormControl>
+                    </Box>
 
-              <Card
-                elevation={2}
-                sx={{
-                  width: "100%",
-                  minWidth: 150,
-                  maxWidth: 260,
-                  height: 140,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  borderRadius: 3,
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-                  backgroundColor: "#fff",
-                  mb: 4,
-                  mx: 'auto'
-                }}
-              >
-                <CardContent sx={{ width: "100%", p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <Avatar sx={{ bgcolor: activityStatus === "Deployed" ? "#4caf50" : "#f44336", width: 44, height: 44, mb: 1 }}>
-                    {activityStatus === "Deployed" ? <CheckCircleOutlineIcon /> : <BlockIcon />}
-                  </Avatar>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#444", mb: 0.5, textAlign: "center" }}>
-                    Activity Status
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: activityStatus === "Deployed" ? "#4caf50" : "#f44336", textAlign: "center" }}>
-                    {activityStatus}
-                  </Typography>
-                </CardContent>
-              </Card>
-
-              
-                <Stack direction="column" spacing={2} sx={{ mb: 2, justifyContent: 'center' }}>
-              <Grid container spacing={3} mb={4}>
-                {scoreStatsCards.map((item, i) => (
-                  <Grid item xs={12} sm={4} key={i}>
                     <Card
                       elevation={2}
                       sx={{
@@ -816,83 +894,146 @@ const fetchStudentScores = async (activityId) => {
                         flexDirection: "column",
                         justifyContent: "center",
                         alignItems: "center",
-                        borderRadius: 3,
                         boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
                         backgroundColor: "#fff",
+                        mb: 4,
+                        mx: 'auto'
                       }}
                     >
                       <CardContent sx={{ width: "100%", p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <Avatar sx={{ bgcolor: item.color, width: 44, height: 44, mb: 1 }}>
-                          {item.icon}
+                        <Avatar sx={{ bgcolor: activityStatus === "Deployed" ? "#4caf50" : "#f44336", width: 44, height: 44, mb: 1 }}>
+                          {activityStatus === "Deployed" ? <CheckCircleOutlineIcon /> : <BlockIcon />}
                         </Avatar>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#444", mb: 0.5, textAlign: "center" }}>
-                          {item.label}
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#444", mb: 0.5, textAlign: "center" }}>
+                          Activity Status
                         </Typography>
-                        <Typography variant="h4" sx={{ fontWeight: 700, color: item.color, textAlign: "center" }}>
-                          {item.count}
+                        <Typography variant="h4" sx={{ fontWeight: 700, color: activityStatus === "Deployed" ? "#4caf50" : "#f44336", textAlign: "center" }}>
+                          {activityStatus}
                         </Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8, textAlign: 'center' }}>{item.description}</Typography>
                       </CardContent>
                     </Card>
-                  </Grid>
-                ))}
-              </Grid>    
-             
 
-              <Box sx={{ display: 'flex', gap: 2.4, mb: 4, paddingTop:0.1, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Button
-                  variant="contained"
-                  sx={{ bgcolor: '#9e9e9e', '&:hover': {bgcolor: '#757575'}, flexGrow: {xs: 1, sm:0} }}
-                  disabled={!selectedActivity || selectedRoomStudents.length === 0}
-                  onClick={() => {
-                    fetchStudentScores(selectedActivity);
-                    setOpenScoresModal(true);
-                  }}
-                >
-                  View Scores
-                </Button>
-                <Button
-                  variant="contained"
-                  sx={{ bgcolor: '#f44336', '&:hover': {bgcolor: '#d32f2f'}, flexGrow: {xs: 1, sm:0} }}
-                  onClick={handleUndeploy}
-                  disabled={!selectedActivity || !isDeployed}
-                >
-                  Undeploy
-                </Button>
-                <Button
-                  variant="contained"
-                  sx={{ bgcolor: '#4caf50', '&:hover': {bgcolor: '#388e3c'}, flexGrow: {xs: 1, sm:0} }}
-                  onClick={handleDeploy}
-                  disabled={!selectedActivity || isDeployed}
-                >
-                  Deploy
-                </Button>
-                
-              </Box>
-               </Stack>          
-              </Box>
+
+                    <Stack direction="column" spacing={2} sx={{ mb: 2, justifyContent: 'center' }}>
+                      <Grid container spacing={3} mb={4}>
+                        {scoreStatsCards.map((item, i) => (
+                          <Grid item xs={12} sm={4} key={i}>
+                            <Card
+                              elevation={2}
+                              sx={{
+                                width: "100%",
+                                minWidth: 150,
+                                maxWidth: 260,
+                                height: 140,
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+                                backgroundColor: "#fff",
+                              }}
+                            >
+                              <CardContent sx={{ width: "100%", p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Avatar sx={{ bgcolor: item.color, width: 44, height: 44, mb: 1 }}>
+                                  {item.icon}
+                                </Avatar>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#444", mb: 0.5, textAlign: "center" }}>
+                                  {item.label}
+                                </Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 700, color: item.color, textAlign: "center" }}>
+                                  {item.count}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#5D4037', opacity: 0.8, textAlign: 'center' }}>{item.description}</Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        ))}
+                      </Grid>
+
+
+                      <Box sx={{ display: 'flex', gap: 2.4, mb: 4, paddingTop: 0.1, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <Button
+                          variant="contained"
+                          sx={{ bgcolor: '#9e9e9e', '&:hover': { bgcolor: '#757575' }, flexGrow: { xs: 1, sm: 0 } }}
+                          disabled={!selectedActivity || selectedRoomStudents.length === 0}
+                          onClick={() => {
+                            fetchStudentScores(selectedActivity);
+                            setOpenScoresModal(true);
+                          }}
+                        >
+                          View Scores
+                        </Button>
+                        <Button
+                          variant="contained"
+                          sx={{
+                            ...commonButtonStyle,
+                            flexGrow: { xs: 1, sm: 0 }
+                          }}
+
+                        >
+                          Delete
+                        </Button>
+                        <Button
+                          variant="contained"
+                          sx={{
+                            ...commonButtonStyle,
+                            flexGrow: { xs: 1, sm: 0 }
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="contained"
+                          sx={{
+                            ...commonButtonStyle,
+                            flexGrow: { xs: 1, sm: 0 }
+                          }}
+                          onClick={handleUndeploy}
+                          disabled={!selectedActivity || !isDeployed}
+                        >
+                          Undeploy
+                        </Button>
+                        <Button
+                          variant="contained"
+                          sx={{
+                            ...commonButtonStyle,
+                            flexGrow: { xs: 1, sm: 0 }
+                          }}
+                          onClick={handleDeploy}
+                          disabled={!selectedActivity || isDeployed}
+                        >
+                          Deploy
+                        </Button>
+
+                      </Box>
+                    </Stack>
+                  </Box>
+
+                </Box>
+
+
+              </Stack>
               
-              
-                  
-              <Box sx={{ p: 3, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1,height: 300, overflowY: 'auto' }}>
+              <Box sx={{ p: 3, bgcolor: 'background.paper', boxShadow: 1, height: 300, overflowY: 'auto' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="subtitle1" fontWeight={600}>Enrolled Students ({selectedRoomStudents.length})</Typography>
                   <Button startIcon={<EditIcon />} size="small" sx={{ color: '#3f51b5', textTransform: 'none' }} onClick={handleOpenStudentListModal}>
                     Edit Student List
                   </Button>
                 </Box>
-                <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1, minHeight: 150, maxHeight: 200, overflowY: 'auto', border: '1px solid #e0e0e0' }}>
+                <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1, minHeight: 150, maxHeight: 200, overflowY: 'auto', }}>
                   {selectedRoomStudents.length > 0 ? selectedRoomStudents.map((student) => (
                     <Typography key={student.userId} variant="body2" sx={{ mb: 0.5 }}>{`${student.firstName} ${student.lastName}`}</Typography>
                   )) : <Typography variant="body2" color="text.secondary">No students enrolled.</Typography>}
                 </Box>
               </Box>
-              </Stack>
-            </Grid>
-          </Grid>
-        <StudentListModalContent />
-        <ScoresModalContent /> 
-      </Box>
+            </Stack>
+          </Stack>
+        </Grid>
+      </Grid>
+      <StudentListModalContent />
+      <ScoresModalContent />
+    </Box>
 
   );
 };

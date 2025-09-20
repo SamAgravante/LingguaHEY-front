@@ -20,6 +20,7 @@
     "firebase": "^11.6.0",
     "howler": "^2.2.4",
     "jwt-decode": "^4.0.0",
+    "mui": "^0.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.30.0",

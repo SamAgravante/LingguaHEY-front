@@ -214,9 +214,9 @@ export default function Subscription() {
       price: "₱0",
       duration: "Basic",
       features: [
-        "Basic language learning features",
-        "Limited vocabulary access",
-        "Standard exercises"
+        "Full vocabulary access",
+        "Create up to 1 classroom",
+        "Live activities"
       ],
       recommended: false,
       buttonText: "CURRENT PLAN",
@@ -229,8 +229,8 @@ export default function Subscription() {
       duration: "for 1 month",
       features: [
         "Full vocabulary access",
-        "Advanced exercises",
-        "Progress tracking"
+        "Create up to 5 classrooms",
+        "Live activities"
       ],
       recommended: true,
       buttonText: "CHOOSE THIS PLAN",
@@ -352,7 +352,7 @@ export default function Subscription() {
                   elevation={3}
                   sx={{
                     p: 3,
-                    height: "100%",
+                    height: "115%",
                     width: "80%",
                     display: "flex",
                     flexDirection: "column",
@@ -437,15 +437,12 @@ export default function Subscription() {
                     {plan.buttonText}
                   </Button>
 
-                  <Typography variant="body2" sx={{ textAlign: "center", mb: 2, color: "text.secondary" }}>
-                    Share storage with up to 5 others
-                  </Typography>
 
                   <Divider sx={{ my: 1 }} />
 
                   <Stack spacing={1.5} sx={{ mt: 1 }}>
                     {plan.features.map((feature, idx) => (
-                      <Box key={idx} sx={{ display: "flex", alignItems: "flex-start" }}>
+                      <Box key={idx} sx={{ display: "flex", alignItems: "flex-start" ,width: 350}}>
                         <CheckIcon sx={{ fontSize: 20, color: "#FB8C00", mr: 1, mt: 0.2 }} />
                         <Typography variant="body2">{feature}</Typography>
                       </Box>
