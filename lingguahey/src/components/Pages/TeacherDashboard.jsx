@@ -18,7 +18,12 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -31,6 +36,48 @@ import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import Classroom from "./Classroom";
 import LiveActClassroom from "./Live-Activity-Classroom/LiveActClassroom";
+import HomeIcon from '@mui/icons-material/Home';
+import SettingsIcon from '@mui/icons-material/Settings';
+import PaymentIcon from '@mui/icons-material/Payment';
+import SubscriptionIcon from '@mui/icons-material/Subscriptions';
+import ContactSupportIcon from '@mui/icons-material/ContactSupport';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import Book from '../../assets/images/teacherUI/Book.png';
+
+// Background assets
+import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
+import MenuBoxHor from "../../assets/images/backgrounds/MenuBox1var.png";
+import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
+import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
+import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
+import MonsterEditUIOuter from "../../assets/images/backgrounds/MonsterEditUIOuter.png";
+import MonsterEditUIOuterLight from "../../assets/images/backgrounds/MonsterEditUIOuterLight.png";
+import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
+import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
+import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
+import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
+import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
+import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
+import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
+import NameTab from "../../assets/images/backgrounds/NameTab.png";
+import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
+import HealthPotion from "../../assets/images/objects/HealthPotion.png";
+import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
+import SkipPotion from "../../assets/images/objects/SkipPotion.png";
+import GoldCoins from "../../assets/images/objects/GoldCoins.png";
+import Tablet from "../../assets/images/objects/Tablet.png";
+import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
+import MCHeadshot from "../../assets/images/objects/MCHeadshot.png";
+import Gems from "../../assets/images/objects/Gems.png";
+import Gears from "../../assets/images/objects/gears.png";
+import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
+import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
+import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
 
 const TeacherDashboard = () => {
   const [rooms, setRooms] = useState([]);
@@ -48,8 +95,13 @@ const TeacherDashboard = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [roomToEdit, setRoomToEdit] = useState(null);
   const [editRoomName, setEditRoomName] = useState("");
+  const [createRoomDialogOpen, setCreateRoomDialogOpen] = useState(false);
   const navigate = useNavigate();
   const [token, setToken] = useState(localStorage.getItem("token"));
+  const getRandomColor = () => {
+    const colors = ['#F08080', '#FA8072', '#E9967A', '#F4A460', '#E6B8AF'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
 
   const API = React.useMemo(() => {
     if (!token) return null;
@@ -63,7 +115,7 @@ const TeacherDashboard = () => {
       },
     });
   }, [token]);
-  
+
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
@@ -138,22 +190,29 @@ const TeacherDashboard = () => {
   }, [token, userData.userId, fetchRooms]);
 
 
+  const handleCreateRoomDialogOpen = () => {
+    setCreateRoomDialogOpen(true);
+  };
+
+  const handleCreateRoomDialogClose = () => {
+    setCreateRoomDialogOpen(false);
+    setNewRoomName(""); // Clear the input when closing the dialog
+  };
+
   const handleCreateRoom = async () => {
     if (!newRoomName.trim() || !API) return;
-    
+
     try {
-      // The classroom creation endpoint might associate the room with the logged-in teacher via token
       const response = await API.post('/api/lingguahey/classrooms', {
         classroomName: newRoomName
-        // teacherId: userData.userId, // Include if your API requires it explicitly
       });
-      
-      setRooms(prev => [...prev, { 
-        id: response.data.classroomID, 
+
+      setRooms(prev => [...prev, {
+        id: response.data.classroomID,
         name: response.data.classroomName,
         activities: response.data.activities || []
       }]);
-      setNewRoomName("");
+      handleCreateRoomDialogClose(); // Close the dialog after successful creation
     } catch (err) {
       console.error("Failed to create room:", err);
       // Add user feedback (e.g., toast notification)
@@ -168,7 +227,7 @@ const TeacherDashboard = () => {
 
   const handleDeleteRoom = async () => {
     if (!API || !roomToDelete) return;
-    
+
     try {
       await API.delete(`/api/lingguahey/classrooms/${roomToDelete.id}`);
       setRooms(prev => prev.filter(room => room.id !== roomToDelete.id));
@@ -189,13 +248,13 @@ const TeacherDashboard = () => {
 
   const handleEditRoom = async () => {
     if (!API || !roomToEdit || !editRoomName.trim()) return;
-    
+
     try {
       const response = await API.put(`/api/lingguahey/classrooms/${roomToEdit.id}`, {
         classroomName: editRoomName
       });
-      
-      setRooms(prev => prev.map(room => 
+
+      setRooms(prev => prev.map(room =>
         room.id === roomToEdit.id ? { ...room, name: editRoomName } : room
       ));
       setEditModalOpen(false);
@@ -217,343 +276,278 @@ const TeacherDashboard = () => {
       </Box>
     );
   }
-  
+
   return (
-    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
-      {/* Header */}
-      <Box 
-        sx={{ 
-          backgroundColor: "#fff", 
-          py: 2, 
-          px: 3, 
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          mb: 4,
-          display: "flex",
-          alignItems: "center"
-        }}
-      >
-        <DashboardIcon sx={{ mr: 2, color: "#3f51b5", fontSize: 32 }} />
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, color: "#3f51b5" }}>
-            Teacher Dashboard
-          </Typography>
-          <Typography variant="body1" sx={{ color: "#757575" }}>
-            {userData.firstName ? `Welcome, ${userData.firstName} ${userData.lastName}` : "LingguaHey Learning Platform"}
-          </Typography>
-        </Box>
-      </Box>
+    <Box
+      sx={{
+        minHeight: "96.5%",
+        width: "98%",
+        overflow: "hidden",
+        backgroundImage: `url(${MonsterEditUIOuterLight})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        //alignItems: "center",
+        p: 2,
+      }}>
 
-      <Box sx={{ maxWidth: 1600, mx: "auto", px: 3 }}>
-        {/* Create Room Section */}
-        <Paper
-          elevation={0}
-          sx={{
-            mb: 4,
-            p: 3,
-            borderRadius: 2,
-            backgroundColor: "#fff",
-            border: "1px solid rgba(0, 0, 0, 0.12)"
-          }}
-        >
-          <Box 
-            sx={{ 
-              display: "flex", 
-              gap: 2, 
-              alignItems: 'center', 
-              width: { xs: '100%', md: '50%', lg: '40%' }
-            }}
-          >
-            <TextField
-              fullWidth
-              label="New Room Name"
-              variant="outlined"
-              value={newRoomName}
-              placeholder="Enter room name..."
-              onChange={(e) => setNewRoomName(e.target.value)}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#fff",
-                  borderRadius: 1,
-                  "&:hover fieldset": {
-                    borderColor: "#3f51b5",
+      {/* Main Content */}
+      <Box sx={{ flexGrow: 1, p: 3, pl: 7 }}>
+        {/* Header */}
+        <Typography variant="h5" component="h2" gutterBottom>
+          View Classrooms
+        </Typography>
+
+        {/* Classroom Cards */}
+        <Grid container spacing={3}>
+          {/* Existing Classroom Cards */}
+          {rooms.map((room) => (
+            <Grid item xs={12} sm={6} md={4} key={room.id}>
+              <Card
+                sx={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRadius: 2,
+                  minWidth: 230,
+                  transition: "all 0.2s ease-in-out",
+                  border: "1px solid rgba(0, 0, 0, 0.12)",
+                  backgroundColor: 'rgba(233, 30, 98, 0)', // Example background color
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
                   },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#3f51b5",
-                  }
-                }
-              }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleCreateRoom}
-              disabled={!newRoomName.trim()}
-              sx={{
-                height: 56,
-                px: 3,
-                backgroundColor: "#3f51b5",
-                "&:hover": {
-                  backgroundColor: "#303f9f"
-                },
-                "&.Mui-disabled": {
-                  backgroundColor: "#e0e0e0"
-                },
-                whiteSpace: "nowrap"
-              }}
-              startIcon={<AddIcon />}
-            >
-              Create Room
-            </Button>
-          </Box>
-        </Paper>
+                  cursor: 'pointer',
+                }}
+                onClick={() => handleRoomClick(room)}
+              >
 
-        {/* Rooms Grid */}
-        <Box sx={{ mb: 4 }}>
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: 3,
-                borderRadius: 2,
-                "& .MuiAlert-message": { fontSize: "0.95rem" }
-              }}
-              action={
-                <Button 
-                  color="inherit" 
-                  size="small" 
-                  onClick={fetchRooms}
-                  sx={{ fontWeight: 500 }}
-                >
-                  RETRY
-                </Button>
-              }
-            >
-              {error}
-            </Alert>
-          )}
 
-          {isLoading && rooms.length > 0 && (
-            <Box display="flex" justifyContent="center" my={4}>
-              <CircularProgress size={32} sx={{ color: "#3f51b5" }}/>
-            </Box>
-          )}
-
-          <Grid container spacing={3}>
-            {!isLoading && rooms.length > 0 ? (
-              rooms.map((room) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={room.id}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      borderRadius: 2,
-                      minWidth: 230,
-                      transition: "all 0.2s ease-in-out",
-                      border: "1px solid rgba(0, 0, 0, 0.12)",
-                      "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
-                      }
-                    }}
-                    onClick={() => handleRoomClick(room)}
-                  >
-                    <CardContent sx={{ p: 3, position: "relative" }}>
-                      <Box sx={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 0 }}>
-                        <Tooltip title="Edit Room" placement="top">
-                          <IconButton
-                            size="small"
-                            edge="end"
-                            aria-label={`Edit room ${room.name}`}
-                            sx={{
-                              color: "rgb(73, 73, 73)",
-                              opacity: 0.34,
-                              "&:hover": {
-                                opacity: 1,
-                                backgroundColor: "rgba(33, 150, 243, 0.08)"
-                              }
-                            }}
-                            onClick={(e) => handleEditClick(e, room)}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete Room" placement="top">
-                          <IconButton
-                            size="small"
-                            edge="end"
-                            aria-label={`Delete room ${room.name}`}
-                            sx={{
-                              color: "#f44336",
-                              opacity: 0.7,
-                              "&:hover": {
-                                opacity: 1,
-                                backgroundColor: "rgba(244, 67, 54, 0.08)"
-                              }
-                            }}
-                            onClick={(e) => handleDeleteClick(e, room)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-
-                      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                        <Avatar 
-                          sx={{ 
-                            bgcolor: "#3f51b5",
-                            mr: 2,
-                            width: 40,
-                            height: 40
-                          }}
-                        >
-                          <ClassIcon />
-                        </Avatar>
-                        <Typography 
-                          variant="h6" 
-                          sx={{ 
-                            fontWeight: 500,
-                            fontSize: "1.1rem",
-                            color: "#1a237e"
-                          }}
-                        >
-                          {room.name}
-                        </Typography>
-                      </Box>
-                      {/*
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: "text.secondary",
-                          display: "flex",
-                          alignItems: "center",
-                          mt: 1
-                        }}
-                      >
-                        {room.activities?.length || 0} Activities
-                      </Typography>
-                      */}
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))
-            ) : (
-              !isLoading && (
-                <Grid item xs={12}>
-                  <Paper 
-                    sx={{ 
-                      p: 4, 
-                      textAlign: "center",
-                      borderRadius: 2,
-                      backgroundColor: "#f8f9fa",
-                      border: "1px solid rgba(0, 0, 0, 0.12)"
-                    }}
-                  >
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        color: "text.secondary",
-                        fontWeight: 500
+                <CardContent sx={{ p: 2, position: "relative", backgroundColor: getRandomColor(), borderRadius: 2, alignItems: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Box sx={{ justifyContent: 'center' }}>
+                    <Avatar
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        bgcolor: "transparent",
+                        alignItems: 'center',
                       }}
                     >
-                      No rooms created yet. Create your first room to get started.
-                    </Typography>
-                  </Paper>
-                </Grid>
-              )
-            )}
+                      <img src={Book} alt="Book Icon" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    </Avatar>
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 500,
+                      fontSize: "1.1rem",
+                      textAlign: 'center',
+                      backgroundColor: '#00000069',
+                      padding: '4px 8px',
+                      borderRadius: 1,
+                      width: '100%',
+                    }}
+                  >
+                    {room.name}
+                  </Typography>
+                </CardContent>
+
+
+              </Card>
+            </Grid>
+          ))}
+
+          {/* "Create New Classroom" Card */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Card
+              sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: 208,
+                transition: "all 0.2s ease-in-out",
+                border: "1px solid rgba(0, 0, 0, 0.12)",
+                backgroundImage: `url(${GameTextFieldMedium})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backgroundcolor: 'transparent',
+                "&:hover": {
+                  transform: "translateY(-4px)",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
+                },
+                cursor: 'pointer',
+              }}
+              onClick={handleCreateRoomDialogOpen}
+            >
+              <CardContent sx={{ textAlign: 'center' }}>
+                <Typography variant="h6">Create New Classroom +</Typography>
+              </CardContent>
+            </Card>
           </Grid>
-        </Box>
+        </Grid>
       </Box>
 
-      {/* Delete Confirmation Modal */}
-      <Dialog
-        open={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-description"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <DialogTitle id="delete-dialog-title">
-          {"Delete Room"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete "{roomToDelete?.name}"? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setDeleteModalOpen(false)} 
-            sx={{ color: 'text.secondary' }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteRoom} 
-            color="error" 
-            variant="contained"
-            autoFocus
-          >
-            Delete
-          </Button>
-        </DialogActions>
+      {/* Create New Classroom Dialog */}
+      <Dialog open={createRoomDialogOpen} onClose={handleCreateRoomDialogClose}>
+        <Box
+          sx={{
+            p: 2,
+            backgroundImage: `url(${GameTextFieldMedium})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            width: 400,
+            minHeight: 300,
+          }}
+        >
+          <DialogTitle sx={{ textAlign: "center", color: "#5D4037", }}>
+            Create New Classroom
+          </DialogTitle>
+          <Divider sx={{ mb: 1 }} />
+
+          <DialogContent>
+            <TextField
+              sx={{
+                backgroundImage: `url(${GameTextBox})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                width: 300,
+                height: 60,
+                alignSelf: "center",
+                ml:3
+              }}
+              label="Classroom Name"
+              type="text"
+              value={newRoomName}
+              onChange={(e) => setNewRoomName(e.target.value)}
+              fullWidth
+              variant="outlined"
+              InputLabelProps={{
+                sx: {
+                  top: -6,
+                  "&.MuiInputLabel-shrink": { top: -6 },
+                },
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center" }}>
+            <Button
+              sx={{
+                backgroundImage: `url(${GameShopBoxSmall})`,
+                backgroundSize: 'cover',
+                width: '180px',
+                height: '50px',
+                top: 20,
+                color: '#5D4037'
+              }}
+              onClick={handleCreateRoomDialogClose}>Cancel</Button>
+            <Button
+              sx={{
+                backgroundImage: `url(${GameShopBoxSmall})`,
+                backgroundSize: 'cover',
+                width: '180px',
+                height: '50px',
+                top: 20,
+                color: '#5D4037'
+              }}
+              onClick={handleCreateRoom} disabled={!newRoomName.trim()}>
+              Create
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
 
-      {/* Edit Room Modal */}
-      <Dialog
-        open={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        aria-labelledby="edit-dialog-title"
-        aria-describedby="edit-dialog-description"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <DialogTitle id="edit-dialog-title">
-          {"Edit Room Name"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="edit-dialog-description">
-            Update the name of the room.
-          </DialogContentText>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Room Name"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={editRoomName}
-            onChange={(e) => setEditRoomName(e.target.value)}
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                backgroundColor: "#fff",
-                borderRadius: 1,
-                "&:hover fieldset": {
-                  borderColor: "#3f51b5",
+      {/* Edit Room Dialog */}
+      <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)}>
+        <Box
+          sx={{
+            p: 2,
+            backgroundImage: `url(${GameTextFieldBig})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            width: 350,
+            minHeight: 250,
+          }}
+        >
+          <DialogTitle sx={{ textAlign: "center", color: "#5D4037" }}>
+            Edit Room Name
+          </DialogTitle>
+          <Divider sx={{ mb: 1 }} />
+
+          <DialogContent>
+            <TextField
+              sx={{
+                backgroundImage: `url(${GameTextBox})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                width: 300,
+                height: 60,
+                alignSelf: "center",
+              }}
+              label="Room Name"
+              type="text"
+              value={editRoomName}
+              onChange={(e) => setEditRoomName(e.target.value)}
+              fullWidth
+              variant="outlined"
+              InputLabelProps={{
+                sx: {
+                  top: -6,
+                  "&.MuiInputLabel-shrink": { top: -6 },
                 },
-                "&.Mui-focused fieldset": {
-                  borderColor: "#3f51b5",
-                }
-              }
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setEditModalOpen(false)} 
-            sx={{ color: 'text.secondary' }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleEditRoom} 
-            color="primary" 
-            variant="contained"
-            autoFocus
-          >
-            Save
-          </Button>
-        </DialogActions>
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center" }}>
+            <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditRoom}>Save</Button>
+          </DialogActions>
+        </Box>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+        <Box
+          sx={{
+            p: 2,
+            backgroundImage: `url(${GameTextFieldBig})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            width: 350,
+            minHeight: 220,
+          }}
+        >
+          <DialogTitle sx={{ textAlign: "center", color: "#B71C1C" }}>
+            Delete Room
+          </DialogTitle>
+          <Divider sx={{ mb: 1 }} />
+
+          <DialogContent>
+            <Typography align="center" sx={{ mb: 2 }}>
+              Are you sure you want to delete{" "}
+              <strong>{roomToDelete?.name}</strong>? <br /> This action cannot be
+              undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center" }}>
+            <Button onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleDeleteRoom} color="error" variant="contained">
+              Delete
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
     </Box>
   );
 };

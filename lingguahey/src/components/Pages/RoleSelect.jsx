@@ -1,8 +1,18 @@
-import { Grid, Stack, Box, Typography, IconButton } from "@mui/material";
+import { Grid, Stack, Box, Typography, IconButton,TextField,Button } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from "react-router-dom";
 import { MusicContext } from "../../contexts/MusicContext";
 import { useState, useEffect,useContext } from "react";
+
+// Background assets
+import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
+import MenuBoxHor from "../../assets/images/backgrounds/MenuBox1var.png";
+import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
+import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
 
 export default function RoleSelect() {
   const navigate = useNavigate();
@@ -15,21 +25,60 @@ export default function RoleSelect() {
   useEffect(() => {
     setIntroMode(true); // Switch to default/background music
   }, []);
+const handleSignUp = async (e) => {
 
+  };
   const roles = [
     { label: "Student", value: "USER" },
     { label: "Teacher", value: "TEACHER" }
   ];
 
   return (
-    <Grid container sx={{ width: '100vw', height: '100vh', background, p: 0, justifyContent: 'center', alignItems: 'center' }}>
-      <Box sx={{ width: '60%', height: '70%', backgroundColor: panelBg, p: 4 }}>
-        <Box sx={{top: 16, left: 16 }}>
-          <IconButton onClick={()=>navigate('/')}><ArrowBackIcon sx={{ color:textColor }}/>
-          <Typography sx={{ cursor:'pointer', color: textColor }} onClick={()=>navigate('/')}>Back</Typography>
-          </IconButton>
-        </Box>
-        <Stack spacing={4} sx={{ height: '100%' }} justifyContent="center" alignItems="center">
+          <Grid
+        container
+        sx={{
+          backgroundImage: `url(${LandingBackgroundPic})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    minHeight: '100vh',
+                    minWidth: '100vw',
+                    display: 'flex',
+                    justifyContent: 'center',
+        }}
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Box
+          component="form"
+          onSubmit={handleSignUp}
+          sx={{
+            width: "100%",
+            minWidth: 1000,
+            minHeight: 800,
+            backgroundImage: `url(${MenuBoxHor})`,
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            color: textColor,
+            borderRadius: 2,
+            paddingLeft: 51,
+            paddingRight: 51,
+            paddingTop: 15,
+          }}
+        >
+          <Stack direction={"row"} alignItems="center" spacing={70}>
+            <IconButton onClick={() => navigate("/")}>
+            <ArrowBackIcon sx={{ color: textColor }} />
+            <Typography
+              sx={{ cursor: "pointer", color: textColor }}
+              onClick={() => navigate("/")}
+            >
+              Back
+            </Typography>
+            </IconButton>
+            </Stack>
+          
+          <Stack spacing={4} sx={{ height: '100%' }} justifyContent="center" alignItems="center">
           <Typography variant="h4" sx={{ color: textColor }}>Select Your Role</Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} justifyContent="center">
             {roles.map(({ label, value }) => (
@@ -37,11 +86,12 @@ export default function RoleSelect() {
                 key={label}
                 onClick={() => navigate('/signup', { state: { role: value } })}
                 sx={{
-                  backgroundColor: optionBg,
-                  minHeight: '50vh',
-                  minWidth: '20vw',
-                  maxHeight: '20vh',
-                  maxWidth: '50vw',
+                  backgroundImage: `url(${GameTextFieldBig})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  width: '20vw',
+                  height: '47vh',
+
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -58,7 +108,7 @@ export default function RoleSelect() {
             ))}
           </Stack>
         </Stack>
-      </Box>
-    </Grid>
+        </Box>
+      </Grid>
   );
 }

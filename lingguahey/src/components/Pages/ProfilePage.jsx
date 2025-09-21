@@ -1,11 +1,17 @@
-import { Box, Typography, Grid, Stack, TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert } from "@mui/material";
+import { Box, Typography, Grid, Stack, TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, IconButton, Divider } from "@mui/material";
 import { useEffect, useState } from "react";
 import { getUserFromToken } from "../../utils/auth";
 import axios from "axios";
+import CloseIcon from "@mui/icons-material/Close";
+
+// Background assets
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
 
 export default function ProfilePage() {
-  // ---- LOGIC: DO NOT MODIFY ----
-  const userID = getUserFromToken().userId;
+  const userID = getUserFromToken()?.userId;
   const [userDetails, setUserDetails] = useState({});
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
@@ -41,7 +47,7 @@ export default function ProfilePage() {
         showSnack("Failed to fetch user details.", "error");
       }
     };
-    fetchUser();
+    if (userID) fetchUser();
   }, [userID]);
 
   const handleChange = (e) => {
@@ -51,22 +57,22 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     const payload = {
-      userId:      formData.userId,
-      firstName:   formData.firstName,
-      middleName:  formData.middleName,
-      lastName:    formData.lastName,
-      email:       formData.email,
-      password:    formData.password,
-      idNumber:    formData.idNumber,
+      userId: formData.userId,
+      firstName: formData.firstName,
+      middleName: formData.middleName,
+      lastName: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      idNumber: formData.idNumber,
       totalPoints: formData.totalPoints,
-      profilePic:  formData.profilePic,
-      role:        formData.role,
+      profilePic: formData.profilePic,
+      role: formData.role,
     };
     try {
       const response = await API.put(`/${userID}`, payload);
       setUserDetails(response.data);
-      setEditMode(false);
       setFormData(response.data);
+      setEditMode(false);
       showSnack("Profile updated successfully.", "success");
     } catch (error) {
       console.error("Failed to update profile", error);
@@ -92,7 +98,7 @@ export default function ProfilePage() {
   };
 
   const handleSnackClose = (event, reason) => {
-    if (reason === 'clickaway') return;
+    if (reason === "clickaway") return;
     setSnackOpen(false);
   };
 
@@ -101,89 +107,245 @@ export default function ProfilePage() {
       showSnack("New password must be at least 8 characters long.", "warning");
       return;
     }
-
     if (newPassword !== confirmNewPassword) {
       showSnack("New passwords do not match.", "warning");
       return;
     }
-
-    const payload = {
-      oldPassword: currentPassword,
-      newPassword: newPassword
-    }
+    const payload = { oldPassword: currentPassword, newPassword: newPassword };
     try {
       await API.put(`/${userID}/reset-password`, payload);
       setPwdDialogOpen(false);
       showSnack("Password updated successfully.", "success");
     } catch (error) {
-      console.error("Failed to update password", error);
       showSnack("Failed to update password. Please check your current password.", "error");
     }
   };
 
-  // Theme colors
-  const panelBg = "#FFF9C4";
-  const inputBg = "#FFFFFF";
-  const buttonPrimary = "#FFCC80";
-  const buttonSecondary = "#FFE0B2";
-  const textPrimary = "#6D4C41";
+  // Shared textfield style
+  const customTextFieldProps = {
+    fullWidth: true,
+    variant: "outlined",
+    InputProps: {
+      sx: {
+        backgroundImage: `url(${GameTextFieldLong})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        height: 40,
+        pl: 1,
+      },
+    },
+    InputLabelProps: {
+      sx: {
+        top: -6,
+        "&.MuiInputLabel-shrink": { top: -12 },
+      },
+    },
+  };
 
   return (
     <>
-    <Box sx={{ width: '82vw', minHeight: '90vh', backgroundColor: '#FFECB3', p: 3 }}>
-      <Grid container justifyContent="center">
-        <Box sx={{ backgroundColor: panelBg, p: 4, borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '100%', maxWidth: 600 }}>
+      <Grid container justifyContent="center" sx={{ p: 4 }}>
+        <Box
+          sx={{
+            backgroundImage: `url(${GameTextFieldBig})`,
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            width: 400,
+            minHeight: 550,
+            borderRadius: 3,
+            p: 5,
+            position: "relative",
+          }}
+        >
+          <Typography variant="h4" sx={{ textAlign: "center", mb: 3, color: "#5D4037" }}>
+            {editMode ? "Edit Profile" : "Profile Information"}
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Box sx={{ height:20}}/>
+
           <Stack spacing={3}>
-            <Typography variant="h4" sx={{ color: textPrimary, textAlign: 'center' }}>Profile Information</Typography>
             {editMode ? (
-              <Stack spacing={2}>
-                <TextField label="First Name" name="firstName" value={formData.firstName || ''} onChange={handleChange} fullWidth variant="outlined" sx={{ backgroundColor: inputBg, borderRadius: 1 }} />
-                <TextField label="Middle Name" name="middleName" value={formData.middleName || ''} onChange={handleChange} fullWidth variant="outlined" sx={{ backgroundColor: inputBg, borderRadius: 1 }} />
-                <TextField label="Last Name" name="lastName" value={formData.lastName || ''} onChange={handleChange} fullWidth variant="outlined" sx={{ backgroundColor: inputBg, borderRadius: 1 }} />
-                <TextField label="Email" name="email" value={formData.email || ''} disabled fullWidth variant="outlined" sx={{ backgroundColor: inputBg, borderRadius: 1 }} />
-                <Button variant="outlined" onClick={handlePwdDialogOpen} sx={{ textTransform: 'none', width: 'fit-content' }}>Change Password</Button>
+              <>
+                <TextField label="First Name" name="firstName" value={formData.firstName || ""} onChange={handleChange} {...customTextFieldProps} />
+                <TextField label="Middle Name" name="middleName" value={formData.middleName || ""} onChange={handleChange} {...customTextFieldProps} />
+                <TextField label="Last Name" name="lastName" value={formData.lastName || ""} onChange={handleChange} {...customTextFieldProps} />
+                <TextField label="Email" name="email" value={formData.email || ""} disabled {...customTextFieldProps} />
+
+                <Button
+                  onClick={handlePwdDialogOpen}
+                  sx={{
+                    backgroundImage: `url(${GameTextBoxLong})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    textTransform: "none",
+                    width: 360,
+                    height: 40,
+                    alignSelf: "center",
+                  }}
+                >
+                  Change Password
+                </Button>
+
                 <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button variant="contained" onClick={handleSave} sx={{ backgroundColor: buttonPrimary, color: textPrimary, textTransform: 'none' }}>Save</Button>
-                  <Button variant="contained" onClick={() => setEditMode(false)} sx={{ backgroundColor: buttonSecondary, color: textPrimary, textTransform: 'none' }}>Cancel</Button>
+                  <Button
+                    onClick={handleSave}
+                    sx={{
+                      backgroundColor: "#AED581",
+                      color: "#5D4037",
+                      "&:hover": { backgroundColor: "#C5E1A5" },
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    onClick={() => setEditMode(false)}
+                    sx={{
+                      backgroundColor: "#FFB74D",
+                      color: "#5D4037",
+                      "&:hover": { backgroundColor: "#FFA726" },
+                    }}
+                  >
+                    Cancel
+                  </Button>
                 </Stack>
-              </Stack>
+              </>
             ) : (
-              <Stack spacing={1}>
-                <Typography sx={{ color: textPrimary }}>First Name: {userDetails.firstName}</Typography>
-                <Typography sx={{ color: textPrimary }}>Middle Name: {userDetails.middleName}</Typography>
-                <Typography sx={{ color: textPrimary }}>Last Name: {userDetails.lastName}</Typography>
-                <Typography sx={{ color: textPrimary }}>Email: {userDetails.email}</Typography>
-                <Box textAlign="right" sx={{ mt: 2 }}>
-                  <Button variant="contained" onClick={() => setEditMode(true)} sx={{ backgroundColor: buttonPrimary, color: textPrimary, textTransform: 'none' }}>Edit</Button>
-                </Box>
-              </Stack>
+              <>
+                <Typography><strong>First Name:</strong> {userDetails.firstName}</Typography>
+                <Typography><strong>Middle Name:</strong> {userDetails.middleName}</Typography>
+                <Typography><strong>Last Name:</strong> {userDetails.lastName}</Typography>
+                <Typography><strong>Email:</strong> {userDetails.email}</Typography>
+
+                <Button
+                  onClick={() => setEditMode(true)}
+                  sx={{
+                    mt: 2,
+                    backgroundColor: "#AED581",
+                    color: "#5D4037",
+                    "&:hover": { backgroundColor: "#C5E1A5" },
+                  }}
+                >
+                  Edit Profile
+                </Button>
+              </>
             )}
           </Stack>
         </Box>
       </Grid>
-    </Box>
 
-    <Dialog open={pwdDialogOpen} onClose={handlePwdDialogClose}>
-      <DialogTitle>Confirm Password Change</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField label="Current Password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} fullWidth variant="outlined" />
-          <TextField label="New Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} fullWidth variant="outlined" />
-          <TextField label="Confirm New Password" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} fullWidth variant="outlined" />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handlePwdDialogClose} sx={{ textTransform: 'none' }}>Cancel</Button>
-        <Button onClick={handlePwdConfirm} sx={{ textTransform: 'none' }}>Confirm</Button>
-      </DialogActions>
-    </Dialog>
+      {/* Password Change Dialog */}
+      <Dialog open={pwdDialogOpen} onClose={handlePwdDialogClose} sx={{paddingLeft:30,paddingBottom:30}}>
+        <Box sx={{
+          p: 2,
+          backgroundImage: `url(${GameTextFieldBig})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          width: 350,
+          height: 425,
+        }}>
+          <DialogTitle sx={{ textAlign: 'center', color: '#5D4037' }}>Confirm Password Change</DialogTitle>
+          <Divider sx={{ mb: 1 }} />
 
-    {/* Snackbar for notifications */}
-    <Snackbar open={snackOpen} autoHideDuration={4000} onClose={handleSnackClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-      <Alert onClose={handleSnackClose} severity={snackSeverity} sx={{ width: '100%' }}>
-        {snackMessage}
-      </Alert>
-    </Snackbar>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField
+                sx={{
+                  backgroundImage: `url(${GameTextBox})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  textTransform: 'none',
+                  width: 300,
+                  height: 60,
+                  alignSelf: 'center',
+                }}
+                label="Current Password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                fullWidth
+                variant="outlined"
+                InputLabelProps={{
+                  sx: {
+                    top: -6,
+                    '&.MuiInputLabel-shrink': {
+                      top: -6,
+                    },
+                  },
+                }}
+
+              />
+              <TextField
+                sx={{
+                  backgroundImage: `url(${GameTextBox})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  textTransform: 'none',
+                  width: 300,
+                  height: 60,
+                  alignSelf: 'center',
+                }}
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                fullWidth
+                variant="outlined"
+                InputLabelProps={{
+                  sx: {
+                    top: -6,
+                    '&.MuiInputLabel-shrink': {
+                      top: -6,
+                    },
+                  },
+                }}
+              />
+              <TextField
+                sx={{
+                  backgroundImage: `url(${GameTextBox})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  textTransform: 'none',
+                  width: 300,
+                  height: 60,
+                  alignSelf: 'center',
+                }}
+                label="Confirm New Password"
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                fullWidth
+                variant="outlined"
+                InputLabelProps={{
+                  sx: {
+                    top: -6,
+                    '&.MuiInputLabel-shrink': {
+                      top: -6,
+                    },
+                  },
+                }}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handlePwdDialogClose}>Cancel</Button>
+            <Button onClick={handlePwdConfirm}>Confirm</Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar open={snackOpen} autoHideDuration={4000} onClose={handleSnackClose} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        <Alert onClose={handleSnackClose} severity={snackSeverity} sx={{ width: "100%" }}>
+          {snackMessage}
+        </Alert>
+      </Snackbar>
     </>
   );
 }

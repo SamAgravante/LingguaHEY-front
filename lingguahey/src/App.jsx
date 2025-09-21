@@ -19,6 +19,7 @@ import Activities from "./components/Pages/Activities";
 import OnePicFourWords from "./components/Pages/Games/GameCreation/OnePicFourWords";
 import PhraseTranslation from "./components/Pages/Games/GameCreation/PhraseTranslation";
 import WordTranslation from "./components/Pages/Games/GameCreation/WordTranslation";
+import DungeonGame from './components/Pages/DungeonGame';
 
 import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/LiveActClassroom";
 import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
@@ -79,6 +80,7 @@ function App() {
         <Route path="/leveleditor" element={<LevelEditor />} />
         <Route path="/add-level" element={<AddLevelForm />} />
         <Route path="/monstereditor" element={<MonsterEditor />} />
+        <Route path="/dungeon" element={<DungeonGame />} />
 
         {/* Live Activities under a classroom context */}
         <Route

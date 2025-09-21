@@ -13,6 +13,13 @@
   font-display: swap;
 }
 @font-face {
+  font-family: 'RetroGaming';
+  src: url('./assets/font/RetroGaming.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
   font-family: 'LittleBubble';
   src: url('./assets/font/LittleBubble‑Regular.otf') format('opentype');
   font-weight: 400;
@@ -46,11 +53,17 @@ a:hover {
 
 body {
   margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
   display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-  font-family: 'ABeeZee', system-ui, sans-serif;
+  align-items: center;
+  justify-content: center;
 }
 
 h1, h2, h3, h4, h5, h6 {

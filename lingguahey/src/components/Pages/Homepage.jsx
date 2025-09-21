@@ -1,5 +1,5 @@
 // src/components/Pages/Homepage.jsx
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, use } from 'react';
 import {
   Grid,
   Stack,
@@ -10,6 +10,8 @@ import {
   Backdrop,
   IconButton,
   LinearProgress,
+  Button,
+  Divider,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -29,6 +31,44 @@ import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png'
 import { MusicContext } from '../../contexts/MusicContext';
 import { useScore } from '../../contexts/ScoreContext';
 import { styled } from '@mui/system';
+import DungeonGame from './DungeonGame';
+import { useNavigate } from 'react-router-dom';
+import DungeonSection from '../sections/DungeonSection';
+import ShopSection from '../sections/ShopSection';
+import SummonSection from '../sections/SummonSection';
+import SettingsNav from '../sections/SettingsNav';
+
+// Background assets
+import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
+import MenuBoxHor from "../../assets/images/backgrounds/MenuBox1var.png";
+import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
+import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
+import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
+import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
+import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
+import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
+import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
+import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
+import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
+import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
+import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
+import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
+import NameTab from "../../assets/images/backgrounds/NameTab.png";
+import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
+import HealthPotion from "../../assets/images/objects/HealthPotion.png";
+import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
+import SkipPotion from "../../assets/images/objects/SkipPotion.png";
+import GoldCoins from "../../assets/images/objects/GoldCoins.png";
+import Tablet from "../../assets/images/objects/Tablet.png";
+import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
+import MCHeadshot from "../../assets/images/objects/MCHeadshot.png";
+import Gems from "../../assets/images/objects/Gems.png";
+import Gears from "../../assets/images/objects/gears.png";
+import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
+import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
+import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
 
 
 const PastelProgress = styled(LinearProgress)(() => ({
@@ -46,15 +86,79 @@ export default function Homepage() {
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState('');
-  const [activities, setActivities] = useState([]);  const [current, setCurrent] = useState(null);
+  const [activities, setActivities] = useState([]); const [current, setCurrent] = useState(null);
   const [classroom, setClassroom] = useState(null);
   const [userDetails, setUserDetails] = useState({});
-  const [userActivities, setUserActivities] = useState([]);  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const [userActivities, setUserActivities] = useState([]);
   const { refreshScore } = useScore();
   const [progressVocab, setProgressVocab] = useState(0);
   const [progressGrammar, setProgressGrammar] = useState(0);
   const [secVisibility, setSecVisibility] = useState(true);
   const liveActivityRef = useRef(null);
+  const [shopHealthPotion, setShopHealthPotion] = useState(0);
+  const [shopShieldPotion, setShopShieldPotion] = useState(0);
+  const [shopSkipPotion, setShopSkipPotion] = useState(0);
+  const [shopTotal, setShopTotal] = useState(0);
+  const [coins, setCoins] = useState(0);
+  const [gems, setGems] = useState(0);
+  const navigate = useNavigate();
+
+  const [makeMessageAppear, setMakeMessageAppear] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState(0);
+  const [levelDetails, setLevelDetails] = useState([]);
+  const [dungeonPreperatory, setDungeonPreparatory] = useState(false);
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [monsterIndex, setMonsterIndex] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  //function 
+  async function buyPotion() {
+    console.log('buyPotion Function is called');
+    try {
+      //Health Potion Loop
+      for (let count = 0; count < shopHealthPotion; count++) {
+        const buyResp = await API.post(`/potion-shop/buy`, {
+          userId: userDetails.userId,
+          potionType: 'HEALTH',
+          cost: 100
+        });
+        console.log(buyResp.data);
+      }
+
+      //Shield Potion Loop
+      for (let count = 0; count < shopShieldPotion; count++) {
+        const buyResp = await API.post(`/potion-shop/buy`, {
+          userId: userDetails.userId,
+          potionType: 'SHIELD',
+          cost: 200
+        });
+        console.log(buyResp.data);
+      }
+
+      //Skip Potion Loop
+      for (let count = 0; count < shopSkipPotion; count++) {
+        const buyResp = await API.post(`/potion-shop/buy`, {
+          userId: userDetails.userId,
+          potionType: 'SKIP',
+          cost: 300
+        });
+        console.log(buyResp.data);
+      }
+
+      // Fetch updated user details after purchase
+      const userResp = await API.get(`/users/${userDetails.userId}`);
+      setUserDetails(userResp.data);
+      setCoins(userResp.data.coins); // Update coins state
+
+      setShopHealthPotion(0);
+      setShopShieldPotion(0);
+      setShopSkipPotion(0);
+      setMakeMessageAppear(false);
+      setShopTotal(0);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   // Decode token → user
   useEffect(() => {
@@ -68,19 +172,21 @@ export default function Homepage() {
     if (!user) return;
     let isMounted = true;
     (async () => {
-      try {        
+      try {
         const userResp = await API.get(`/users/${user.userId}`);
         setUserDetails(userResp.data);
-        
+        setCoins(userResp.data.coins); // Initialize coins state
+        setGems(userResp.data.gems);
+
         //console.log('User details:', userResp.data);        
-        const endpoint = userResp.data.role === 'TEACHER' 
+        const endpoint = userResp.data.role === 'TEACHER'
           ? `classrooms/teacher/${user.userId}`
           : `classrooms/user/${user.userId}`;
         //console.log('Fetching classroom from endpoint:', endpoint);
         const classResp = await API.get(endpoint);
-        //console.log ('Classroom response:', classResp.data);
+        console.log('Classroom response:', classResp.data);
         if (!isMounted) return;
-        
+
         // Handle teacher vs student response differently
         if (userResp.data.role === 'TEACHER') {
           // For teachers, take the first classroom if they have any
@@ -94,9 +200,15 @@ export default function Homepage() {
           setClassroom(classResp.data.classroomID);
         }
 
-        const prog = await API.get(`/activities/${user.userId}/progress`);
-        setProgressVocab(prog.data.gameSet1Progress * 100);
-        setProgressGrammar(prog.data.gameSet2Progress * 100);
+        //const prog = await API.get(`/activities/${user.userId}/progress`);
+        //setProgressVocab(prog.data.gameSet1Progress * 100);
+        //setProgressGrammar(prog.data.gameSet2Progress * 100);
+
+        //Level Details
+        const levelResp = await API.get(`/levels`);
+        console.log(levelResp);
+        setLevelDetails(levelResp.data);
+        console.log(levelResp.data);
 
         await fetchUserActivities();
       } catch (err) {
@@ -154,7 +266,9 @@ export default function Homepage() {
     setSection(key);
     setCurrent(null);
     setOpen(true);
-  };  const closeModal = async () => {
+    setCoins(userDetails.coins);
+    setGems(userDetails.gems);
+  }; const closeModal = async () => {
     try {
       // Fetch updated progress
       if (user) {
@@ -234,222 +348,140 @@ export default function Homepage() {
     fetchDeployedActivity();
   }, [section, classroom]);
 
+  function renderGemAndCoinsTab() {
+    return (
+      <>
+        {/* Gem Tab */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 180,
+            backgroundImage: `url(${ItemBox})`,
+            backgroundSize: 'cover',
+            width: 90,
+            height: 120,
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: 2,
+            justifyContent: 'center',
+            paddingRight: 2,
+            paddingTop: 1,
+          }}
+        >
+          <Box sx={{ width: 1000, height: 400, right: '1000%', top: '360%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+            <Stack direction='row'>
+              <Box sx={{
+                width: '220px', height: '215px', position: 'absolute', bottom: 0, left: 0,
+                //border: '2px solid red' 
+              }}>
+                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <img src={MCNoWeapon} alt="Player" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
+                  <img src={WeaponBasicStaff} alt="Weapon" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
+                </Box>
+              </Box>
+            </Stack>
+          </Box>
+
+          <Stack
+            direction="column"
+            sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}
+          >
+            <img src={Gems} alt="Gems" style={{ width: '17px', height: '42px' }} />
+            <Typography
+              variant="h4"
+              color="#5D4037"
+              sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}
+            >
+              {userDetails.gems || 0}
+            </Typography>
+          </Stack>
+        </Box>
+
+        {/* Gold Tab */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            backgroundImage: `url(${ItemBox})`,
+            backgroundSize: 'cover',
+            width: 90,
+            height: 120,
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: 2,
+            justifyContent: 'center',
+            paddingRight: 2,
+            paddingTop: 1,
+          }}
+        >
+          <Stack
+            direction="column"
+            sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}
+          >
+            <img
+              src={GoldCoins}
+              alt="Gold Coins"
+              style={{ width: '42px', height: '42px' }}
+            />
+            <Typography
+              variant="h4"
+              color="#5D4037"
+              sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}
+            >
+              {coins || 0}  {/* Use coins state instead of userDetails.coins */}
+            </Typography>
+          </Stack>
+        </Box>
+      </>
+    );
+  }
+
+
   function renderBody() {
     // 1) Before selecting any item
     if (!current) {
-      // If in Activity section → multiplayer lobby
-      if (section === 'Activity') {
+      if (section === 'Dungeon') {
+        const currentLevel = levelDetails[currentLevelIndex];
         return (
-          <LiveActivityGame
-            ref={liveActivityRef}
-            activityId={deployedActivityId}
-            userId={user?.userId}
-            onStarted={closeModal}
-            onReturn={closeModal}
+          <DungeonSection
+            closeModal={closeModal}
+            currentLevel={currentLevel}
+            currentLevelIndex={currentLevelIndex}
+            setCurrentLevelIndex={setCurrentLevelIndex}
+            levelDetails={levelDetails}
+            dungeonPreperatory={dungeonPreperatory}
+            setDungeonPreparatory={setDungeonPreparatory}
+            user={user}
+          />
+        );
+      } else if (section === 'Shop') {
+        return (
+          <ShopSection
+            shopHealthPotion={shopHealthPotion}
+            setShopHealthPotion={setShopHealthPotion}
+            shopShieldPotion={shopShieldPotion}
+            setShopShieldPotion={setShopShieldPotion}
+            shopSkipPotion={shopSkipPotion}
+            setShopSkipPotion={setShopSkipPotion}
+            shopTotal={shopTotal}
+            setShopTotal={setShopTotal}
+            makeMessageAppear={makeMessageAppear}
+            setMakeMessageAppear={setMakeMessageAppear}
+            buyPotion={buyPotion}
+            handleBackClick={handleBackClick}
+            renderGemAndCoinsTab={renderGemAndCoinsTab}
+          />
+        );
+      } else if (section === 'Summon') {
+        return (
+          <SummonSection
+            handleBackClick={handleBackClick}
+            renderGemAndCoinsTab={renderGemAndCoinsTab}
           />
         );
       }
-
-      // Otherwise, Vocabulary/Grammar lists
-      const flatList =
-        section === 'Vocabulary'
-          ? activities.filter(a => ['GAME1', 'GAME3'].includes(a.gameType))
-          : activities.filter(a => a.gameType === 'GAME2');
-
-      // Group by lessonNumber + lessonName
-      const lessonsMap = flatList.reduce((acc, act) => {
-        const key = `${act.lessonNumber}__${act.lessonName}`;
-        if (!acc[key]) {
-          acc[key] = {
-            lessonNumber: act.lessonNumber,
-            lessonName: act.lessonName,
-            topics: [],
-          };
-        }
-        acc[key].topics.push(act);
-        return acc;
-      }, {});
-
-      // Convert to array and sort by lessonNumber
-      const groupedLessons = Object.values(lessonsMap)
-        .sort((a, b) => a.lessonNumber - b.lessonNumber)
-        .map(lesson => ({
-          ...lesson,
-          topics: lesson.topics.sort((x, y) => x.topicNumber - y.topicNumber),
-        }));
-
-      // Helper function to check if an activity is accessible
-      const isActivityAccessible = (activity, lessonIndex, activityIndex) => {
-        // Teachers can access all activities
-        if (userDetails.role === 'TEACHER') return true;
-
-        // First activity of first lesson is always accessible
-        if (lessonIndex === 0 && activityIndex === 0) return true;
-
-        // Get all previous activities in current lesson
-        const currentLessonActivities = groupedLessons[lessonIndex].topics;
-        const previousActivitiesInLesson = currentLessonActivities.slice(0, activityIndex);
-
-        // Get activities from previous lessons
-        const previousLessonsActivities = groupedLessons
-          .slice(0, lessonIndex)
-          .flatMap(lesson => lesson.topics);
-
-        // Calculate required completions
-        const requiredCompletions = [
-          ...previousLessonsActivities,
-          ...previousActivitiesInLesson
-        ].map(act => act.activityId);
-
-        // Check if all required activities are completed
-        const isUnlocked = requiredCompletions.every(actId =>
-          userActivities.some(ua => ua.activity_ActivityId === actId && ua.completed)
-        );
-
-        return isUnlocked;
-      };
-
-      return (
-        <Stack
-          spacing={3}
-          sx={{
-            mt: 4,
-            px: 2,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          {groupedLessons.map((lesson, lessonIndex) => (
-            <Box 
-              key={`${lesson.lessonNumber}-${lesson.lessonName}`} 
-              sx={{ width: '100%', maxWidth: 800 }}
-            >
-              {/* Lesson Header */}
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 'bold', mb: 1, textAlign: 'center' }}
-              >
-                Lesson {lesson.lessonNumber}: {lesson.lessonName}
-              </Typography>
-
-              {/* Vertical list of activity cards, centered */}
-              <Stack
-                direction="column"
-                spacing={2}
-                sx={{ alignItems: 'center' }}
-              >
-                {lesson.topics.map((act, activityIndex) => {
-                  const isCompleted = userActivities.some(
-                    ua => ua.activity_ActivityId === act.activityId && ua.completed
-                  );
-                  const isAccessible = isActivityAccessible(act, lessonIndex, activityIndex);
-                  const hasPrerequisites = !(lessonIndex === 0 && activityIndex === 0);
-
-                  const getStatusMessage = () => {
-                    if (isCompleted) return 'Activity completed!';
-                    if (!isAccessible && hasPrerequisites) return 'Complete previous activities to unlock';
-                    return 'Ready to start!';
-                  };
-
-                  return (
-                    <Box
-                      key={act.activityId}
-                      onClick={() => isAccessible && startActivity(act)}
-                      title={getStatusMessage()}
-                      sx={{
-                        backgroundColor: isCompleted
-                          ? '#C8E6C9'  // Green for completed
-                          : isAccessible
-                            ? '#FFF8E1' // Yellow for accessible
-                            : '#ECEFF1', // Grey for locked
-                        borderRadius: 4,
-                        p: 3,
-                        width: '80%',
-                        paddingBottom: 2,
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                        cursor: isAccessible ? 'pointer' : 'not-allowed',
-                        opacity: isAccessible ? 1 : 0.7,
-                        position: 'relative',
-                        transition: 'all 0.2s ease',
-                        '&:hover': isAccessible ? { 
-                          transform: 'scale(1.02)',
-                          boxShadow: '0 6px 12px rgba(0,0,0,0.15)'
-                        } : {}
-                      }}
-                    >
-                      {/* Activity Name & Game Mode */}
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {act.activityName}
-                      </Typography>
-                      <Typography variant="body2">
-                        {act.gameType === 'GAME1'
-                          ? 'One Pic Four Words'
-                          : act.gameType === 'GAME2'
-                          ? 'Phrase Translation'
-                          : 'Word Translation'}
-                      </Typography>
-                      {/* Status indicator */}
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          display: 'block',
-                          mt: 1,
-                          color: isCompleted 
-                            ? '#2E7D32'  // Dark green
-                            : isAccessible 
-                              ? '#1565C0'  // Blue
-                              : '#757575'  // Grey
-                        }}
-                      >
-                        {getStatusMessage()}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Stack>
-            </Box>
-          ))}
-        </Stack>
-      );
-    }
-
-    // 2) Once an item is selected
-    const isCompleted = userActivities.some(
-      ua => ua.activity_ActivityId === current.activityId && ua.completed
-    );
-
-    if (section === 'Activity') {
-      return (
-        <LiveActivityGame
-          ref={liveActivityRef}
-          activityId={current.activityId}
-          userId={user?.userId}
-          onStarted={closeModal}
-          onReturn={closeModal}
-        />
-      );
-    } else if (section === 'Grammar') {
-      return (
-        <PhraseTranslation
-          activityId={current.activityId}
-          onBack={backToList}
-          isCompleted={isCompleted}
-        />
-      );
-    } else if (section === 'Vocabulary') {
-      return current.gameType === 'GAME1' ? (
-        <OnePicFourWord
-          activityId={current.activityId}
-          onBack={backToList}
-          isCompleted={isCompleted}
-        />
-      ) : (
-        <WordTranslation
-          activityId={current.activityId}
-          onBack={backToList}
-          isCompleted={isCompleted}
-        />
-      );
     }
 
     return null;
@@ -458,13 +490,13 @@ export default function Homepage() {
 
   const sections = [
     {
-      key: 'Vocabulary',
+      key: 'Shop',
       icon: <BookIcon sx={{ fontSize: 48, color: '#6D4C41' }} />,
       bg: '#FFEBEE',
       progress: progressVocab,
     },
     {
-      key: 'Grammar',
+      key: 'Summon',
       icon: <GTranslateIcon sx={{ fontSize: 48, color: '#1E88E5' }} />,
       bg: '#E3F2FD',
       progress: progressGrammar,
@@ -478,72 +510,131 @@ export default function Homepage() {
   ];
 
   return (
-    <Grid container direction="column" alignItems="center" sx={{ p: 2, bgcolor: '#E1F5FE' }}>
-      {/* Header */}
-      <Stack direction="row" alignItems="center" sx={{ mb: 4 }}>
-        <Grid container direction="column" alignItems="center" sx={{ p: 2 }}>
-          <Typography variant="h4" sx={{ mb: 2 }}>
-            {userDetails.firstName ? `Welcome, ${userDetails.firstName}!` : 'Welcome!'}
+    <Grid
+      container
+      direction="column"
+      alignItems="center"
+      sx={{
+        backgroundImage: `url(${ForestwithShops})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        width: '100vw',
+        height: '56.25vw', // This maintains 16:9 aspect ratio (9/16 = 0.5625)
+        maxHeight: '100vh',
+        maxWidth: '177.78vh', // This maintains 16:9 aspect ratio (16/9 = 1.7778)
+        margin: 'auto',
+        position: 'relative',
+        overflow: 'auto'
+      }}
+    >
+      <Box sx={{
+        position: 'absolute', top: 16, left: 16,
+        backgroundImage: `url(${NameTab})`,
+        backgroundSize: 'cover',
+        width: 730,
+        height: 150,
+        display: 'flex',
+        alignItems: 'center',
+        paddingLeft: 2
+      }}>
+        <img src={MCHeadshot} alt="Player" style={{ width: 100, height: 100, marginLeft: 10 }} />
+        <Stack direction={'column'}>
+          <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
+            {userDetails.firstName || 'Player Name'}
           </Typography>
-          {classroom ? (
-            <Typography variant="h5" sx={{ mb: 4 }}>
-              Choose a section to start learning:
-            </Typography>
-          ) : (
-            <Typography variant="h5" sx={{ mb: 4, color: '#666' }}>
-              {userDetails.role === 'TEACHER' 
-                ? 'Please create a classroom.'
-                : 'Please wait for a teacher to assign you to a classroom.'}
-            </Typography>
-          )}
-        </Grid>
-        <img src={bunnyWave} alt="Bunny Wave" width={80} height={120} />
+          <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
+            Rank: Mage
+          </Typography>
+        </Stack>
+      </Box>
+      {renderGemAndCoinsTab()}
+
+      {/* Settings */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 200,
+          left: 16,
+          backgroundImage: `url(${Gears})`,
+          backgroundSize: 'cover',
+          width: 50,
+          height: 65,
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: 2,
+          cursor: 'pointer'  // Add this to show it's clickable
+        }}
+        onClick={() => setSettingsOpen(!settingsOpen)}
+      >
+      </Box>
+
+      <Stack
+        direction="row"
+        spacing={4}
+        sx={{
+          position: 'absolute',
+          width: '100%',
+          justifyContent: 'space-around',
+          top: '60%',
+          transform: 'translateY(-50%)'
+        }}
+      >
+        {/* Left structure button */}
+        <Button
+          onClick={() => openModal('Shop')}
+          sx={{
+            width: '200px',
+            height: '200px',
+            borderRadius: '16px',
+            opacity: 0.9,
+            position: 'relative',
+            left: '1%',  // Adjust this value to align with left structure
+            '&:hover': {
+              transform: 'scale(1.1)',
+              opacity: 1
+            }
+          }}
+        >
+        </Button>
+
+        {/* Middle structure button */}
+        <Button
+          onClick={() => openModal('Summon')}
+          sx={{
+            width: '200px',
+            height: '200px',
+            borderRadius: '16px',
+            opacity: 0.9,
+            position: 'relative',
+            right: '-2%',  // Adjust this value to align with middle structure
+            '&:hover': {
+              transform: 'scale(1.1)',
+              opacity: 1
+            }
+          }}
+        >
+
+        </Button>
+
+        {/* Right structure button */}
+        <Button
+          onClick={() => openModal('Dungeon')}
+          sx={{
+            width: '200px',
+            height: '200px',
+            borderRadius: '16px',
+            opacity: 0.9,
+            position: 'relative',
+            right: '-8%',  // Adjust this value to align with right structure
+            '&:hover': {
+              transform: 'scale(1.1)',
+              opacity: 1
+            }
+          }}
+        >
+        </Button>
       </Stack>
 
-      {/* Section Cards - only show if classroom exists */}
-      {classroom && (
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ mb: 4 }}>
-          {sections.map(s => (
-            <Box
-              key={s.key}
-              onClick={() => openModal(s.key)}
-              sx={{
-                backgroundColor: s.bg,
-                width: 360,
-                height: 560,
-                borderRadius: 3,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s',
-                '&:hover': { transform: 'scale(1.05)' },
-              }}
-            >
-              {s.icon}
-              <Typography variant="h3" sx={{ mt: 1, fontSize: 30 }}>
-                {s.key}
-              </Typography>
-              {s.key !== 'Activity' && userDetails.role !== 'TEACHER' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <PastelProgress
-                      variant="determinate"
-                      value={s.progress}
-                      sx={{ width: '100%' }}
-                    />
-                    <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
-                      {s.progress.toFixed(0)}% Completed
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          ))}
-        </Stack>
-      )}
 
       {/* Modal */}
       <Modal
@@ -556,15 +647,20 @@ export default function Homepage() {
         <Fade in={open}>
           <Box
             sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '98vw',
-              height: '100vh',
-              backgroundImage: `url(${modalBg})`,
-              backroundRepeat: 'no-repeat',
-              p: 3,
-              overflowY: 'auto',
+              backgroundImage: `url(${section === 'Shop'
+                ? ShopUI
+                : section === 'Summon'
+                  ? SummonUI
+                  : DungeonOpen})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              width: '100vw',
+              height: '56.25vw', // This maintains 16:9 aspect ratio (9/16 = 0.5625)
+              maxHeight: '100vh',
+              maxWidth: '177.78vh', // This maintains 16:9 aspect ratio (16/9 = 1.7778)
+              margin: 'auto',
+              position: 'relative',
+              overflow: 'auto'
             }}
           >
             <Stack direction="row" justifyContent="space-between">
@@ -574,10 +670,11 @@ export default function Homepage() {
               <IconButton onClick={closeModal}>
                 <CloseIcon />
               </IconButton>
-            </Stack>            
+            </Stack>
+            {/* Modal Content 
             <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
               {section === 'Activity' ? 'King of the Hill!' : `${section} Activities!`}
-            </Typography>
+            </Typography>*/}
             <Box
               sx={{
                 flexGrow: 1,
@@ -612,25 +709,37 @@ export default function Homepage() {
         </Fade>
       </Modal>
 
-      {/* Music Toggle */}
-      <button
-        style={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          background: '#FFCC80',
-          color: '#5D4037',
-          border: 'none',
-          borderRadius: 8,
-          padding: '0.6em 1.2em',
-          fontSize: '1em',
-          fontWeight: 500,
-          cursor: 'pointer',
+      {/* Settings Modal */}
+      <Modal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        closeAfterTransition
+        BackdropProps={{
+          timeout: 500,
         }}
-        onClick={toggleMusic}
       >
-        {musicOn ? '🎵 Mute Music' : '🔇 Play Music'}
-      </button>
+        <Fade in={settingsOpen}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 370,
+              backgroundImage: `url(${MenuBoxVert})`,
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              height: 600,
+              borderRadius: 2,
+              p: 16,
+            }}
+          >
+            <SettingsNav onClose={() => setSettingsOpen(false)} />
+          </Box>
+        </Fade>
+      </Modal>
+
     </Grid>
   );
 }
