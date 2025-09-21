@@ -80,6 +80,8 @@ function App() {
         <Route path="/leveleditor" element={<LevelEditor />} />
         <Route path="/add-level" element={<AddLevelForm />} />
         <Route path="/monstereditor" element={<MonsterEditor />} />
+
+        {/* Game */}
         <Route path="/dungeon" element={<DungeonGame />} />
 
         {/* Live Activities under a classroom context */}
