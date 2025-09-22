@@ -153,6 +153,25 @@ const TeacherDashboard = () => {
     }
   }, [token, API]);
 
+  // palette (keep stable order)
+  const COLORS = ['#F08080', '#FA8072', '#E9967A', '#F4A460', '#E6B8AF'];
+
+  // deterministic mapping: same id => same color (static across refresh)
+  const getColorForId = (id) => {
+    if (!id) {
+      // fallback to a random pick if no id present
+      return COLORS[Math.floor(Math.random() * COLORS.length)];
+    }
+    const s = String(id);
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+      hash = ((hash << 5) - hash) + s.charCodeAt(i);
+      hash |= 0;
+    }
+    hash = Math.abs(hash);
+    return COLORS[hash % COLORS.length];
+  };
+
   const fetchRooms = useCallback(async () => {
     if (!API) {
       setIsLoading(false);
@@ -161,16 +180,14 @@ const TeacherDashboard = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // User ID for fetching rooms should come from the decoded token or userData
-      // Assuming the teacher's own rooms are fetched.
-      // If your API doesn't need teacherId in path because it's derived from token, adjust accordingly.
-      const decoded = jwtDecode(token); // Ensure token is valid before decoding
+      const decoded = jwtDecode(token);
       const response = await API.get(`/api/lingguahey/classrooms/teacher/${decoded.userId}`);
       setRooms(
         response.data.map((room) => ({
           id: room.classroomID,
           name: room.classroomName || room.name || "Unnamed Room",
-          activities: room.activities || [], // Keep activities count if shown on card
+          activities: room.activities || [],
+          color: getColorForId(room.classroomID), // assign deterministic color
         }))
       );
     } catch (err) {
@@ -180,7 +197,7 @@ const TeacherDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [API, token]); // Added token dependency
+  }, [API, token]);
 
   // Fetch classrooms/rooms
   useEffect(() => {
@@ -207,10 +224,12 @@ const TeacherDashboard = () => {
         classroomName: newRoomName
       });
 
+      const createdId = response.data.classroomID;
       setRooms(prev => [...prev, {
-        id: response.data.classroomID,
+        id: createdId,
         name: response.data.classroomName,
-        activities: response.data.activities || []
+        activities: response.data.activities || [],
+        color: getColorForId(createdId), // ensure created room gets deterministic color
       }]);
       handleCreateRoomDialogClose(); // Close the dialog after successful creation
     } catch (err) {
@@ -326,7 +345,16 @@ const TeacherDashboard = () => {
               >
 
 
-                <CardContent sx={{ p: 2, position: "relative", backgroundColor: getRandomColor(), borderRadius: 2, alignItems: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <CardContent sx={{
+                  p: 2,
+                  position: "relative",
+                  backgroundColor: room.color, // use assigned static color
+                  borderRadius: 2,
+                  alignItems: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}>
                   <Box sx={{ justifyContent: 'center' }}>
                     <Avatar
                       sx={{

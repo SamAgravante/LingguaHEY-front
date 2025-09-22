@@ -27,8 +27,8 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
     if (question) {
       setNewPhrase(question.questionDescription || "");
       setTranslation(question.questionText || "");
-      setNewChoices(question.choices.map(c => c.choiceText) || []);
-      const correct = question.choices.filter(c => c.correct).map(c => c.choiceText) || [];
+      setNewChoices((question.choices || []).map(c => c.choiceText) || []);
+      const correct = (question.choices || []).filter(c => c.correct).map(c => c.choiceText) || [];
       setCorrectChoices(correct);
       setChoiceOrder(correct);
       setIsEditMode(true);
@@ -40,9 +40,9 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
       setNewMessage("Enter a correct translation first.");
       return;
     }
-    const words = translation.trim().split(" ");
+    const words = translation.trim().split(/\s+/);
     const shuffled = words.sort(() => Math.random() - 0.5);
-    setNewChoices(shuffled);
+    setNewChoices(shuffled.slice(0, 8));
     setNewMessage("");
   };
 
@@ -54,6 +54,10 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
     }
     if (newChoices.includes(val)) {
       setNewMessage("This choice is already added.");
+      return;
+    }
+    if (newChoices.length >= 8) {
+      setNewMessage("Maximum 8 choices allowed.");
       return;
     }
     setNewChoices([...newChoices, val]);
@@ -104,7 +108,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
     try {
       const form = new FormData();
       form.append("questionDescription", newPhrase);
-      form.append("questionText", newChoices.join(" "));
+      form.append("questionText", translation || newChoices.join(" "));
       form.append("image", null);
       form.append("gameType", "GAME2");
 
@@ -126,7 +130,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
         qId = qRes.data.questionId;
       }
 
-      let score = 0;
+      // post choices (no scoring logic)
       for (let i = 0; i < newChoices.length; i++) {
         const ch = newChoices[i];
         const isCorr = correctChoices.includes(ch);
@@ -136,32 +140,6 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
           { choiceText: ch, choiceOrder: isCorr ? orderIndex + 1 : null, correct: isCorr },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        if (isCorr) score++;
-      }
-
-      if (qId) {
-        try {
-          await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}`,
-            null,
-            { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
-          );
-        } catch (scoreError) {
-          if (scoreError.response && scoreError.response.status === 409) {
-            await axios.put(
-              `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/scores/questions/${qId}/score`,
-              null,
-              { params: { scoreValue: score }, headers: { Authorization: `Bearer ${token}` } }
-            );
-          } else {
-            console.error("Error creating/updating score:", scoreError);
-            throw scoreError;
-          }
-        }
-      } else {
-        console.error("Question ID is undefined. Cannot post score.");
-        setNewMessage("Failed to save score. Question ID is missing.");
-        return;
       }
 
       setNewMessage("Saved successfully!");
@@ -185,23 +163,23 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
           <Typography variant="h5" fontWeight="bold">Phrase Translation</Typography>
         </Box>
 
-        <Paper sx={{ color: 'black', p: 4, borderRadius: 3, mb: 4 }}>
+        <Paper sx={{ color: 'black', p: 4, borderRadius: 3, mb: 4, bgcolor: '#F7CB97', border:'3px solid #5D4037' }}>
           <Typography variant="h6" fontWeight="bold" color="black" sx={{ mb: 2 }}>{question ? 'Edit Question' : 'Add New Question'}</Typography>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
             <Box sx={{ flex: 1 }}>
               <Typography color="black" mb={1} fontWeight="bold">Enter Phrase</Typography>
-              <TextField fullWidth variant="outlined" value={newPhrase} onChange={(e) => setNewPhrase(e.target.value)} sx={{  input: { color: 'black' } }} />
+              <TextField fullWidth variant="outlined" value={newPhrase} onChange={(e) => setNewPhrase(e.target.value)} sx={{ input: { color: 'black' }, boxShadow:2, border: '2px solid #5D4037' }} />
               <Typography color="black" mt={2} mb={1} fontWeight="bold">Enter Translation</Typography>
-              <TextField fullWidth variant="outlined" value={translation} onChange={(e) => setTranslation(e.target.value)} sx={{  input: { color: 'black' } }} />
+              <TextField fullWidth variant="outlined" value={translation} onChange={(e) => setTranslation(e.target.value)} sx={{ input: { color: 'black' }, boxShadow:2, border: '2px solid #5D4037' }} />
               <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                <Button variant="contained" onClick={generateChoices} sx={{ bgcolor: '#81D4FA' }}>Generate Choices</Button>
+                <Button variant="contained" onClick={generateChoices} sx={{ bgcolor: 'transparent', color:'#5D4037', border: '2px solid #5D4037' }}>Generate Choices</Button>
               </Box>
             </Box>
             <Box sx={{ flex: 2 }}>
               <Typography color="black" mb={1} fontWeight="bold">Manual Choice ({newChoices.length}/8)</Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <TextField fullWidth variant="outlined" value={inputChoice} onChange={(e) => setInputChoice(e.target.value)} sx={{  input: { color: 'black' } }} />
-                <Button variant="contained" onClick={addManualChoice} sx={{ bgcolor: '#81D4FA' }}>Add</Button>
+                <TextField fullWidth variant="outlined" value={inputChoice} onChange={(e) => setInputChoice(e.target.value)} sx={{ input: { color: 'black' }, boxShadow:2, border: '2px solid #5D4037' }} />
+                <Button variant="contained" onClick={addManualChoice} sx={{ bgcolor: 'transparent',color:'#5D4037', border: '1px solid #5D4037' }}>Add</Button>
               </Box>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 {newChoices.map((c, idx) => (
@@ -212,7 +190,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
                     onDelete={() => removeChoice(c)}
                     sx={{
                       bgcolor: correctChoices.includes(c) ? '#4CAF50' : '',
-                      color: correctChoices.includes(c) ? '#fff' : '#B3E5FC',
+                      color: correctChoices.includes(c) ? '#5D4037' : 'rgba(0, 0, 0, 1)',
                       border: correctChoices.includes(c) ? '2px solid #4CAF50' : '1px solid #616161'
                     }}
                   />
@@ -230,7 +208,7 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
               </Box>
             </Box>
           </Box>
-          {newMessage && <Typography color={newMessage.includes('Failed') ? '#E57373' : '#81C784'} sx={{ mt: 3, textAlign: 'center' }}>{newMessage}</Typography>}
+          {newMessage && <Typography color={newMessage.includes('failed') ? '#E57373' : '#81C784'} sx={{ mt: 3, textAlign: 'center' }}>{newMessage}</Typography>}
         </Paper>
       </Box>
     </Grid>
