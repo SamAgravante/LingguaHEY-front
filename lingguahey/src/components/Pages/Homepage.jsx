@@ -76,6 +76,8 @@ import ArrowPrev from "../../assets/images/objects/ArrowPrev.png";
 import InventoryCharacterArea from "../../assets/images/objects/InventoryCharacterArea.png";
 import InventoryUIArea from "../../assets/images/objects/InventoryUIArea.png";
 import InventoryItemArea from "../../assets/images/objects/InventoryItemArea.png";
+import DungeonArrowLeft from "../../assets/images/objects/DungeonArrowLeft.png";
+import DungeonArrowRight from "../../assets/images/objects/DungeonArrowRight.png";
 
 //Weapons
 import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
