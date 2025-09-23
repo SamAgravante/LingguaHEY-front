@@ -319,13 +319,15 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
               borderRadius: 3,
               mb: 4,
               boxShadow: 3,
+              border: "3px solid #5D4037",
+              bgcolor: "#F7CB97",
             }}
           >
             <Typography
               variant="h6"
               fontWeight="bold"
               color="black"
-              sx={{ mb: 2 }}
+              sx={{ mb: 2, }}
             >
               Edit Question
             </Typography>
@@ -347,14 +349,15 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                   sx={{
                     p: 2,
                     textAlign: "center",
-                    border: "2px dashed #616161",
+                    border: "2px dashed #4CAF50",
                     cursor: "pointer",
-                    "&:hover": { borderColor: "#B3E5FC" },
+                    "&:hover": { borderColor: "#5D4037" },
                     minHeight: 180,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
+                    bgcolor: "#F7CB97",
                   }}
                   component="label"
                 >
@@ -517,6 +520,8 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
               borderRadius: 3,
               mb: 4,
               boxShadow: 3,
+              border: "3px solid #5D4037",
+              bgcolor: "#F7CB97",
             }}
           >
             <Typography
@@ -545,14 +550,15 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                   sx={{
                     p: 2,
                     textAlign: "center",
-                    border: "2px dashed #616161",
+                    border: "2px dashed #5D4037",
                     cursor: "pointer",
-                    "&:hover": { borderColor: "#B3E5FC" },
+                    "&:hover": { borderColor: "#4CAF50" },
                     minHeight: 180,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
+                    bgcolor: "#F7CB97",
                   }}
                   component="label"
                 >
@@ -603,6 +609,10 @@ function OnePicFourWords({ activityId, classroomId, onGameCreated, question, onC
                         "&.Mui-focused fieldset": { borderColor: "#81D4FA" },
                       },
                       flex: 1,
+                      bgcolor: "#F7CB97",
+                      border: "2px solid #5D4037",
+                      borderRadius: 2,
+                      boxShadow: 2,
                     }}
                     disabled={newQuestionChoices.length >= 5}
                   />
