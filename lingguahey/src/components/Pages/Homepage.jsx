@@ -66,9 +66,20 @@ import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMedi
 import MCHeadshot from "../../assets/images/objects/MCHeadshot.png";
 import Gems from "../../assets/images/objects/Gems.png";
 import Gears from "../../assets/images/objects/gears.png";
+import CodexBroken from "../../assets/images/objects/CodexBroken.png";
+import TabMarkCodex from "../../assets/images/objects/TabMarkCodex.png";
+import TabMarkInventory from "../../assets/images/objects/TabMarkInventory.png";
 import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
 import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
+import ArrowNext from "../../assets/images/objects/ArrowNext.png";
+import ArrowPrev from "../../assets/images/objects/ArrowPrev.png";
+import InventoryCharacterArea from "../../assets/images/objects/InventoryCharacterArea.png";
+import InventoryUIArea from "../../assets/images/objects/InventoryUIArea.png";
+import InventoryItemArea from "../../assets/images/objects/InventoryItemArea.png";
+
+//Weapons
 import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
+import HellfireStaff from '../../assets/images/weapons/HellfireStaff.png';
 
 
 const PastelProgress = styled(LinearProgress)(() => ({
@@ -110,6 +121,75 @@ export default function Homepage() {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
   const [monsterIndex, setMonsterIndex] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [codexOpen, setCodexOpen] = useState(false);
+  const [monsterList, setMonsterList] = useState([]);
+  const [leftPageCounter, setLeftPageCounter] = useState(0);
+  const [rightPageCounter, setRightPageCounter] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [inventory, SetInventory] = useState([]);
+  const [itemEquipped, setItemEquipped] = useState({});
+
+  async function codexNavigationLeft() {
+    if (leftPageCounter > 0) {
+      setLeftPageCounter(prev => prev - 2);
+      setRightPageCounter(prev => prev - 2);
+    }
+  }
+
+  async function codexNavigationRight() {
+    if (rightPageCounter < monsterList.length - 1) {
+      setLeftPageCounter(prev => prev + 2);
+      setRightPageCounter(prev => prev + 2);
+    }
+  }
+
+  /*
+  async function displayWeapon() {
+    for(let count=0; count<inventory.length;count++){
+      if(inventory[count].cosmeticId === userDetails.equipped_cosmetic_id){
+        setItemEquipped(inventory[count]);
+        return;
+      }
+    }
+  }*/
+
+  async function displayWeapon() {
+    if (!inventory || inventory.length === 0) return null;
+
+    const equippedItem = inventory.find(
+      item => item.cosmeticId === userDetails.equipped_cosmetic_id
+    );
+
+    if (equippedItem) {
+      console.log("Equipped item:", equippedItem.name);
+      return equippedItem.name;
+    }
+
+    return null;
+  }
+
+  async function equipItem(item) {
+    try {
+      await API.post("/inventory/equip", {
+        userId: userDetails.userId,
+        cosmeticId: item.cosmeticId,
+      });
+
+      // update userDetails so UI refreshes
+      SetUserDetails({
+        ...userDetails,
+        equipped_cosmetic_id: item.cosmeticId,
+      });
+
+      console.log("Equipped:", item.name);
+    } catch (err) {
+      console.error("Failed to equip item:", err);
+    }
+  }
+
+
 
   //function 
   async function buyPotion() {
@@ -178,7 +258,7 @@ export default function Homepage() {
         setCoins(userResp.data.coins); // Initialize coins state
         setGems(userResp.data.gems);
 
-        //console.log('User details:', userResp.data);        
+        console.log('User details:', userResp.data);
         const endpoint = userResp.data.role === 'TEACHER'
           ? `classrooms/teacher/${user.userId}`
           : `classrooms/user/${user.userId}`;
@@ -204,6 +284,25 @@ export default function Homepage() {
         //setProgressVocab(prog.data.gameSet1Progress * 100);
         //setProgressGrammar(prog.data.gameSet2Progress * 100);
 
+
+
+
+
+        //Monster List
+        setIsLoading(true)
+
+        // Inventory List
+        const inventoryResp = await API.get(`/inventory/${user.userId}`);
+        SetInventory(inventoryResp.data);
+        console.log("Inventory contains:" + inventoryResp.data);
+
+
+        const monsterResp = await API.get(`/monsters`);
+        if (isMounted) {
+          setMonsterList(monsterResp.data);
+          setIsLoading(false);
+        }
+        console.log("monster list: " + monsterResp.data);
         //Level Details
         const levelResp = await API.get(`/levels`);
         console.log(levelResp);
@@ -213,6 +312,7 @@ export default function Homepage() {
         await fetchUserActivities();
       } catch (err) {
         console.error(err);
+        setIsLoading(false);
       }
     })();
     return () => { isMounted = false; };
@@ -369,20 +469,6 @@ export default function Homepage() {
             paddingTop: 1,
           }}
         >
-          <Box sx={{ width: 1000, height: 400, right: '1000%', top: '360%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-            <Stack direction='row'>
-              <Box sx={{
-                width: '220px', height: '215px', position: 'absolute', bottom: 0, left: 0,
-                //border: '2px solid red' 
-              }}>
-                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-                  <img src={MCNoWeapon} alt="Player" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
-                  <img src={WeaponBasicStaff} alt="Weapon" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
-                </Box>
-              </Box>
-            </Stack>
-          </Box>
-
           <Stack
             direction="column"
             sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}
@@ -393,7 +479,7 @@ export default function Homepage() {
               color="#5D4037"
               sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}
             >
-              {userDetails.gems || 0}
+              {gems || 0}
             </Typography>
           </Stack>
         </Box>
@@ -438,6 +524,56 @@ export default function Homepage() {
     );
   }
 
+  // New function for character rendering
+  function renderCharacter() {
+    return (
+      <Box sx={{
+        position: 'absolute',
+        bottom: '20%',  // Changed from top/right positioning
+        left: '10%',    // Changed from right positioning
+        width: '220px',
+        height: '215px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Stack direction='row'>
+          <Box sx={{
+            width: '220px',
+            height: '215px',
+            position: 'relative',  // Changed from absolute
+            ml: 80,
+            mb: 10
+          }}>
+            <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+              <img
+                src={MCNoWeapon}
+                alt="Player"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '220px',
+                  height: '215px'
+                }}
+              />
+              <img
+                src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
+                alt="Weapon"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '220px',
+                  height: '215px'
+                }}
+              />
+            </Box>
+          </Box>
+        </Stack>
+      </Box>
+    );
+  }
 
   function renderBody() {
     // 1) Before selecting any item
@@ -458,6 +594,7 @@ export default function Homepage() {
         );
       } else if (section === 'Shop') {
         return (
+
           <ShopSection
             shopHealthPotion={shopHealthPotion}
             setShopHealthPotion={setShopHealthPotion}
@@ -479,6 +616,8 @@ export default function Homepage() {
           <SummonSection
             handleBackClick={handleBackClick}
             renderGemAndCoinsTab={renderGemAndCoinsTab}
+            userDetails={userDetails}
+            setGems={setGems}
           />
         );
       }
@@ -548,6 +687,7 @@ export default function Homepage() {
         </Stack>
       </Box>
       {renderGemAndCoinsTab()}
+      {renderCharacter()} {/* Only render character in main screen, not in modals */}
 
       {/* Settings */}
       <Box
@@ -565,6 +705,42 @@ export default function Homepage() {
           cursor: 'pointer'  // Add this to show it's clickable
         }}
         onClick={() => setSettingsOpen(!settingsOpen)}
+      >
+      </Box>
+      {/* Inventory */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 280,
+          left: 16,
+          backgroundImage: `url(${TabMarkInventory})`,
+          backgroundSize: 'cover',
+          width: 140,
+          height: 65,
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: 2,
+          cursor: 'pointer'  // Add this to show it's clickable
+        }}
+        onClick={() => setInventoryOpen(!inventoryOpen)}
+      >
+      </Box>
+      {/* Codex */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 360,
+          left: 16,
+          backgroundImage: `url(${TabMarkCodex})`,
+          backgroundSize: 'cover',
+          width: 140,
+          height: 65,
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: 2,
+          cursor: 'pointer'  // Add this to show it's clickable
+        }}
+        onClick={() => setCodexOpen(!codexOpen)}
       >
       </Box>
 
@@ -714,9 +890,10 @@ export default function Homepage() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         closeAfterTransition
-        BackdropProps={{
-          timeout: 500,
-        }}
+        BackdropProps={
+          {
+            timeout: 500,
+          }}
       >
         <Fade in={settingsOpen}>
           <Box
@@ -736,6 +913,449 @@ export default function Homepage() {
             }}
           >
             <SettingsNav onClose={() => setSettingsOpen(false)} />
+          </Box>
+        </Fade>
+      </Modal>
+
+      {/* Codex Modal */}
+      <Modal
+        open={codexOpen}
+        onClose={() => setCodexOpen(false)}
+        closeAfterTransition
+        BackdropProps={
+          {
+            timeout: 500,
+          }}
+      >
+        <Fade in={codexOpen}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 650,
+              backgroundImage: `url(${CodexBroken})`,
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              height: 430,
+              borderRadius: 2,
+              //border: "solid",
+              p: 16,
+            }}
+          >
+            <Stack direction="row" sx={{ justifyContent: 'center', alignItems: 'center', ml: 2 }} spacing={3}>
+              <Button
+                onClick={codexNavigationLeft}
+                disabled={isLoading || leftPageCounter <= 0}
+                sx={{
+                  position: "absolute", width: 100, height: 40, left: 70, bottom: 160,
+                  backgroundImage: `url(${ArrowPrev})`,
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                }}
+              >
+              </Button>
+
+              {isLoading ? (
+                // Loading placeholder
+                <Typography color="#5D4037">Loading monsters...</Typography>
+              ) : (
+                // Content when data is loaded
+                <>
+                  {/* Left Page */}
+                  <Box sx={{
+                    //border: "solid",
+                    width: 800,
+                    height: 360,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pr: 7
+                  }}>
+                    <Stack direction="column" sx={{
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center"
+                    }}>
+                      {monsterList[leftPageCounter] ? (
+                        <>
+                          <Box sx={{ width: "220px", height: "215px" }}>
+                            <img
+                              src={`data:image/png;base64,${monsterList[leftPageCounter].imageData}`}
+                              alt="Enemy"
+                              style={{ width: "220px", height: "215px" }}
+                            />
+                          </Box>
+                          <Typography color="#5D4037" sx={{ mt: 3 }}>
+                            Tagalog Name: {monsterList[leftPageCounter].tagalogName}
+                          </Typography>
+                          <Typography color="#5D4037">
+                            English Name: {monsterList[leftPageCounter].englishName}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography>No monster data available</Typography>
+                      )}
+                    </Stack>
+                  </Box>
+
+                  {/* Right Page */}
+                  <Box sx={{
+                    //border: "solid",
+                    width: 800,
+                    height: 360,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pl: 7
+                  }}>
+                    <Stack direction="column" sx={{
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center"
+                    }}>
+                      {monsterList[rightPageCounter] ? (
+                        <>
+                          <Box sx={{ width: "220px", height: "215px" }}>
+                            <img
+                              src={`data:image/png;base64,${monsterList[rightPageCounter].imageData}`}
+                              alt="Enemy"
+                              style={{ width: "220px", height: "215px" }}
+                            />
+                          </Box>
+                          <Typography color="#5D4037" sx={{ mt: 3 }}>
+                            Tagalog Name: {monsterList[rightPageCounter].tagalogName}
+                          </Typography>
+                          <Typography color="#5D4037">
+                            English Name: {monsterList[rightPageCounter].englishName}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography color="#5D4037">No monster data available</Typography>
+                      )}
+                    </Stack>
+                  </Box>
+                </>
+              )}
+
+              <Button
+                color="#5D4037"
+                onClick={codexNavigationRight}
+                disabled={isLoading || rightPageCounter >= (monsterList.length - 1)}
+                sx={{
+                  position: "absolute", width: 100, height: 40, right: 70, bottom: 160,
+                  backgroundImage: `url(${ArrowNext})`,
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                }}
+              >
+              </Button>
+              <Typography
+                color="#5D4037"
+                sx={{ position: "absolute", width: 100, height: 40, left: 70, top: 80, fontSize: 40 }}
+              >
+                Codex
+              </Typography>
+            </Stack>
+
+          </Box>
+        </Fade>
+      </Modal>
+
+      {/* Inventory Modal */}
+      <Modal
+        open={inventoryOpen}
+        onClose={() => setInventoryOpen(false)}
+        closeAfterTransition
+        BackdropProps={
+          {
+            timeout: 500,
+          }}
+      >
+        <Fade in={inventoryOpen}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundImage: `url(${InventoryUIArea})`,
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              height: 505,
+              width: 750,
+              borderRadius: 2,
+              //border: "solid",
+              p: 16,
+            }}
+          >
+            <Stack direction="row">
+
+
+              <Box position="relative" sx={{
+                //border: "solid", 
+                width: '300px',
+                height: '415px',
+                backgroundImage: `url(${InventoryCharacterArea})`,
+                backgroundSize: 'contain',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bottom: 70,
+                right: 40
+              }}>
+                <Box
+                  sx={{
+                    //border: "solid", 
+                    width: '320px', height: '315px',
+                  }}>
+                  <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <img
+                      src={MCNoWeapon}
+                      alt="Player"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '320px',
+                        height: '315px'
+                      }}
+                    />
+                    <img
+                      src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
+                      alt="Weapon"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '320px',
+                        height: '315px'
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+              <Stack direction="column">
+                <Box sx={{
+                  //border: "solid", 
+                  width: 100,
+                  height: 100,
+                  backgroundImage: `url(${ItemBox})`,
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  mt: 10
+                }}>
+                  <img
+                    src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
+                    alt={`${itemEquipped.name}`}
+                    style={{ width: "100px", height: "100px" }}
+                  />
+                </Box>
+                <Typography color="#5D4037">
+                  {itemEquipped.name}
+                </Typography>
+              </Stack>
+              <Stack direction="column" spacing={2} sx={{ ml: 6, }}>
+                <Stack direction="row" spacing={.5} sx={{ alignItems: 'center', justifyContent: 'center' }}>
+
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundImage: `url(${GameShopBoxSmall})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 290,
+                    height: 80,
+                    justifyContent: 'center',
+                  }}>
+                    <img src={HealthPotion} alt="Health Potion" style={{ width: '40px', height: '50px' }} />
+                    <Stack direction="column" spacing={0} sx={{ alignItems: 'center', justifyContent: 'center', marginLeft: 1 }}>
+
+                      <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                        Health Potion
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center' }}>
+                        <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                          (Amount: {userDetails?.potions?.HEALTH || 0})
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                </Stack>
+                <Stack direction="row" spacing={.5} sx={{ alignItems: 'center', justifyContent: 'center' }}>
+
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundImage: `url(${GameShopBoxSmall})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 290,
+                    height: 80,
+                    justifyContent: 'center',
+                  }}>
+                    <img src={ShieldPotion} alt="Shield Potion" style={{ width: '40px', height: '50px' }} />
+                    <Stack direction="column" spacing={0} sx={{ alignItems: 'center', justifyContent: 'center', marginLeft: 1 }}>
+
+                      <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                        Shield Potion
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center' }}>
+                        <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                          (Amount: {userDetails?.potions?.SHIELD || 0})
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                </Stack>
+                <Stack direction="row" spacing={.5} sx={{ alignItems: 'center', justifyContent: 'center' }}>
+
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundImage: `url(${GameShopBoxSmall})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    width: 290,
+                    height: 80,
+                    justifyContent: 'center',
+                  }}>
+                    <img src={SkipPotion} alt="Skip Potion" style={{ width: '40px', height: '50px' }} />
+                    <Stack direction="column" spacing={0} sx={{ alignItems: 'center', justifyContent: 'center', marginLeft: 1 }}>
+
+                      <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                        Skip Potion
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center' }}>
+                        <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                          (Amount: {userDetails?.potions?.SKIP || 0})
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                </Stack>
+              </Stack>
+            </Stack>
+
+            {/*Item List area*/}
+            <Box position="relative" sx={{
+              //border: "solid", 
+              width: '800px',
+              height: '170px',
+              backgroundImage: `url(${InventoryItemArea})`,
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bottom: 40,
+              //right:40,
+              mt: 1
+            }}>
+              {/*Items Tiles 11x2*/}
+              <Box sx={{
+                //border: "solid", 
+                width: '760px',
+                height: '115px',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {/* Items Tiles 11x2 */}
+                <Grid container spacing={1} columns={10}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}>
+                  {(() => {
+                    // Always fill to 22 slots
+                    const slots = [...inventory];
+                    while (slots.length < 20) {
+                      slots.push(null);
+                    }
+
+                    return slots.map((item, index) => {
+                      const isEquipped =
+                        item && userDetails.equipped_cosmetic_id === item.cosmeticId;
+
+                      return (
+                        <Grid item xs={1} key={index}>
+                          <Button
+                            variant="contained"
+                            onClick={item ? async () => {
+                              try {
+                                await API.post("/inventory/equip", {
+                                  userId: userDetails.userId,
+                                  cosmeticId: item.cosmeticId,
+                                });
+                                SetUserDetails({
+                                  ...userDetails,
+                                  equipped_cosmetic_id: item.cosmeticId,
+                                });
+                              } catch (err) {
+                                console.error("Failed to equip item:", err);
+                              }
+                            } : undefined}
+                            disabled={!item}
+                            sx={{
+                              backgroundImage: `url(${ItemBox})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                              border: isEquipped ? "3px solid gold" : "1px solid gray",
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              textTransform: "none",
+                              color: isEquipped ? "gold" : "white",
+                              width: 40,
+                              height: 60
+                            }}
+                          >
+                            {item ? (
+                              <>
+                                <Box
+                                  component="img"
+                                  src={`data:image/png;base64,${item.cosmeticImage}`}
+                                  alt={item.name}
+                                  sx={{ width: 40, height: 60, mb: 0.5 }}
+                                />
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontWeight: isEquipped ? "bold" : "normal",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {item.name}
+                                </Typography>
+                              </>
+                            ) : null}
+                          </Button>
+                        </Grid>
+                      );
+                    });
+                  })()}
+                </Grid>
+
+              </Box>
+            </Box>
           </Box>
         </Fade>
       </Modal>
