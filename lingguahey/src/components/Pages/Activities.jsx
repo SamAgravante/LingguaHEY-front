@@ -2,6 +2,10 @@ import React from "react";
 import { Box, Typography, Button, Grid, Card, CardActionArea } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
+import levelEditorIcon from "../../assets/images/ui-assets/LevelEditor_Button.jpg";
+import monsterEditorIcon from "../../assets/images/ui-assets/MonsterEditor_Button.png";
+import bg from "../../assets/images/backgrounds/Editor_BG.png";
+
 const Activities = () => {
   const navigate = useNavigate();
 
@@ -20,7 +24,10 @@ const Activities = () => {
   return (
     <Box
       sx={{
-        backgroundColor: "#f5f5f5", // ✅ old background
+        backgroundImage: `url(${bg})`,
+        backgroundSize: "cover",       // makes sure it covers entire screen
+        backgroundPosition: "center",  // centers the image
+        backgroundRepeat: "no-repeat", // no tiling
         minHeight: "100vh",
         width: "100%",
         display: "flex",
@@ -36,12 +43,13 @@ const Activities = () => {
           position: "absolute",
           top: 16,
           right: 16,
-          backgroundColor: "#3f51b5",
-          color: "#fff",
+          color: "#3f51b5",
           fontWeight: "bold",
           padding: "6px 16px",
           borderRadius: 2,
-          "&:hover": { backgroundColor: "#5c6bc0" },
+          marginRight: "30px",
+          fontSize: "40px",
+          "&:hover": { backgroundColor: "transparent" },
         }}
       >
         Return
@@ -49,13 +57,14 @@ const Activities = () => {
 
       {/* Header */}
       <Typography
-        variant="h3"
+        variant="inherit"
         sx={{
           fontWeight: 600,
           textAlign: "center",
           marginTop: 4,
           marginBottom: 6,
           color: "#3f51b5", // ✅ old header color
+          fontSize: "80px"
         }}
       >
         Game Editor
@@ -72,46 +81,32 @@ const Activities = () => {
         <Grid item>
           <Card
             sx={{
-              width: 280,
-              height: 280,
-              backgroundColor: "#fff", // ✅ old card color
-              border: "2px solid #ddd",
-              borderRadius: 2,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: 2,
+              width: 500,
+              height: 420,
+              backgroundColor: "transparent",
+              boxShadow: "none",
             }}
           >
             <CardActionArea
               onClick={handleLevelEditorClick}
               sx={{
+                width: "100%",
                 height: "100%",
                 display: "flex",
-                flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <Box
-                sx={{
-                  width: "200px",
-                  height: "150px",
-                  border: "2px dashed #aaa",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginBottom: 2,
+              <img
+                src={levelEditorIcon}
+                alt="Monster Editor"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain", // scale properly inside card
+                  backgroundColor: "transparent",
                 }}
-              >
-                <Typography variant="body1" sx={{ color: "#666" }}>
-                  [Box Placeholder]
-                </Typography>
-              </Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: "#3f51b5" }}>
-                Level Editor
-              </Typography>
+              />
             </CardActionArea>
           </Card>
         </Grid>
@@ -120,46 +115,31 @@ const Activities = () => {
         <Grid item>
           <Card
             sx={{
-              width: 280,
-              height: 280,
-              backgroundColor: "#fff",
-              border: "2px solid #ddd",
-              borderRadius: 2,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: 2,
+              width: 500,   // bigger size
+              height: 420,
+              backgroundColor: "transparent",
+              boxShadow: "none",
             }}
           >
             <CardActionArea
               onClick={handleMonsterEditorClick}
               sx={{
+                width: "100%",
                 height: "100%",
                 display: "flex",
-                flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <Box
-                sx={{
-                  width: "200px",
-                  height: "150px",
-                  border: "2px dashed #aaa",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginBottom: 2,
+              <img
+                src={monsterEditorIcon}
+                alt="Monster Editor"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
                 }}
-              >
-                <Typography variant="body1" sx={{ color: "#666" }}>
-                  [Box Placeholder]
-                </Typography>
-              </Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: "#3f51b5" }}>
-                Monster Editor
-              </Typography>
+              />
             </CardActionArea>
           </Card>
         </Grid>

@@ -3,9 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Grid,
   CircularProgress,
   TextField,
   Stack,
@@ -13,10 +10,20 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
+  Grid,
 } from "@mui/material";
+import { Delete } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../../../contexts/AuthContext";
+
+// Backgrounds
+import ListContainerBG from "../../../assets/images/backgrounds/MonsterEditUIOuter.png";
+import ListBG from "../../../assets/images/backgrounds/NameTab.png";
+import EditBG from "../../../assets/images/backgrounds/GameShopBoxSmall.png";
+import bg from "../../../assets/images/backgrounds/Editor_BG.png";
+import DeleteBG from "../../../assets/images/ui-assets/DeleteButton.png";
 
 const MonsterEditor = () => {
   const navigate = useNavigate();
@@ -102,6 +109,9 @@ const MonsterEditor = () => {
       formData.append("englishName", editForm.english);
       formData.append("tagalogName", editForm.tagalog);
       formData.append("description", editForm.description);
+      if (editForm.file) {
+        formData.append("file", editForm.file);
+      }
 
       const response = await API.put(`/${editMonster}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -111,14 +121,14 @@ const MonsterEditor = () => {
         prev.map((m) =>
           m.id === editMonster
             ? {
-                ...m,
-                english: response.data.englishName,
-                tagalog: response.data.tagalogName,
-                description: response.data.description,
-                image: response.data.imageData
-                  ? `data:image/png;base64,${response.data.imageData}`
-                  : m.image,
-              }
+              ...m,
+              english: response.data.englishName,
+              tagalog: response.data.tagalogName,
+              description: response.data.description,
+              image: response.data.imageData
+                ? `data:image/png;base64,${response.data.imageData}`
+                : m.image,
+            }
             : m
         )
       );
@@ -160,8 +170,9 @@ const MonsterEditor = () => {
       }
 
       const response = await API.post("", formData, {
-        headers: { 
-          "Content-Type": "multipart/form-data" },
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       const newMonster = {
@@ -194,7 +205,9 @@ const MonsterEditor = () => {
   return (
     <Box
       sx={{
-        backgroundColor: "#f5f5f5",
+        backgroundImage: `url(${bg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
         minHeight: "100vh",
         padding: 4,
         position: "relative",
@@ -207,186 +220,451 @@ const MonsterEditor = () => {
           position: "absolute",
           top: 16,
           right: 16,
-          backgroundColor: "#3f51b5",
-          color: "#fff",
+          backgroundColor: "transparent",
+          color: "#3f51b5",
+          fontWeight: "bold",
+          fontSize: "20px",
+          "&:hover": { backgroundColor: "transparent" },
         }}
       >
-        Return
+        ← Return
       </Button>
 
+      {/* Title */}
       <Typography
-        variant="h3"
-        sx={{ fontWeight: 600, textAlign: "center", mb: 6, color: "#3f51b5" }}
+        sx={{
+          fontWeight: 600,
+          textAlign: "center",
+          marginBottom: 4,
+          color: "#3f51b5",
+          fontSize: "60px",
+        }}
       >
         Monster Editor
       </Typography>
 
-      {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", minHeight: "50vh" }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Grid container direction="column" spacing={3} alignItems="center">
-          {monsters.map((monster) => (
-            <Grid item key={monster.id} sx={{ width: "100%", maxWidth: 800 }}>
-              <Card sx={{ backgroundColor: "#fff", border: "1px solid #ddd" }}>
-                <CardContent>
-                  {editMonster === monster.id ? (
-                    // Edit Form
-                    <Stack spacing={2}>
-                      <TextField
-                        label="English Name"
-                        name="english"
-                        value={editForm.english}
-                        onChange={handleChange}
-                        fullWidth
-                      />
-                      <TextField
-                        label="Tagalog Name"
-                        name="tagalog"
-                        value={editForm.tagalog}
-                        onChange={handleChange}
-                        fullWidth
-                      />
-                      <TextField
-                        label="Description"
-                        name="description"
-                        value={editForm.description}
-                        onChange={handleChange}
-                        fullWidth
-                        multiline
-                      />
-                      <Stack direction="row" spacing={2} justifyContent="flex-end">
+      {/* Outer Container Background */}
+      <Box
+        sx={{
+          backgroundImage: `url(${ListContainerBG})`,
+          backgroundSize: "100% 100%",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center",
+          padding: 4,
+          maxWidth: 1100,
+          margin: "0 auto",
+        }}
+      >
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              minHeight: "50vh",
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Stack spacing={3}>
+            {monsters.map((monster) => (
+              <Box
+                key={monster.id}
+                sx={{
+                  backgroundImage: `url(${ListBG})`,
+                  backgroundSize: "100% 100%",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  padding: 2,
+                  paddingTop: 5,
+                  minHeight: 120,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                {editMonster === monster.id ? (
+                  // Edit Form
+                  <Box sx={{ width: "100%", padding: 2 }}>
+                    <Grid container spacing={2}>
+                      {/* Add Image Box */}
+                      <Grid item xs={12} sm={3}>
+                        <Box
+                          sx={{
+                            border: "2px dashed #5b3138",
+                            borderRadius: "8px",
+                            height: "100%",
+                            minHeight: 100,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            backgroundColor: "#f7cb97",
+                            "&:hover": { backgroundColor: "#f5b971" },
+                          }}
+                          onClick={() => document.getElementById("editImageInput").click()}
+                        >
+                          <Typography
+                            sx={{
+                              color: "#5b3138",
+                              fontWeight: "bold",
+                              textAlign: "center",
+                              fontSize: "14px", // Slightly smaller font size
+                            }}
+                          >
+                            Change Image
+                          </Typography>
+                          <input
+                            type="file"
+                            id="editImageInput"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, file: e.target.files[0] }))
+                            }
+                          />
+                        </Box>
+                      </Grid>
+
+                      {/* Form Fields */}
+                      <Grid item xs={12} sm={9}>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12}>
+                            <TextField
+                              label="English Name"
+                              name="english"
+                              value={editForm.english}
+                              onChange={handleChange}
+                              fullWidth
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  border: "2px solid #5b3138", // Add border
+                                  borderRadius: "8px", // Optional: Add rounded corners
+                                  minHeight: 40, // Reduced height
+                                },
+                                "& .MuiInputLabel-root": {
+                                  backgroundColor: "#f7cb97", // Add background to prevent overlap
+                                  padding: "0 4px", // Add padding to the label
+                                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                                },
+                                "& .MuiInputLabel-shrink": {
+                                  transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                                },
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12}>
+                            <TextField
+                              label="Tagalog Name"
+                              name="tagalog"
+                              value={editForm.tagalog}
+                              onChange={handleChange}
+                              fullWidth
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  border: "2px solid #5b3138", // Add border
+                                  borderRadius: "8px", // Optional: Add rounded corners
+                                  minHeight: 40, // Reduced height
+                                },
+                                "& .MuiInputLabel-root": {
+                                  backgroundColor: "#f7cb97", // Add background to prevent overlap
+                                  padding: "0 4px", // Add padding to the label
+                                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                                },
+                                "& .MuiInputLabel-shrink": {
+                                  transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                                },
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12}>
+                            <TextField
+                              label="Description"
+                              name="description"
+                              value={editForm.description}
+                              onChange={handleChange}
+                              fullWidth
+                              multiline
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  border: "2px solid #5b3138", // Add border
+                                  borderRadius: "8px", // Optional: Add rounded corners
+                                  minHeight: 40, // Reduced height
+                                },
+                                "& .MuiInputLabel-root": {
+                                  backgroundColor: "#f7cb97", // Add background to prevent overlap
+                                  padding: "0 4px", // Add padding to the label
+                                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                                },
+                                "& .MuiInputLabel-shrink": {
+                                  transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                                },
+                              }}
+                            />
+                          </Grid>
+                        </Grid>
+                      </Grid>
+
+                      {/* Save and Cancel Buttons */}
+                      <Grid item xs={12} sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
                         <Button
                           variant="contained"
-                          onClick={handleSaveEdit}
                           sx={{ backgroundColor: "#4caf50" }}
+                          onClick={handleSaveEdit}
                         >
                           Save
                         </Button>
                         <Button
                           variant="contained"
-                          onClick={handleCancelEdit}
                           sx={{ backgroundColor: "#9e9e9e" }}
+                          onClick={handleCancelEdit}
                         >
                           Cancel
                         </Button>
-                      </Stack>
-                    </Stack>
-                  ) : (
-                    // Display View
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        {monster.image.startsWith("data:") ? (
-                          <img
-                            src={monster.image}
-                            alt={monster.english}
-                            style={{ width: 50, height: 50, borderRadius: 8 }}
-                          />
-                        ) : (
-                          <Typography variant="h4">{monster.image}</Typography>
-                        )}
-                        <Box>
-                          <Typography>
-                            <strong>English:</strong> {monster.english}
-                          </Typography>
-                          <Typography>
-                            <strong>Tagalog:</strong> {monster.tagalog}
-                          </Typography>
-                          {/* Commented out description, might delete later */}
-                          {/*<Typography color="text.secondary">
-                            <strong>Description:</strong> {monster.description}
-                          </Typography>*/}
-                        </Box>
-                      </Box>
-
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ) : (
+                  <>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, marginLeft: "15px", paddingBottom: "18px" }}>
+                      {monster.image.startsWith("data:") ? (
+                        <img
+                          src={monster.image}
+                          alt={monster.english}
+                          style={{ width: 100, height: 100 }}
+                        />
+                      ) : (
+                        <Typography variant="h4">{monster.image}</Typography>
+                      )}
                       <Box>
-                        <Button
-                          variant="contained"
-                          sx={{ backgroundColor: "#2196f3", mr: 2 }}
-                          onClick={() => handleEditClick(monster)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="contained"
-                          sx={{ backgroundColor: "#e53935" }}
-                          onClick={() => handleDelete(monster.id)}
-                        >
-                          Delete
-                        </Button>
+                        <Typography sx={{ fontWeight: "bold", fontSize: 30 }}>
+                          English: {monster.english}
+                        </Typography>
+                        <Typography sx={{ fontWeight: "bold", fontSize: 30 }}>
+                          Tagalog: {monster.tagalog}
+                        </Typography>
                       </Box>
                     </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+                    <Box sx={{ marginRight: "15px", paddingBottom: "18px" }}>
+                      <Button
+                        variant="contained"
+                        sx={{
+                          backgroundImage: `url(${EditBG})`,
+                          backgroundSize: "100% 100%",
+                          backgroundRepeat: "no-repeat",
+                          color: "#000",
+                          marginRight: 2,
+                          fontWeight: "bold",
+                          width: 100,
+                          height: 40,
+                          fontSize: "16px",
+                          padding: 1,
+                        }}
+                        onClick={() => handleEditClick(monster)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="contained"
+                        sx={{
+                          backgroundImage: `url(${DeleteBG})`,
+                          backgroundSize: "100% 100%",
+                          backgroundRepeat: "no-repeat",
+                          fontWeight: "bold",
+                          width: 100,
+                          height: 40,
+                          fontSize: "16px",
+                          "&:hover": { backgroundColor: "#d32f2f" },
+                        }}
+                        onClick={() => handleDelete(monster.id)}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  </>
+                )}
+              </Box>
+            ))}
 
-          {/* Add Monster Card */}
-          <Grid item sx={{ width: "100%", maxWidth: 800 }}>
-            <Card
+            {/* Add Monster Box */}
+            <Box
+              onClick={() => setOpenAddDialog(true)}
               sx={{
-                backgroundColor: "#fafafa",
-                border: "2px dashed #aaa",
+                backgroundImage: `url(${ListBG})`,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                padding: 3,
+                minHeight: 100,
                 textAlign: "center",
                 cursor: "pointer",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
               }}
-              onClick={() => setOpenAddDialog(true)}
             >
-              <CardContent>
-                <Typography variant="h6" color="text.secondary">
-                  + Add Monster
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
+              <Typography
+                sx={{ fontWeight: "bold", fontSize: "28px", color: "#000" }}
+              >
+                Add New Monster +
+              </Typography>
+            </Box>
+          </Stack>
+        )}
+      </Box>
 
       {/* Add Monster Dialog */}
-      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add a New Monster</DialogTitle>
+      <Dialog
+        open={openAddDialog}
+        onClose={() => setOpenAddDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundImage: `url(${ListContainerBG})`, // ✅ use same outer BG
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            padding: 3,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: "bold",
+            color: "#3f51b5",
+            textAlign: "center",
+            fontSize: "28px",
+          }}
+        >
+          Add a New Monster
+        </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="English Name"
-              name="english"
-              value={newMonsterForm.english}
-              onChange={handleNewMonsterChange}
-              fullWidth
-            />
-            <TextField
-              label="Tagalog Name"
-              name="tagalog"
-              value={newMonsterForm.tagalog}
-              onChange={handleNewMonsterChange}
-              fullWidth
-            />
-            <TextField
-              label="Description"
-              name="description"
-              value={newMonsterForm.description}
-              onChange={handleNewMonsterChange}
-              fullWidth
-              multiline
-            />
-            <input
-              type="file"
-              name="file"
-              accept="image/*"
-              onChange={handleNewMonsterChange}
-            />
-          </Stack>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* Add Image Box (same style as edit) */}
+            <Grid item xs={12} sm={4}>
+              <Box
+                sx={{
+                  border: "2px dashed #5b3138",
+                  borderRadius: "8px",
+                  height: "100%",
+                  minHeight: 120,
+                  minWidth: 150,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  backgroundColor: "#f7cb97",
+                  "&:hover": { backgroundColor: "#f5b971" },
+                }}
+                onClick={() =>
+                  document.getElementById("addImageInput").click()
+                }
+              >
+                <Typography
+                  sx={{
+                    color: "#5b3138",
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    fontSize: "14px",
+                  }}
+                >
+                  Add Image
+                </Typography>
+                <input
+                  type="file"
+                  id="addImageInput"
+                  name="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleNewMonsterChange}
+                />
+              </Box>
+            </Grid>
+
+            {/* Form Fields */}
+            <Grid item xs={12} sm={8}>
+              <Stack spacing={2}>
+                <TextField
+                  label="English Name"
+                  name="english"
+                  value={newMonsterForm.english}
+                  onChange={handleNewMonsterChange}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      border: "2px solid #5b3138", // Add border
+                      borderRadius: "8px", // Optional: Add rounded corners
+                      minHeight: 40, // Reduced height
+                    },
+                    "& .MuiInputLabel-root": {
+                      backgroundColor: "#dba463", // Add background to prevent overlap
+                      padding: "0 4px", // Add padding to the label
+                      transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                    },
+                    "& .MuiInputLabel-shrink": {
+                      transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                    },
+                    width: "380px",
+                  }}
+                  fullWidth
+                />
+                <TextField
+                  label="Tagalog Name"
+                  name="tagalog"
+                  value={newMonsterForm.tagalog}
+                  onChange={handleNewMonsterChange}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      border: "2px solid #5b3138", // Add border
+                      borderRadius: "8px", // Optional: Add rounded corners
+                      minHeight: 40, // Reduced height
+                    },
+                    "& .MuiInputLabel-root": {
+                      backgroundColor: "#dba463", // Add background to prevent overlap
+                      padding: "0 4px", // Add padding to the label
+                      transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                    },
+                    "& .MuiInputLabel-shrink": {
+                      transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                    },
+                  }}
+                  fullWidth
+                />
+                <TextField
+                  label="Description"
+                  name="description"
+                  value={newMonsterForm.description}
+                  onChange={handleNewMonsterChange}
+                  fullWidth
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      border: "2px solid #5b3138",
+                      borderRadius: "8px",
+                      minHeight: 40,
+                    },
+                    "& .MuiInputLabel-root": {
+                      backgroundColor: "#dba463",
+                      padding: "0 4px",
+                      transform: "translate(14px, -6px) scale(0.75)",
+                    },
+                    "& .MuiInputLabel-shrink": {
+                      transform: "translate(14px, -6px) scale(0.75)",
+                    },
+                  }}
+                  multiline
+                />
+              </Stack>
+            </Grid>
+          </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenAddDialog(false)}>Cancel</Button>
+        <DialogActions sx={{ justifyContent: "flex-end" }}>
+          <Button
+            onClick={() => setOpenAddDialog(false)}
+            variant="contained"
+            sx={{ backgroundColor: "#9e9e9e" }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleAddMonster}
             variant="contained"

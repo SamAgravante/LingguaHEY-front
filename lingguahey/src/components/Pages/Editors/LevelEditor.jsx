@@ -3,8 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
   Grid,
   CircularProgress,
   Dialog,
@@ -18,6 +16,11 @@ import {
 import { AddCircle, Delete } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+
+import bg from "../../../assets/images/backgrounds/Editor_BG.png";
+import cardBG from "../../../assets/images/backgrounds/Card_Border.png";
+import EditBG from "../../../assets/images/backgrounds/GameShopBoxSmall.png";
+import ListContainerBG from "../../../assets/images/backgrounds/MonsterEditUIOuter.png";
 
 const LevelEditor = () => {
   const navigate = useNavigate();
@@ -170,12 +173,12 @@ const LevelEditor = () => {
           levels.map((lvl) =>
             lvl.id === levelForm.id
               ? {
-                  ...lvl,
-                  name: response.data.levelName,
-                  coins: response.data.coinsReward,
-                  gems: response.data.gemsReward,
-                  monsters: response.data.levelMonsters,
-                }
+                ...lvl,
+                name: response.data.levelName,
+                coins: response.data.coinsReward,
+                gems: response.data.gemsReward,
+                monsters: response.data.levelMonsters,
+              }
               : lvl
           )
         );
@@ -217,7 +220,9 @@ const LevelEditor = () => {
   return (
     <Box
       sx={{
-        backgroundColor: "#f5f5f5",
+        backgroundImage: `url(${bg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
         minHeight: "100vh",
         padding: 4,
         position: "relative",
@@ -230,105 +235,138 @@ const LevelEditor = () => {
           position: "absolute",
           top: 16,
           right: 16,
-          backgroundColor: "#3f51b5",
-          color: "#fff",
+          backgroundColor: "transparent",
+          color: "#3f51b5",
           fontWeight: "bold",
-          padding: "6px 16px",
-          borderRadius: 2,
-          "&:hover": { backgroundColor: "#5c6bc0" },
+          fontSize: "20px",
+          "&:hover": { backgroundColor: "transparent" },
         }}
       >
-        Return
+        ← Return
       </Button>
 
       {/* Header */}
       <Typography
-        variant="h3"
         sx={{
           fontWeight: 600,
           textAlign: "center",
           marginBottom: 6,
-          color: "#3f51b5",
+          color: "#6fa8dc",
+          fontSize: "60px",
         }}
       >
         Level Editor
       </Typography>
 
-      {/* Level List */}
-      <Grid container direction="column" spacing={3} alignItems="center">
-        {levels.map((level) => (
-          <Grid item key={level.id} sx={{ width: "100%", maxWidth: 700 }}>
-            <Card
-              sx={{
-                backgroundColor: "#fff",
-                border: "2px solid #ddd",
-                borderRadius: 2,
-              }}
-            >
-              <CardContent
+      {/* Level List Container */}
+      <Box
+        sx={{
+          maxHeight: "70vh",
+          overflowY: "auto",
+          px: 0, // 👈 reduced padding so scrollbar sits closer to content
+          "&::-webkit-scrollbar": {
+            width: "10px", // 👈 scrollbar width
+          },
+          "&::-webkit-scrollbar-track": {
+            background: "transparent", // 👈 transparent track
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "rgba(0,0,0,0.8)", // 👈 60% opacity
+            borderRadius: "6px",
+          },
+          "&::-webkit-scrollbar-thumb:hover": {
+            backgroundColor: "rgba(0,0,0,0.8)", // 👈 darkens slightly on hover
+          },
+        }}
+      >
+        <Grid container direction="column" spacing={3} alignItems="center" >
+          {levels.map((level) => (
+            <Grid item key={level.id} sx={{ width: "100%", maxWidth: 1000 }}>
+              <Box
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  backgroundImage: `url(${cardBG})`,
+                  backgroundSize: "100% 100%",   // stretches bg properly
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  padding: 4,
+                  minHeight: 140,
                 }}
               >
-                <Box>
-                  <Typography variant="h5" sx={{ fontWeight: 600, color: "#3f51b5" }}>
-                    {level.name}
-                  </Typography>
-                  <Typography variant="body2">
-                    Coins: {level.coins} | Gems: {level.gems}
-                  </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "20px 40px",
+                    height: "100%",
+                  }}
+                >
+                  <Box>
+                    <Typography sx={{ fontWeight: 600, color: "#000", fontSize: "60px" }}>
+                      {level.name}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Button
+                      sx={{
+                        backgroundImage: `url(${EditBG})`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        color: "#000",
+                        fontWeight: "bold",
+                        width: 100,
+                        height: 40,
+                        fontSize: "18px",
+                        mr: 2,
+                      }}
+                      onClick={() => handleOpenEdit(level)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="contained"
+                      sx={{
+                        backgroundColor: "#e53935",
+                        fontWeight: "bold",
+                        "&:hover": { backgroundColor: "#d32f2f" },
+                      }}
+                      onClick={() => handleDelete(level.id)}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
                 </Box>
-                <Box>
-                  <Button
-                    variant="contained"
-                    sx={{
-                      backgroundColor: "#fbc02d",
-                      color: "#000",
-                      marginRight: 2,
-                      fontWeight: "bold",
-                      "&:hover": { backgroundColor: "#f9a825" },
-                    }}
-                    onClick={() => handleOpenEdit(level)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="contained"
-                    sx={{
-                      backgroundColor: "#e53935",
-                      fontWeight: "bold",
-                      "&:hover": { backgroundColor: "#d32f2f" },
-                    }}
-                    onClick={() => handleDelete(level.id)}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+              </Box>
+            </Grid>
+          ))}
 
-        {/* Add Level Box */}
-        <Grid item sx={{ width: "100%", maxWidth: 700 }}>
-          <Button
-            fullWidth
-            variant="outlined"
-            sx={{
-              padding: 2,
-              fontWeight: "bold",
-              border: "2px dashed #aaa",
-              color: "#3f51b5",
-              "&:hover": { backgroundColor: "#f5f5f5" },
-            }}
-            onClick={handleOpenAdd}
-          >
-            Add New Level +
-          </Button>
+          {/* Add Level Box */}
+          <Grid item sx={{ width: "100%", maxWidth: 1000 }}>
+            <Box
+              onClick={handleOpenAdd}
+              sx={{
+                backgroundImage: `url(${cardBG})`,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                padding: 4,
+                minHeight: 140,
+                textAlign: "center",
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Typography sx={{ fontWeight: "bold", fontSize: "50px", color: "#000" }}>
+                Add New Level +
+              </Typography>
+            </Box>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
+
+
 
       {/* Add/Edit Dialog */}
       <Dialog
@@ -336,6 +374,15 @@ const LevelEditor = () => {
         onClose={handleCloseDialog}
         fullWidth
         maxWidth="sm"
+        PaperProps={{
+          sx: {
+            backgroundImage: `url(${ListContainerBG})`, // ✅ same as MonsterEditor
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            padding: 3,
+          },
+        }}
       >
         <DialogTitle>{levelForm.id ? "Edit Level" : "Add New Level"}</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
@@ -344,6 +391,21 @@ const LevelEditor = () => {
             value={levelForm.name}
             onChange={(e) => handleFormChange("name", e.target.value)}
             fullWidth
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                border: "2px solid #5b3138",
+                borderRadius: "8px",
+                minHeight: 40,
+              },
+              "& .MuiInputLabel-root": {
+                backgroundColor: "#dba463",
+                padding: "0 4px",
+                transform: "translate(14px, -6px) scale(0.75)",
+              },
+              "& .MuiInputLabel-shrink": {
+                transform: "translate(14px, -6px) scale(0.75)",
+              },
+            }}
           />
           <TextField
             label="Coins Reward"
@@ -351,6 +413,21 @@ const LevelEditor = () => {
             value={levelForm.coins}
             onChange={(e) => handleFormChange("coins", e.target.value)}
             fullWidth
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                border: "2px solid #5b3138",
+                borderRadius: "8px",
+                minHeight: 40,
+              },
+              "& .MuiInputLabel-root": {
+                backgroundColor: "#dba463",
+                padding: "0 4px",
+                transform: "translate(14px, -6px) scale(0.75)",
+              },
+              "& .MuiInputLabel-shrink": {
+                transform: "translate(14px, -6px) scale(0.75)",
+              },
+            }}
           />
           <TextField
             label="Gems Reward"
@@ -358,9 +435,24 @@ const LevelEditor = () => {
             value={levelForm.gems}
             onChange={(e) => handleFormChange("gems", e.target.value)}
             fullWidth
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                border: "2px solid #5b3138",
+                borderRadius: "8px",
+                minHeight: 40,
+              },
+              "& .MuiInputLabel-root": {
+                backgroundColor: "#dba463",
+                padding: "0 4px",
+                transform: "translate(14px, -6px) scale(0.75)",
+              },
+              "& .MuiInputLabel-shrink": {
+                transform: "translate(14px, -6px) scale(0.75)",
+              },
+            }}
           />
 
-          <Typography variant="h6">Monsters</Typography>
+          <Typography variant="h6" sx={{ mt: 2 }}>Monsters</Typography>
           {levelForm.monsters.map((monster, index) => (
             <Box
               key={index}
@@ -373,7 +465,22 @@ const LevelEditor = () => {
                 onChange={(e) =>
                   handleMonsterFieldChange(index, "monsterId", e.target.value)
                 }
-                sx={{ flex: 2 }}
+                sx={{
+                  flex: 2,
+                  "& .MuiOutlinedInput-root": {
+                    border: "2px solid #5b3138",
+                    borderRadius: "8px",
+                    minHeight: 40,
+                  },
+                  "& .MuiInputLabel-root": {
+                    backgroundColor: "#dba463",
+                    padding: "0 4px",
+                    transform: "translate(14px, -6px) scale(0.75)",
+                  },
+                  "& .MuiInputLabel-shrink": {
+                    transform: "translate(14px, -6px) scale(0.75)",
+                  },
+                }}
               >
                 {monsterPool.map((m) => (
                   <MenuItem key={m.id} value={m.id}>
@@ -381,18 +488,7 @@ const LevelEditor = () => {
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField
-                select
-                label="Type"
-                value={monster.monsterType}
-                onChange={(e) =>
-                  handleMonsterFieldChange(index, "monsterType", e.target.value)
-                }
-                sx={{ flex: 1 }}
-              >
-                <MenuItem value="MINION">Minion</MenuItem>
-                <MenuItem value="BOSS">Boss</MenuItem>
-              </TextField>
+
               <IconButton color="error" onClick={() => handleRemoveMonsterField(index)}>
                 <Delete />
               </IconButton>
@@ -406,6 +502,7 @@ const LevelEditor = () => {
             Add Monster
           </Button>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button
