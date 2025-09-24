@@ -84,9 +84,9 @@ import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
 import SettingsIcon from '@mui/icons-material/Settings';
 
 // Import game components
-import LiveActOnePicFourWords from "../../components/pages/Live-Activity-Classroom/LiveActOnePicFourWords";
-import LiveActPhraseTranslation from "../../components/pages/Live-Activity-Classroom/LiveActPhraseTranslation";
-import LiveActWordTranslation from "../../components/pages/Live-Activity-Classroom/LiveActWordTranslation";
+import LiveActOnePicFourWords from "../../components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
+import LiveActPhraseTranslation from "../../components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
+import LiveActWordTranslation from "../../components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
 
 
 const TeacherDashboardPopUp = () => {
@@ -440,7 +440,7 @@ const TeacherDashboardPopUp = () => {
     }
 
     try {
-      const response = await API.put(`/live-activities/${selectedActivity}/set-deployed/true`);
+      const response = await API.put(`/live-activities/${selectedActivity.activity_ActivityId}/set-deployed/true`);
       if (response.status === 200) {
         setIsDeployed(true);
         setActivityStatus("Deployed");
@@ -459,7 +459,7 @@ const TeacherDashboardPopUp = () => {
     }
 
     try {
-      const response = await API.put(`/live-activities/${selectedActivity}/set-deployed/false`);
+      const response = await API.put(`/live-activities/${selectedActivity.activity_ActivityId}/set-deployed/false`);
       if (response.status === 200) {
         setIsDeployed(false);
         setActivityStatus("Undeployed");
@@ -535,8 +535,11 @@ const TeacherDashboardPopUp = () => {
     setSelectedQuestionType(questionType);
   };
 
-  const resetSelectedQuestionType = () => {
+  const resetSelectedQuestionType = async () => {
     setSelectedQuestionType(null);
+    if (selectedActivity) {
+      await fetchActivityQuestions(selectedActivity.activity_ActivityId);
+    }
   };
 
   const fetchActivityQuestions = async (activityId) => {
@@ -1363,7 +1366,6 @@ useEffect(() => {
               <List sx={{ border: '3px solid #5D4037', borderRadius: 1, p: 2 }}>
                 {activityQuestions.map((question, index) => {
                   const imgSrc = imageUrls[question.questionId] ?? getQuestionImageSrc(question); // getQuestionImageSrc = your existing resolver
-
                   // render image only when src exists
                   return (
                     <ListItem key={question.questionId} divider={index < activityQuestions.length - 1} sx={{ py: 1 }}>
@@ -1375,7 +1377,7 @@ useEffect(() => {
                               {imgSrc ? (
                                 <Box
                                   component="img"
-                                  src={imgSrc}
+                                  src={`data:image/png;base64,${imgSrc}`}
                                   alt={question.questionText || `activity-img-${index}`}
                                   sx={{ maxWidth: 160, maxHeight: 90, objectFit: "cover", borderRadius: 1 }}
                                   onError={(e) => { e.currentTarget.style.display = "none"; }}

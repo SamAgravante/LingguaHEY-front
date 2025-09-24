@@ -174,18 +174,14 @@ export default function Homepage() {
 
   async function equipItem(item) {
     try {
-      await API.post("/inventory/equip", {
+      const equipResp = await API.post("/inventory/equip", {
         userId: userDetails.userId,
         cosmeticId: item.cosmeticId,
       });
 
-      // update userDetails so UI refreshes
-      SetUserDetails({
-        ...userDetails,
-        equipped_cosmetic_id: item.cosmeticId,
-      });
-
-      console.log("Equipped:", item.name);
+      // server may return wrapper object similar to GET
+      setItemEquipped(equipResp.data?.equippedCosmetic || {});
+      console.log("Equipped:", item?.name);
     } catch (err) {
       console.error("Failed to equip item:", err);
     }
@@ -298,6 +294,13 @@ export default function Homepage() {
         SetInventory(inventoryResp.data);
         console.log("Inventory contains:" + inventoryResp.data);
 
+        // Equipped Item
+        const equipResp = await API.get(`/users/${user.userId}/equipped-cosmetic`);
+        // API shape: { equippedCosmetic: { cosmeticId, name, rarity, cosmeticImage } }
+        setItemEquipped(equipResp.data?.equippedCosmetic || {});
+        console.log("Equipped Item:", equipResp.data);
+
+
 
         const monsterResp = await API.get(`/monsters`);
         if (isMounted) {
@@ -370,6 +373,8 @@ export default function Homepage() {
     setOpen(true);
     setCoins(userDetails.coins);
     setGems(userDetails.gems);
+        console.log("Current Item equipped: " + itemEquipped);
+
   }; const closeModal = async () => {
     try {
       // Fetch updated progress
@@ -559,17 +564,19 @@ export default function Homepage() {
                   height: '215px'
                 }}
               />
-              <img
-                src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
-                alt="Weapon"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '220px',
-                  height: '215px'
-                }}
-              />
+              {itemEquipped?.cosmeticImage ? (
+                <img
+                  src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
+                  alt="Weapon"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '220px',
+                    height: '215px'
+                  }}
+                />
+              ) : null}
             </Box>
           </Box>
         </Stack>
@@ -1130,17 +1137,19 @@ export default function Homepage() {
                         height: '315px'
                       }}
                     />
-                    <img
-                      src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
-                      alt="Weapon"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '320px',
-                        height: '315px'
-                      }}
-                    />
+                    {itemEquipped?.cosmeticImage ? (
+                      <img
+                        src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
+                        alt="Weapon"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '320px',
+                          height: '315px'
+                        }}
+                      />
+                    ) : null}
                   </Box>
                 </Box>
               </Box>
@@ -1303,13 +1312,12 @@ export default function Homepage() {
                             onClick={item ? async () => {
                               try {
                                 await API.post("/inventory/equip", {
-                                  userId: userDetails.userId,
+                                  userId: user.userId,
                                   cosmeticId: item.cosmeticId,
                                 });
-                                SetUserDetails({
-                                  ...userDetails,
-                                  equipped_cosmetic_id: item.cosmeticId,
-                                });
+                                const equipRest = await API.get(`/users/${user.userId}/equipped-cosmetic`);
+                                setItemEquipped(equipRest.data?.equippedCosmetic || {});
+                                console.log("Item equipped:", equipRest.data);
                               } catch (err) {
                                 console.error("Failed to equip item:", err);
                               }
@@ -1334,8 +1342,8 @@ export default function Homepage() {
                               <>
                                 <Box
                                   component="img"
-                                  src={`data:image/png;base64,${item.cosmeticImage}`}
-                                  alt={item.name}
+                                  src={item?.cosmeticImage ? `data:image/png;base64,${item.cosmeticImage}` : undefined}
+                                  alt={item?.name}
                                   sx={{ width: 40, height: 60, mb: 0.5 }}
                                 />
                                 <Typography
