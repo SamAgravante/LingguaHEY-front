@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useContext } from "react";
 import {
   Box,
   Typography,
@@ -26,8 +26,10 @@ import {
   DialogContent,   // added
   DialogActions,   // added
   TextField,       // added
-  DialogContentText
+  DialogContentText,
+  Fade
 } from "@mui/material";
+import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
@@ -88,6 +90,11 @@ import LiveActOnePicFourWords from "../../components/Pages/Live-Activity-Classro
 import LiveActPhraseTranslation from "../../components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
 import LiveActWordTranslation from "../../components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
 
+import LiveActivityGame from './LiveActivityGame';
+import { MusicContext } from '../../contexts/MusicContext';
+
+
+
 
 const TeacherDashboardPopUp = () => {
   const { roomId } = useParams();
@@ -122,7 +129,7 @@ const TeacherDashboardPopUp = () => {
   const [isDeployed, setIsDeployed] = useState(false);
   const [openActivityCreateModal, setOpenActivityCreateModal] = useState(false);
   const [newActivityName, setNewActivityName] = useState("");
-  
+
 
   // Menu / edit / delete states
   const [menuAnchor, setMenuAnchor] = useState(null);
@@ -148,6 +155,32 @@ const TeacherDashboardPopUp = () => {
   const [questionToEdit, setQuestionToEdit] = useState(null);
 
   const [imageUrls, setImageUrls] = useState({});
+
+  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const liveActivityRef = useRef(null);
+  const [multiplayerOpen, setMultiplayerOpen] = useState(false);
+  const [deployedActivityId, setDeployedActivityId] = useState(null);
+  const [secVisibility, setSecVisibility] = useState(true);
+
+
+  useEffect(() => {
+    const fetchDeployedActivity = async () => {
+      if (multiplayerOpen && roomDetails) {
+        try {
+          const res = await API.get(`/live-activities/classrooms/${roomDetails.classroomId}/deployed`);
+          setDeployedActivityId(res.data);
+        } catch (err) {
+          if (err.response && err.response.status === 403) {
+            setDeployedActivityId(null);
+          } else {
+            console.error('Failed to fetch deployed activity:', err);
+            setDeployedActivityId(null);
+          }
+        }
+      }
+    };
+    fetchDeployedActivity();
+  }, [multiplayerOpen, roomDetails]);
 
   const getSortedScores = () => {
     if (scoreSort === "highest") {
@@ -508,7 +541,7 @@ const TeacherDashboardPopUp = () => {
   };
 
   //Activity Functions
-    const handleOpenActivityEdit = async (activityOrId) => {
+  const handleOpenActivityEdit = async (activityOrId) => {
     const activityObj = typeof activityOrId === "string"
       ? activities.find(a => a.activity_ActivityId === activityOrId)
       : activityOrId;
@@ -571,31 +604,31 @@ const TeacherDashboardPopUp = () => {
   };
 
   const openDeleteQuestionDialog = (questionId, questionText) => {
-   setQuestionToDeleteId(questionId);
-   setDeleteLiveActivityDialogMessage(
-     questionText
-       ? `Are you sure you want to delete this question: "${questionText}"?`
-       : "Are you sure you want to delete this question?"
-   );
-   setOpenQuestionDeleteDialog(true);
+    setQuestionToDeleteId(questionId);
+    setDeleteLiveActivityDialogMessage(
+      questionText
+        ? `Are you sure you want to delete this question: "${questionText}"?`
+        : "Are you sure you want to delete this question?"
+    );
+    setOpenQuestionDeleteDialog(true);
   };
 
- const closeDeleteQuestionDialog = () => {
-   setOpenQuestionDeleteDialog(false);
-   setQuestionToDeleteId(null);
-   setDeleteLiveActivityDialogMessage("");
+  const closeDeleteQuestionDialog = () => {
+    setOpenQuestionDeleteDialog(false);
+    setQuestionToDeleteId(null);
+    setDeleteLiveActivityDialogMessage("");
   };
 
- const confirmDeleteQuestion = async () => {
-   if (!questionToDeleteId || !API) return;
-   try {
-     await API.delete(`/questions/${questionToDeleteId}`);
-     setActivityQuestions(prev => prev.filter(q => q.questionId !== questionToDeleteId));
-   } catch (err) {
-     console.error("Error deleting question:", err);
-   } finally {
-     closeDeleteQuestionDialog();
-   }
+  const confirmDeleteQuestion = async () => {
+    if (!questionToDeleteId || !API) return;
+    try {
+      await API.delete(`/questions/${questionToDeleteId}`);
+      setActivityQuestions(prev => prev.filter(q => q.questionId !== questionToDeleteId));
+    } catch (err) {
+      console.error("Error deleting question:", err);
+    } finally {
+      closeDeleteQuestionDialog();
+    }
   };
 
 
@@ -607,60 +640,60 @@ const TeacherDashboardPopUp = () => {
  * Create object URLs for any Blob / ArrayBuffer image fields found on questions.
  * Cleans up (revokeObjectURL) when activityQuestions change or component unmounts.
  */
-useEffect(() => {
-  const created = {};
-  try {
-    (activityQuestions || []).forEach((q) => {
-      const id = q.questionId;
-      const imgCandidate = q.image || q.file || q.media?.[0] || q.imageData;
-      if (!imgCandidate) return;
+  useEffect(() => {
+    const created = {};
+    try {
+      (activityQuestions || []).forEach((q) => {
+        const id = q.questionId;
+        const imgCandidate = q.image || q.file || q.media?.[0] || q.imageData;
+        if (!imgCandidate) return;
 
-      // If it's already a string data URL or http(s) url, use it directly
-      if (typeof imgCandidate === "string" && imgCandidate.trim()) {
-        created[id] = imgCandidate.trim();
-        return;
-      }
+        // If it's already a string data URL or http(s) url, use it directly
+        if (typeof imgCandidate === "string" && imgCandidate.trim()) {
+          created[id] = imgCandidate.trim();
+          return;
+        }
 
-      // If it's a Blob/File, create an object URL
-      if (imgCandidate instanceof Blob) {
-        created[id] = URL.createObjectURL(imgCandidate);
-        return;
-      }
+        // If it's a Blob/File, create an object URL
+        if (imgCandidate instanceof Blob) {
+          created[id] = URL.createObjectURL(imgCandidate);
+          return;
+        }
 
-      // If backend returned a binary array (Array or nested), convert to Blob then object URL
-      const maybeArray = Array.isArray(imgCandidate)
-        ? imgCandidate
-        : (imgCandidate && Array.isArray(imgCandidate.data) ? imgCandidate.data : null);
+        // If backend returned a binary array (Array or nested), convert to Blob then object URL
+        const maybeArray = Array.isArray(imgCandidate)
+          ? imgCandidate
+          : (imgCandidate && Array.isArray(imgCandidate.data) ? imgCandidate.data : null);
 
-      if (maybeArray) {
-        const uint8 = new Uint8Array(maybeArray);
-        const blob = new Blob([uint8], { type: "image/jpeg" });
-        created[id] = URL.createObjectURL(blob);
-        return;
-      }
+        if (maybeArray) {
+          const uint8 = new Uint8Array(maybeArray);
+          const blob = new Blob([uint8], { type: "image/jpeg" });
+          created[id] = URL.createObjectURL(blob);
+          return;
+        }
+      });
+    } catch (err) {
+      console.warn("Error creating image object URLs", err);
+    }
+
+    // set urls and ensure previous created URLs are revoked by returning cleanup that revokes what we created
+    // store previous to revoke on next effect run
+    setImageUrls((prev) => {
+      // revoke any prev URLs that we are replacing
+      Object.keys(prev).forEach((k) => {
+        if (created[k] !== prev[k] && prev[k] && prev[k].startsWith("blob:")) {
+          URL.revokeObjectURL(prev[k]);
+        }
+      });
+      return created;
     });
-  } catch (err) {
-    console.warn("Error creating image object URLs", err);
-  }
 
-  // set urls and ensure previous created URLs are revoked by returning cleanup that revokes what we created
-  // store previous to revoke on next effect run
-  setImageUrls((prev) => {
-    // revoke any prev URLs that we are replacing
-    Object.keys(prev).forEach((k) => {
-      if (created[k] !== prev[k] && prev[k] && prev[k].startsWith("blob:")) {
-        URL.revokeObjectURL(prev[k]);
-      }
-    });
-    return created;
-  });
-
-  return () => {
-    Object.values(created).forEach((u) => {
-      if (u && u.startsWith("blob:")) URL.revokeObjectURL(u);
-    });
-  };
-}, [activityQuestions]);
+    return () => {
+      Object.values(created).forEach((u) => {
+        if (u && u.startsWith("blob:")) URL.revokeObjectURL(u);
+      });
+    };
+  }, [activityQuestions]);
 
   // helper: resolve common image shapes to a usable src (returns null when none)
   const getQuestionImageSrc = (q) => {
@@ -694,8 +727,8 @@ useEffect(() => {
     // buffer/byte-array -> data URL
     const maybeArray =
       (q.image && Array.isArray(q.image)) ? q.image :
-      (q.image && q.image.data && Array.isArray(q.image.data)) ? q.image.data :
-      (q.data && Array.isArray(q.data)) ? q.data : null;
+        (q.image && q.image.data && Array.isArray(q.image.data)) ? q.image.data :
+          (q.data && Array.isArray(q.data)) ? q.data : null;
 
     if (maybeArray) {
       try {
@@ -1121,7 +1154,7 @@ useEffect(() => {
             fontSize: { xs: '1.6rem', sm: '2.2rem', md: '3rem' },
             textAlign: 'center',
             mb: 0,
-            flexGrow: 1, 
+            flexGrow: 1,
             marginRight: '350px',
           }}
         >
@@ -1131,7 +1164,7 @@ useEffect(() => {
         {/* right: settings button */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Button
-            sx={{ 
+            sx={{
               borderRadius: 2,
               //border: "1px solid #5D4037",
               bgcolor: "transparent",
@@ -1145,12 +1178,12 @@ useEffect(() => {
             aria-haspopup="true"
             aria-expanded={isMenuOpen ? 'true' : undefined}
           >
-            <SettingsIcon 
-            sx={{
-              height: 50,
-              width: 50,
-              color: "#5D4037"
-            }}/>
+            <SettingsIcon
+              sx={{
+                height: 50,
+                width: 50,
+                color: "#5D4037"
+              }} />
           </Button>
         </Box>
       </Box>
@@ -1167,7 +1200,7 @@ useEffect(() => {
           pt: { md: 0 }
         }}
       >
-       
+
         <Box sx={{ display: 'flex', alignItems: 'center', ml: 10 }}>
           {/*<Button
             sx={{ ...commonButtonStyle, ml: 100 }}
@@ -1196,21 +1229,21 @@ useEffect(() => {
 
       {/* Edit Room Dialog */}
       <Dialog open={editRoomDialogOpen} onClose={() => setEditRoomDialogOpen(false)}>
-        <DialogTitle 
-          sx={{ 
+        <DialogTitle
+          sx={{
             borderTop: '5px solid #5D4037',
             borderLeft: '5px solid #5D4037',
             borderRight: '5px solid #5D4037',
             bgcolor: '#F7CB97'
-            }}>
-            Edit Classroom
-          </DialogTitle>
-        <DialogContent 
-          sx={{ 
+          }}>
+          Edit Classroom
+        </DialogTitle>
+        <DialogContent
+          sx={{
             borderLeft: '5px solid #5D4037',
             borderRight: '5px solid #5D4037',
             bgcolor: '#F7CB97'
-            }}>
+          }}>
           <TextField
             autoFocus
             margin="dense"
@@ -1220,13 +1253,13 @@ useEffect(() => {
             onChange={(e) => setEditRoomName(e.target.value)}
           />
         </DialogContent>
-        <DialogActions 
-          sx={{ 
+        <DialogActions
+          sx={{
             borderBottom: '5px solid #5D4037',
             borderLeft: '5px solid #5D4037',
             borderRight: '5px solid #5D4037',
             bgcolor: '#F7CB97'
-            }}>
+          }}>
           <Button onClick={() => setEditRoomDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveEdit} disabled={!editRoomName.trim()}>Save</Button>
         </DialogActions>
@@ -1234,29 +1267,29 @@ useEffect(() => {
 
       {/* Delete confirm dialog */}
       <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-        <DialogTitle  
-          sx={{ 
-            borderTop: '5px solid #5D4037', 
-            borderLeft: '5px solid #5D4037', 
-            borderRight: '5px solid #5D4037', 
-            bgcolor: '#F7CB97' 
-            }}>
-            Delete Classroom?
-          </DialogTitle>
-        <DialogContent 
-          sx={{ 
-            borderLeft: '5px solid #5D4037', 
-            borderRight: '5px solid #5D4037',
-            bgcolor: '#F7CB97' 
-            }}>
-          <Typography>Are you sure you want to delete this classroom? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions  sx={{
-            borderBottom: '5px solid #5D4037',
+        <DialogTitle
+          sx={{
+            borderTop: '5px solid #5D4037',
             borderLeft: '5px solid #5D4037',
             borderRight: '5px solid #5D4037',
             bgcolor: '#F7CB97'
           }}>
+          Delete Classroom?
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          <Typography>Are you sure you want to delete this classroom? This action cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions sx={{
+          borderBottom: '5px solid #5D4037',
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
           <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
           <Button color="error" onClick={handleConfirmDelete}>Delete</Button>
         </DialogActions>
@@ -1269,20 +1302,20 @@ useEffect(() => {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title" 
-          sx={{ 
-            borderTop: '5px solid #5D4037', 
-            borderLeft: '5px solid #5D4037', 
-            borderRight: '5px solid #5D4037', 
-            bgcolor: '#F7CB97' 
-            }}>
+        <DialogTitle id="alert-dialog-title"
+          sx={{
+            borderTop: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
           {"Confirm Delete Activity"}
         </DialogTitle>
-        <DialogContent sx={{ 
-            borderLeft: '5px solid #5D4037', 
-            borderRight: '5px solid #5D4037',
-            bgcolor: '#F7CB97' 
-            }}>
+        <DialogContent sx={{
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
           <DialogContentText id="alert-dialog-description"
             sx={{
               bgcolor: '#F7CB97'
@@ -1291,11 +1324,11 @@ useEffect(() => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{
-            borderBottom: '5px solid #5D4037',
-            borderLeft: '5px solid #5D4037',
-            borderRight: '5px solid #5D4037',
-            bgcolor: '#F7CB97'
-          }}>
+          borderBottom: '5px solid #5D4037',
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
           <Button onClick={closeDeleteDialog} color="primary">
             Cancel
           </Button>
@@ -1353,10 +1386,12 @@ useEffect(() => {
           }}>
           {selectedActivity ? `Configure ${selectedActivity.activity_ActivityName}` : "Configure Activity"}
         </DialogTitle>
-        <DialogContent dividers sx={{ pt: 2,
-            borderLeft: '5px solid #5D4037',
-            borderRight: '5px solid #5D4037',
-            bgcolor: '#F7CB97' }}>
+        <DialogContent dividers sx={{
+          pt: 2,
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
           {/* List of Questions */}
           {activityQuestions.length > 0 && (
             <Box sx={{ mb: 3 }}>
@@ -1400,7 +1435,7 @@ useEffect(() => {
                           primary={
                             <Typography variant="body1" fontWeight="medium">
                               {/* prefer explicit phrase field, fallback to questionText */}
-                             {`Question ${index + 1}: ${question.phrase || question.questionText || question.question || "Untitled Phrase"}`}
+                              {`Question ${index + 1}: ${question.phrase || question.questionText || question.question || "Untitled Phrase"}`}
                             </Typography>
                           }
                           secondary="Phrase Translation"
@@ -1412,9 +1447,8 @@ useEffect(() => {
                               {`Question ${index + 1}: ${question.questionText || question.question || "Untitled Question"}`}
                             </Typography>
                           }
-                          secondary={`Game Type: ${
-                            question.gameType === "GAME3" ? "Word Translation" : question.gameType
-                          }`}
+                          secondary={`Game Type: ${question.gameType === "GAME3" ? "Word Translation" : question.gameType
+                            }`}
                         />
                       )}
                       <ListItemSecondaryAction>
@@ -1491,11 +1525,13 @@ useEffect(() => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2,
-            borderBottom: '5px solid #5D4037',
-            borderLeft: '5px solid #5D4037',
-            borderRight: '5px solid #5D4037',
-            bgcolor: '#F7CB97' }}>
+        <DialogActions sx={{
+          p: 2,
+          borderBottom: '5px solid #5D4037',
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
           <Button onClick={closeActivityDialog} color="secondary" variant="outlined">
             Close
           </Button>
@@ -1504,7 +1540,7 @@ useEffect(() => {
 
       <Divider />
 
-      <Grid container sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 4 }, pt: { md: 0 }, mt:3}}>
+      <Grid container sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 4 }, pt: { md: 0 }, mt: 3 }}>
 
         <Grid item xs={12} md={6} sx={{ pr: { md: 6 }, mb: { xs: 4, md: 0 }, pl: { md: 10 } }}>
           <Stack direction="column" sx={{
@@ -1518,8 +1554,8 @@ useEffect(() => {
                   backgroundSize: "contain",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center",
-                  width:600,
-                  height:600,
+                  width: 600,
+                  height: 600,
                   pl: 5,
                   pr: 5,
                   pt: 8,
@@ -1529,15 +1565,15 @@ useEffect(() => {
 
                   <Stack direction="row"
                     sx={{
-                        width: "100%",
-                        maxWidth: 600,
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        height: 60,
-                        gap: 2,   // use gap for consistent spacing (theme spacing * 2 = 16px)
-                        mb: 3
-                      }}>
-                    <Typography variant="h6" sx={{ mb: 0, color: '#5D4037', lineHeight: '1',display: 'flex',alignItems: 'center'}}>Activity Data</Typography>
+                      width: "100%",
+                      maxWidth: 600,
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      height: 60,
+                      gap: 2,   // use gap for consistent spacing (theme spacing * 2 = 16px)
+                      mb: 3
+                    }}>
+                    <Typography variant="h6" sx={{ mb: 0, color: '#5D4037', lineHeight: '1', display: 'flex', alignItems: 'center' }}>Activity Data</Typography>
                     <Button
                       sx={{
                         borderRadius: 2,
@@ -1555,33 +1591,49 @@ useEffect(() => {
                     </Button>
                   </Stack>
 
-                  <Divider sx={{mb:2,mt:2}}/>
+                  <Divider sx={{ mb: 2, mt: 2 }} />
                   <Box sx={{
                     //borderStyle: "solid" 
                   }}>
-                    <Box sx={{ mb: 4, p: 2, bgcolor: 'rgba(185, 43, 174, 0)' }}>
+                    <Box sx={{ mb: 1, p: 2, bgcolor: 'rgba(185, 43, 174, 0)' }}>
                       <Typography variant="body2" color="text.secondary" id="select-activity-label" mb={1}>
                         Select Activity
                       </Typography>
-                      <FormControl fullWidth>                  
-                      <Select
-                        labelId="select-activity-label"
-                        value={selectedActivity?.activity_ActivityId || ""}
-                        onChange={handleActivityChange}
-                        displayEmpty
-                        sx={{ bgcolor: 'rgba(185, 43, 174, 0)' }}
-                      >
-                        {activities && activities.map((activity) => (
-                          <MenuItem key={activity.activity_ActivityId} value={activity.activity_ActivityId}>
-                            {activity.activity_ActivityName || 'Untitled Activity'}
-                          </MenuItem>
-                        ))}
-                        {(!activities || activities.length === 0) && (
-                          <MenuItem value="" disabled >
-                            No activities available
-                          </MenuItem>
-                        )}
-                      </Select>
+                      <FormControl fullWidth>
+                        <Select
+                          labelId="select-activity-label"
+                          value={selectedActivity?.activity_ActivityId || ""}
+                          onChange={handleActivityChange}
+                          displayEmpty
+                          sx={{ bgcolor: 'rgba(185, 43, 174, 0)' }}
+                        >
+                          {activities && activities.map((activity) => (
+                            <MenuItem key={activity.activity_ActivityId} value={activity.activity_ActivityId}>
+                              {activity.activity_ActivityName || 'Untitled Activity'}
+                            </MenuItem>
+                          ))}
+                          {(!activities || activities.length === 0) && (
+                            <MenuItem value="" disabled >
+                              No activities available
+                            </MenuItem>
+                          )}
+                        </Select>
+                        <Button
+                          disabled={!isDeployed}
+                          variant="contained"
+                          sx={{
+                            bgcolor: 'transparent',
+                            flexGrow: { xs: 1, sm: 0 },
+                            borderRadius: 2,
+                            border: "1px solid #5D4037",
+                            color: '#5D4037',
+                            mt: 1
+                          }}
+                          onClick={() => {
+                            setMultiplayerOpen(true);
+                            setActivityMode(true);
+                          }}
+                        >Enter Lobby</Button>
                       </FormControl>
                     </Box>
 
@@ -1655,8 +1707,8 @@ useEffect(() => {
                       <Box sx={{ display: 'flex', gap: 2.4, mb: 4, paddingTop: 0.1, flexWrap: 'wrap', justifyContent: 'center' }}>
                         <Button
                           variant="contained"
-                          sx={{ 
-                            bgcolor: 'transparent', 
+                          sx={{
+                            bgcolor: 'transparent',
                             flexGrow: { xs: 1, sm: 0 },
                             borderRadius: 2,
                             border: "1px solid #5D4037",
@@ -1734,24 +1786,24 @@ useEffect(() => {
 
               </Stack>
 
-              <Box sx={{ 
+              <Box sx={{
                 p: 10, justifyContent: 'center',
-                bgcolor: 'rgba(185, 43, 174, 0)', 
-                height: 300, 
+                bgcolor: 'rgba(185, 43, 174, 0)',
+                height: 300,
                 overflowY: 'auto',
                 backgroundImage: `url(${GameTextFieldBig})`,
                 backgroundSize: "contain",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center",
-                }}>
+              }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 4 }}>
                   <Typography variant="subtitle1" fontWeight={600}>Enrolled Students ({selectedRoomStudents.length})</Typography>
-                  <Button  
-                    sx={{ 
+                  <Button
+                    sx={{
                       bgcolor: "transparent",
                       color: '#5D4037',
-                    }} 
-                      onClick={handleOpenStudentListModal}>
+                    }}
+                    onClick={handleOpenStudentListModal}>
 
                     <EditIcon />
                   </Button>
@@ -1770,42 +1822,109 @@ useEffect(() => {
       <ScoresModalContent />
 
       {/* Activity Creation Modal */}
-<Modal
-  open={openActivityCreateModal}
-  onClose={handleCloseActivityCreateModal}
-  aria-labelledby="activity-create-modal-title"
-  aria-describedby="activity-create-modal-description"
->
-  <Box sx={{
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 400,
-    bgcolor: '#F7CB97',
-    border: '5px solid #5D4037',
-    boxShadow: 24,
-    p: 4,
-  }}>
-    <Typography id="activity-create-modal-title" variant="h6" component="h2">
-      Create New Activity
-    </Typography>
-    <TextField
-      autoFocus
-      margin="dense"
-      id="activity-name"
-      label="Activity Name"
-      type="text"
-      fullWidth
-      value={newActivityName}
-      onChange={(e) => setNewActivityName(e.target.value)}
-    />
-    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-      <Button onClick={handleCloseActivityCreateModal} sx={{ mr: 1 }}>Cancel</Button>
-      <Button variant="contained" onClick={handleCreateActivity} disabled={!newActivityName.trim()}>Create</Button>
-    </Box>
-  </Box>
-</Modal>
+      <Modal
+        open={openActivityCreateModal}
+        onClose={handleCloseActivityCreateModal}
+        aria-labelledby="activity-create-modal-title"
+        aria-describedby="activity-create-modal-description"
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: '#F7CB97',
+          border: '5px solid #5D4037',
+          boxShadow: 24,
+          p: 4,
+        }}>
+          <Typography id="activity-create-modal-title" variant="h6" component="h2">
+            Create New Activity
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="activity-name"
+            label="Activity Name"
+            type="text"
+            fullWidth
+            value={newActivityName}
+            onChange={(e) => setNewActivityName(e.target.value)}
+          />
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={handleCloseActivityCreateModal} sx={{ mr: 1 }}>Cancel</Button>
+            <Button variant="contained" onClick={handleCreateActivity} disabled={!newActivityName.trim()}>Create</Button>
+          </Box>
+        </Box>
+      </Modal>
+      <Modal
+        open={multiplayerOpen}
+        onClose={() => {
+          setMultiplayerOpen(false);
+          setActivityMode(false);
+        }}
+        closeAfterTransition
+        BackdropProps={{ timeout: 500 }}
+      >
+        <Fade in={multiplayerOpen}>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '98vw',
+              height: '100vh',
+              backgroundImage: `url(${modalBg})`,
+              p: 3,
+              overflowY: 'auto',
+            }}
+          >
+            <Stack direction="row" justifyContent="space-between">
+              <IconButton onClick={() => {
+                if (liveActivityRef.current?.handleReturn) {
+                  liveActivityRef.current.handleReturn();
+                } else {
+                  setMultiplayerOpen(false);
+                  setActivityMode(false);
+                }
+              }}>
+                <ArrowBackIcon />
+              </IconButton>
+              <IconButton onClick={() => {
+                setMultiplayerOpen(false);
+                setActivityMode(false);
+              }}>
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+            <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
+              King of the Hill!
+            </Typography>
+            <Box
+              sx={{
+                flexGrow: 1,
+                maxHeight: '80vh',
+                overflowY: 'auto',
+                '&::-webkit-scrollbar': { width: '25px' },
+                '&::-webkit-scrollbar-track': { background: '#FFF0F5', borderRadius: '8px' },
+                '&::-webkit-scrollbar-thumb': { background: '#F5C0E7', borderRadius: '8px' },
+                '&::-webkit-scrollbar-thumb:hover': { background: '#E79FD9' },
+                scrollbarColor: '#F5C0E7 #FFF0F5',
+                scrollbarWidth: 'thick',
+              }}
+            >
+              <LiveActivityGame
+                ref={liveActivityRef}
+                activityId={selectedActivity?.activity_ActivityId || null}
+                userId={userData?.userId}
+                onStarted={() => setMultiplayerOpen(false)}
+                onReturn={() => setMultiplayerOpen(false)}
+              />
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </Box>
 
   );

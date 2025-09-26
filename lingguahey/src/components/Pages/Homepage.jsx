@@ -66,6 +66,7 @@ import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMedi
 import MCHeadshot from "../../assets/images/objects/MCHeadshot.png";
 import Gems from "../../assets/images/objects/Gems.png";
 import Gears from "../../assets/images/objects/gears.png";
+import MultiplayerIcon from "../../assets/images/objects/MultiplayerIcon.png";
 import CodexBroken from "../../assets/images/objects/CodexBroken.png";
 import TabMarkCodex from "../../assets/images/objects/TabMarkCodex.png";
 import TabMarkInventory from "../../assets/images/objects/TabMarkInventory.png";
@@ -107,7 +108,6 @@ export default function Homepage() {
   const [progressVocab, setProgressVocab] = useState(0);
   const [progressGrammar, setProgressGrammar] = useState(0);
   const [secVisibility, setSecVisibility] = useState(true);
-  const liveActivityRef = useRef(null);
   const [shopHealthPotion, setShopHealthPotion] = useState(0);
   const [shopShieldPotion, setShopShieldPotion] = useState(0);
   const [shopSkipPotion, setShopSkipPotion] = useState(0);
@@ -132,6 +132,30 @@ export default function Homepage() {
 
   const [inventory, SetInventory] = useState([]);
   const [itemEquipped, setItemEquipped] = useState({});
+
+  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const liveActivityRef = useRef(null);
+  const [multiplayerOpen, setMultiplayerOpen] = useState(false);
+  const [deployedActivityId, setDeployedActivityId] = useState(null);
+
+  useEffect(() => {
+    const fetchDeployedActivity = async () => {
+      if (multiplayerOpen && classroom) {
+        try {
+          const res = await API.get(`/live-activities/classrooms/${classroom}/deployed`);
+          setDeployedActivityId(res.data);
+        } catch (err) {
+          if (err.response && err.response.status === 403) {
+            setDeployedActivityId(null);
+          } else {
+            console.error('Failed to fetch deployed activity:', err);
+            setDeployedActivityId(null);
+          }
+        }
+      }
+    };
+    fetchDeployedActivity();
+  }, [multiplayerOpen, classroom]);
 
   async function codexNavigationLeft() {
     if (leftPageCounter > 0) {
@@ -373,7 +397,7 @@ export default function Homepage() {
     setOpen(true);
     setCoins(userDetails.coins);
     setGems(userDetails.gems);
-        console.log("Current Item equipped: " + itemEquipped);
+    console.log("Current Item equipped: " + itemEquipped);
 
   }; const closeModal = async () => {
     try {
@@ -434,7 +458,7 @@ export default function Homepage() {
   };
 
   // ---------------- renderBody ----------------
-  const [deployedActivityId, setDeployedActivityId] = useState(null);
+
 
   useEffect(() => {
     const fetchDeployedActivity = async () => {
@@ -697,6 +721,28 @@ export default function Homepage() {
       </Box>
       {renderGemAndCoinsTab()}
       {renderCharacter()} {/* Only render character in main screen, not in modals */}
+
+      {/* Multiplayer */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 200,
+          right: 16,
+          backgroundImage: `url(${MultiplayerIcon})`,
+          backgroundSize: 'cover',
+          width: 50,
+          height: 65,
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: 2,
+          cursor: 'pointer'  // Add this to show it's clickable
+        }}
+        onClick={() => {
+          setMultiplayerOpen(true);
+          setActivityMode(true);
+        }}
+      >
+      </Box>
 
       {/* Settings */}
       <Box
@@ -1369,7 +1415,73 @@ export default function Homepage() {
           </Box>
         </Fade>
       </Modal>
-
+      <Modal
+        open={multiplayerOpen}
+        onClose={() => {
+          setMultiplayerOpen(false);
+          setActivityMode(false);
+        }}
+        closeAfterTransition
+        BackdropProps={{ timeout: 500 }}
+      >
+        <Fade in={multiplayerOpen}>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '98vw',
+              height: '100vh',
+              backgroundImage: `url(${modalBg})`,
+              p: 3,
+              overflowY: 'auto',
+            }}
+          >
+            <Stack direction="row" justifyContent="space-between">
+              <IconButton onClick={() => {
+                if (liveActivityRef.current?.handleReturn) {
+                  liveActivityRef.current.handleReturn();
+                } else {
+                  setMultiplayerOpen(false);
+                  setActivityMode(false);
+                }
+              }}>
+                <ArrowBackIcon />
+              </IconButton>
+              <IconButton onClick={() => {
+                setMultiplayerOpen(false);
+                setActivityMode(false);
+              }}>
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+            <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
+              King of the Hill!
+            </Typography>
+            <Box
+              sx={{
+                flexGrow: 1,
+                maxHeight: '80vh',
+                overflowY: 'auto',
+                '&::-webkit-scrollbar': { width: '25px' },
+                '&::-webkit-scrollbar-track': { background: '#FFF0F5', borderRadius: '8px' },
+                '&::-webkit-scrollbar-thumb': { background: '#F5C0E7', borderRadius: '8px' },
+                '&::-webkit-scrollbar-thumb:hover': { background: '#E79FD9' },
+                scrollbarColor: '#F5C0E7 #FFF0F5',
+                scrollbarWidth: 'thick',
+              }}
+            >
+              <LiveActivityGame
+                ref={liveActivityRef}
+                activityId={deployedActivityId}
+                userId={user?.userId}
+                onStarted={() => setMultiplayerOpen(false)}
+                onReturn={() => setMultiplayerOpen(false)}
+              />
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </Grid>
   );
 }
