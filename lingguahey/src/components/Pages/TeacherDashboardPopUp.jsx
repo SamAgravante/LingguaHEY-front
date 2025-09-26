@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef, useContext } from "react";
 import {
   Box,
   Typography,
@@ -19,8 +19,17 @@ import {
   CardContent,
   Avatar,
   Stack,
-  Divider
+  Divider,
+  Menu,            // added
+  Dialog,          // added
+  DialogTitle,     // added
+  DialogContent,   // added
+  DialogActions,   // added
+  TextField,       // added
+  DialogContentText,
+  Fade
 } from "@mui/material";
+import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
@@ -29,6 +38,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import InputLabel from '@mui/material/InputLabel';
+import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import SchoolIcon from "@mui/icons-material/School";
 import CancelIcon from "@mui/icons-material/Cancel";
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -47,6 +58,7 @@ import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png
 import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
 import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
 import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
+import GameTextFieldBigger from "../../assets/images/backgrounds/GameTextFieldBigger.png";
 import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
 import MonsterEditUIOuter from "../../assets/images/backgrounds/MonsterEditUIOuter.png";
 import MonsterEditUIOuterLight from "../../assets/images/backgrounds/MonsterEditUIOuterLight.png";
@@ -71,6 +83,18 @@ import Gears from "../../assets/images/objects/gears.png";
 import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
 import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
 import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
+import SettingsIcon from '@mui/icons-material/Settings';
+
+// Import game components
+import LiveActOnePicFourWords from "../../components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
+import LiveActPhraseTranslation from "../../components/Pages/Live-Activity-Classroom/LiveActPhraseTranslation";
+import LiveActWordTranslation from "../../components/Pages/Live-Activity-Classroom/LiveActWordTranslation";
+
+import LiveActivityGame from './LiveActivityGame';
+import { MusicContext } from '../../contexts/MusicContext';
+
+
+
 
 const TeacherDashboardPopUp = () => {
   const { roomId } = useParams();
@@ -100,15 +124,63 @@ const TeacherDashboardPopUp = () => {
     role: null,
   });
   const [activities, setActivities] = useState([]);
-  const [selectedActivity, setSelectedActivity] = useState('');
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [selectedActivityName, setSelectedActivityName] = useState('');
   const [isDeployed, setIsDeployed] = useState(false);
   const [openActivityCreateModal, setOpenActivityCreateModal] = useState(false);
-  const [openActivityEditModal, setOpenActivityEditModal] = useState(false);
   const [newActivityName, setNewActivityName] = useState("");
+
+
+  // Menu / edit / delete states
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const isMenuOpen = Boolean(menuAnchor);
+  const [editRoomDialogOpen, setEditRoomDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [editRoomName, setEditRoomName] = useState("");
+
+  const [activityToDelete, setActivityToDelete] = useState(null);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [deleteDialogMessage, setDeleteDialogMessage] = useState("");
+
+  // question delete confirmation state / message
+  const [questionToDeleteId, setQuestionToDeleteId] = useState(null);
+  const [openQuestionDeleteDialog, setOpenQuestionDeleteDialog] = useState(false);
+  const [deleteLiveActivityDialogMessage, setDeleteLiveActivityDialogMessage] = useState("");
+
+  // Activity deployment states
+  const [openActivityDialog, setOpenActivityDialog] = useState(false);
+  const [openActivityEditModal, setOpenActivityEditModal] = useState(false);
   const [selectedQuestionType, setSelectedQuestionType] = useState(null);
   const [activityQuestions, setActivityQuestions] = useState([]);
   const [questionToEdit, setQuestionToEdit] = useState(null);
+
+  const [imageUrls, setImageUrls] = useState({});
+
+  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const liveActivityRef = useRef(null);
+  const [multiplayerOpen, setMultiplayerOpen] = useState(false);
+  const [deployedActivityId, setDeployedActivityId] = useState(null);
+  const [secVisibility, setSecVisibility] = useState(true);
+
+
+  useEffect(() => {
+    const fetchDeployedActivity = async () => {
+      if (multiplayerOpen && roomDetails) {
+        try {
+          const res = await API.get(`/live-activities/classrooms/${roomDetails.classroomId}/deployed`);
+          setDeployedActivityId(res.data);
+        } catch (err) {
+          if (err.response && err.response.status === 403) {
+            setDeployedActivityId(null);
+          } else {
+            console.error('Failed to fetch deployed activity:', err);
+            setDeployedActivityId(null);
+          }
+        }
+      }
+    };
+    fetchDeployedActivity();
+  }, [multiplayerOpen, roomDetails]);
 
   const getSortedScores = () => {
     if (scoreSort === "highest") {
@@ -239,20 +311,27 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
+  // update fetchActivities to work with selectedActivity as object
   const fetchActivities = async () => {
     if (!API || !roomId) return;
     try {
       const response = await API.get(`/live-activities/${roomId}/live-activities`);
-      console.log('Fetched activities:', response.data);
       setActivities(response.data || []);
 
-      // If we have a selected activity, update its deployment status
       if (selectedActivity) {
-        const selectedAct = response.data.find(act => act.activity_ActivityId === selectedActivity);
+        const selectedId = typeof selectedActivity === "string"
+          ? selectedActivity
+          : selectedActivity?.activity_ActivityId;
+        const selectedAct = response.data.find(act => act.activity_ActivityId === selectedId);
         if (selectedAct) {
-          console.log('Updating deployment status for:', selectedAct);
-          setIsDeployed(!!selectedAct.deployed); // Ensure boolean value with !!
+          setSelectedActivity(selectedAct);
+          setIsDeployed(!!selectedAct.deployed);
           setActivityStatus(selectedAct.deployed ? "Deployed" : "Undeployed");
+        } else {
+          // if not found, clear selection
+          setSelectedActivity(null);
+          setIsDeployed(false);
+          setActivityStatus("Undeployed");
         }
       }
     } catch (err) {
@@ -264,30 +343,32 @@ const TeacherDashboardPopUp = () => {
   // New useEffect to fetch activity statistics
   useEffect(() => {
     const fetchActivityStatistics = async () => {
-      if (!API || !selectedActivity) {
-        setActivityStats({
-          average: 0,
-          lowest: 0,
-          highest: 0,
-        });
+      // normalize selectedActivity to an id string
+      const selectedId = typeof selectedActivity === "string"
+        ? selectedActivity
+        : selectedActivity?.activity_ActivityId;
+
+      if (!API || !selectedId) {
+        setActivityStats({ average: 0, lowest: 0, highest: 0 });
         return;
       }
 
       try {
-        const response = await API.get(`/scores/live-activities/${selectedActivity}/stats`);
-        console.log("Acitivity Stats  :", response.data);
+        // ensure auth header present
+        const adminToken = localStorage.getItem("token");
+        if (adminToken) API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
+
+        const url = `/scores/live-activities/${selectedId}/stats`;
+        console.log("Fetching activity stats from:", url);
+        const response = await API.get(url);
         setActivityStats({
           average: response.data.average || 0,
           lowest: response.data.lowest || 0,
           highest: response.data.highest || 0,
         });
       } catch (err) {
-        console.error("Failed to fetch activity statistics:", err);
-        setActivityStats({
-          average: 0,
-          lowest: 0,
-          highest: 0,
-        });
+        console.error("Failed to fetch activity statistics:", err, "selectedId:", selectedId);
+        setActivityStats({ average: 0, lowest: 0, highest: 0 });
       }
     };
 
@@ -332,25 +413,57 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
+  const handleMenuOpen = (e) => setMenuAnchor(e.currentTarget);
+  const handleMenuClose = () => setMenuAnchor(null);
 
   const handleGoBack = () => {
+    handleMenuClose();
     navigate("/teacherdashboard");
   };
 
+  const handleOpenEdit = () => {
+    handleMenuClose();
+    setEditRoomName(roomDetails?.classroomName || roomDetails?.name || "");
+    setEditRoomDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!API || !roomId) return;
+    try {
+      const resp = await API.put(`/classrooms/${roomId}`, { classroomName: editRoomName });
+      // update local state to reflect new name
+      setRoomDetails(prev => ({ ...(prev || {}), classroomName: editRoomName }));
+      setEditRoomDialogOpen(false);
+    } catch (err) {
+      console.error("Failed to update classroom name:", err);
+      // optionally show feedback
+    }
+  };
+
+  const handleOpenDelete = () => {
+    handleMenuClose();
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!API || !roomId) return;
+    try {
+      await API.delete(`/classrooms/${roomId}`);
+      setDeleteConfirmOpen(false);
+      navigate("/teacherdashboard");
+    } catch (err) {
+      console.error("Failed to delete classroom:", err);
+      // optionally show feedback
+    }
+  };
 
   const handleActivityChange = async (e) => {
     const activityId = e.target.value;
-    setSelectedActivity(activityId);
-
-    // Find the selected activity from the activities array
-    const activity = activities.find(a => a.activity_ActivityId === activityId);
-
-    if (activity) {
-      setSelectedActivityName(activity.activity_ActivityName);
-      setIsDeployed(!!activity.deployed);
-      setActivityStatus(activity.deployed ? "Deployed" : "Undeployed");
-
-    }
+    const activityObj = activities.find(a => a.activity_ActivityId === activityId) || null;
+    setSelectedActivity(activityObj);
+    setSelectedActivityName(activityObj?.activity_ActivityName || "");
+    setIsDeployed(!!activityObj?.deployed);
+    setActivityStatus(activityObj?.deployed ? "Deployed" : "Undeployed");
   };
 
   const handleDeploy = async () => {
@@ -360,7 +473,7 @@ const TeacherDashboardPopUp = () => {
     }
 
     try {
-      const response = await API.put(`/live-activities/${selectedActivity}/set-deployed/true`);
+      const response = await API.put(`/live-activities/${selectedActivity.activity_ActivityId}/set-deployed/true`);
       if (response.status === 200) {
         setIsDeployed(true);
         setActivityStatus("Deployed");
@@ -379,7 +492,7 @@ const TeacherDashboardPopUp = () => {
     }
 
     try {
-      const response = await API.put(`/live-activities/${selectedActivity}/set-deployed/false`);
+      const response = await API.put(`/live-activities/${selectedActivity.activity_ActivityId}/set-deployed/false`);
       if (response.status === 200) {
         setIsDeployed(false);
         setActivityStatus("Undeployed");
@@ -389,6 +502,246 @@ const TeacherDashboardPopUp = () => {
       console.error("Failed to undeploy activity:", err);
       alert('Failed to undeploy activity');
     }
+  };
+
+  const openDeleteActivityDialog = async (activity) => {
+    await fetchActivities();
+    const activityToDeleteWithId = activities.find(
+      (act) => act.activity_ActivityId === activity
+    );
+
+    if (activityToDeleteWithId) {
+      setActivityToDelete(activityToDeleteWithId);
+      setDeleteDialogMessage(
+        `Are you sure you want to delete ${activityToDeleteWithId.activity_ActivityName}?`
+      );
+      setOpenDeleteDialog(true);
+    } else {
+      console.error("Activity not found for deletion.");
+      alert("Activity not found. Please refresh the page.");
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setDeleteDialogMessage("");
+    setActivityToDelete(null);
+  };
+
+  const handleConfirmDeleteActivity = async () => {
+    if (!API || !activityToDelete) return;
+    try {
+      await API.delete(`/live-activities/${activityToDelete?.activity_ActivityId}`);
+      setActivities(prevActivities => prevActivities.filter(activity => activity.activity_ActivityId !== activityToDelete.activity_ActivityId));
+      closeDeleteDialog();
+    } catch (err) {
+      console.error("Failed to delete activity:", err);
+      alert("Failed to delete activity. Please try again.");
+    }
+  };
+
+  //Activity Functions
+  const handleOpenActivityEdit = async (activityOrId) => {
+    const activityObj = typeof activityOrId === "string"
+      ? activities.find(a => a.activity_ActivityId === activityOrId)
+      : activityOrId;
+
+    if (!activityObj) {
+      console.error("Activity not found when opening edit modal", activityOrId);
+      return;
+    }
+
+    setSelectedActivity(activityObj);
+    setOpenActivityDialog(true);
+    // ensure questions are fetched for the real id
+    await fetchActivityQuestions(activityObj.activity_ActivityId);
+  };
+
+  const closeActivityDialog = () => {
+    setOpenActivityDialog(false);
+    setSelectedActivity(null);
+    setSelectedQuestionType(null);
+    setActivityQuestions([]);
+  };
+
+  const handleQuestionTypeSelect = (questionType) => {
+    setSelectedQuestionType(questionType);
+  };
+
+  const resetSelectedQuestionType = async () => {
+    setSelectedQuestionType(null);
+    if (selectedActivity) {
+      await fetchActivityQuestions(selectedActivity.activity_ActivityId);
+    }
+  };
+
+  const fetchActivityQuestions = async (activityId) => {
+    if (!API || !activityId) return;
+    try {
+      const response = await API.get(`/questions/liveactivities/${activityId}`);
+      setActivityQuestions(response.data);
+    } catch (err) {
+      console.error("Error fetching activity questions:", err);
+      setActivityQuestions([]);
+    }
+  };
+
+  const handleEditQuestion = (question) => {
+    setQuestionToEdit(question);
+    // You might want to open a different modal for editing questions
+    // For now, let's just log the question to edit
+    console.log("Editing question:", question);
+  };
+
+  const handleDeleteQuestion = async (questionId) => {
+    if (!API || !selectedActivity) return;
+    try {
+      await API.delete(`/questions/${questionId}`);
+      setActivityQuestions(prevQuestions => prevQuestions.filter(question => question.questionId !== questionId));
+    } catch (err) {
+      console.error("Error deleting question:", err);
+    }
+  };
+
+  const openDeleteQuestionDialog = (questionId, questionText) => {
+    setQuestionToDeleteId(questionId);
+    setDeleteLiveActivityDialogMessage(
+      questionText
+        ? `Are you sure you want to delete this question: "${questionText}"?`
+        : "Are you sure you want to delete this question?"
+    );
+    setOpenQuestionDeleteDialog(true);
+  };
+
+  const closeDeleteQuestionDialog = () => {
+    setOpenQuestionDeleteDialog(false);
+    setQuestionToDeleteId(null);
+    setDeleteLiveActivityDialogMessage("");
+  };
+
+  const confirmDeleteQuestion = async () => {
+    if (!questionToDeleteId || !API) return;
+    try {
+      await API.delete(`/questions/${questionToDeleteId}`);
+      setActivityQuestions(prev => prev.filter(q => q.questionId !== questionToDeleteId));
+    } catch (err) {
+      console.error("Error deleting question:", err);
+    } finally {
+      closeDeleteQuestionDialog();
+    }
+  };
+
+
+
+
+
+
+  /**
+ * Create object URLs for any Blob / ArrayBuffer image fields found on questions.
+ * Cleans up (revokeObjectURL) when activityQuestions change or component unmounts.
+ */
+  useEffect(() => {
+    const created = {};
+    try {
+      (activityQuestions || []).forEach((q) => {
+        const id = q.questionId;
+        const imgCandidate = q.image || q.file || q.media?.[0] || q.imageData;
+        if (!imgCandidate) return;
+
+        // If it's already a string data URL or http(s) url, use it directly
+        if (typeof imgCandidate === "string" && imgCandidate.trim()) {
+          created[id] = imgCandidate.trim();
+          return;
+        }
+
+        // If it's a Blob/File, create an object URL
+        if (imgCandidate instanceof Blob) {
+          created[id] = URL.createObjectURL(imgCandidate);
+          return;
+        }
+
+        // If backend returned a binary array (Array or nested), convert to Blob then object URL
+        const maybeArray = Array.isArray(imgCandidate)
+          ? imgCandidate
+          : (imgCandidate && Array.isArray(imgCandidate.data) ? imgCandidate.data : null);
+
+        if (maybeArray) {
+          const uint8 = new Uint8Array(maybeArray);
+          const blob = new Blob([uint8], { type: "image/jpeg" });
+          created[id] = URL.createObjectURL(blob);
+          return;
+        }
+      });
+    } catch (err) {
+      console.warn("Error creating image object URLs", err);
+    }
+
+    // set urls and ensure previous created URLs are revoked by returning cleanup that revokes what we created
+    // store previous to revoke on next effect run
+    setImageUrls((prev) => {
+      // revoke any prev URLs that we are replacing
+      Object.keys(prev).forEach((k) => {
+        if (created[k] !== prev[k] && prev[k] && prev[k].startsWith("blob:")) {
+          URL.revokeObjectURL(prev[k]);
+        }
+      });
+      return created;
+    });
+
+    return () => {
+      Object.values(created).forEach((u) => {
+        if (u && u.startsWith("blob:")) URL.revokeObjectURL(u);
+      });
+    };
+  }, [activityQuestions]);
+
+  // helper: resolve common image shapes to a usable src (returns null when none)
+  const getQuestionImageSrc = (q) => {
+    if (!q) return null;
+
+    // direct string fields
+    const stringKeys = ["image", "imageUrl", "imagePath", "imageBase64", "photo", "url", "src", "fileUrl"];
+    for (const k of stringKeys) {
+      const v = q[k];
+      if (typeof v === "string" && v.trim()) return v.trim();
+      // nested object with url/src
+      if (v && typeof v === "object") {
+        if (typeof v.url === "string" && v.url.trim()) return v.url.trim();
+        if (typeof v.src === "string" && v.src.trim()) return v.src.trim();
+        if (typeof v.data === "string" && v.data.startsWith("data:")) return v.data;
+      }
+    }
+
+    // media array (common shape)
+    if (Array.isArray(q.media) && q.media.length > 0) {
+      for (const m of q.media) {
+        if (typeof m === "string" && m.trim()) return m.trim();
+        if (m && typeof m === "object") {
+          if (typeof m.url === "string" && m.url.trim()) return m.url.trim();
+          if (typeof m.src === "string" && m.src.trim()) return m.src.trim();
+          if (typeof m.data === "string" && m.data.startsWith("data:")) return m.data;
+        }
+      }
+    }
+
+    // buffer/byte-array -> data URL
+    const maybeArray =
+      (q.image && Array.isArray(q.image)) ? q.image :
+        (q.image && q.image.data && Array.isArray(q.image.data)) ? q.image.data :
+          (q.data && Array.isArray(q.data)) ? q.data : null;
+
+    if (maybeArray) {
+      try {
+        const uint8 = new Uint8Array(maybeArray);
+        let binary = "";
+        for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+        return `data:image/jpeg;base64,${btoa(binary)}`;
+      } catch (err) {
+        console.warn("Failed to convert binary image to data URL:", err);
+      }
+    }
+
+    return null;
   };
 
   if (isLoading) {
@@ -419,6 +772,53 @@ const TeacherDashboardPopUp = () => {
 
   const currentRoomName = roomDetails?.classroomName ||
     roomDetails?.name || (isLoading ? "Loading..." : "Classroom Details");
+
+
+  const handleOpenActivityCreateModal = () => setOpenActivityCreateModal(true);
+  const handleCloseActivityCreateModal = () => setOpenActivityCreateModal(false);
+
+  const handleCreateActivity = async () => {
+    if (!newActivityName.trim() || !API) return;
+
+    try {
+      const response = await API.post(`/live-activities/classrooms/${roomId}`, {
+        activityIdd: "",
+        activityName: newActivityName,
+        completed: false,
+        questions: [],
+      });
+
+      console.log("Activity created:", response.data);
+      const newActivity = {
+        ...response.data,
+        activity_ActivityId:
+          response.data.activity_ActivityId ||
+          response.data.activityID ||
+          response.data.activityId ||
+          response.data.id,
+        activity_ActivityName:
+          response.data.activity_ActivityName ||
+          response.data.activityName ||
+          newActivityName,
+      };
+      setActivities((prevActivities) => [...prevActivities, newActivity]);
+      setNewActivityName("");
+      handleCloseActivityCreateModal(); // Close the modal after creating
+    } catch (err) {
+      console.error("Error creating activity:", err.response?.data || err.message);
+      alert("Failed to create activity. Please try again.");
+    }
+  };
+
+  //Edit Live-Act modal
+  const handleOpenQuestionEdit = (question) => {
+    if (!question) return;
+    // set the question to edit, set game type so the correct game component renders,
+    // and open the activity dialog if not already open
+    setQuestionToEdit(question);
+    setSelectedQuestionType(question.gameType || "GAME3");
+    if (!openActivityDialog) setOpenActivityDialog(true);
+  };
 
   const ScoresModalContent = () => (
     <Modal
@@ -525,19 +925,19 @@ const TeacherDashboardPopUp = () => {
         maxWidth: 1000,
         maxHeight: '90vh',
         overflowY: 'auto',
-        bgcolor: 'background.paper',
-
+        bgcolor: '#F7CB97',
         boxShadow: 24,
         display: 'flex',
         flexDirection: 'column',
+        border: '5px solid #5D4037',
       }}>
         <Box sx={{
           p: { xs: 2, md: 3 },
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid #e0e0e0',
-          bgcolor: '#f5f5f5',
+          borderBottom: '1px solid #F7CB97',
+          bgcolor: '#F7CB97',
           borderTopLeftRadius: 'inherit',
           borderTopRightRadius: 'inherit',
         }}>
@@ -556,14 +956,15 @@ const TeacherDashboardPopUp = () => {
         <Grid container sx={{ flexGrow: 1 }}>
           <Grid item xs={12} md={6} sx={{
             p: { xs: 2, md: 3 },
-            borderRight: { md: '1px solid #e0e0e0' },
-            borderBottom: { xs: '1px solid #e0e0e0', md: 'none' },
+            mb: 5,
+            borderRight: { md: '1px solid #5D4037' },
+            borderBottom: { xs: '1px solid #5D4037', md: 'none' },
           }}>
-            <Typography variant="h6" sx={{ mb: 2, color: '#3f51b5', fontWeight: 500 }}>
+            <Typography variant="h6" sx={{ mb: 2, color: '#5D4037', fontWeight: 500 }}>
               Enrolled Students ({selectedRoomStudents.length})
             </Typography>
             <Box sx={{
-              bgcolor: '#ffffff',
+              bgcolor: '#F7CB97',
 
               //border: '1px solid #e0e0e0',
               maxHeight: 350,
@@ -588,7 +989,7 @@ const TeacherDashboardPopUp = () => {
                     sx={{
                       py: 1.5,
                       px: 2,
-                      borderBottom: '1px solid #eeeeee',
+                      borderBottom: '1px solid #5D4037',
                       '&:last-child': { borderBottom: 'none' },
                       '&:hover': { bgcolor: 'rgba(63, 81, 181, 0.03)' }
                     }}
@@ -608,7 +1009,7 @@ const TeacherDashboardPopUp = () => {
           </Grid>
 
           <Grid item xs={12} md={6} sx={{ p: { xs: 2, md: 3 }, pl: { md: 15 } }}>
-            <Typography variant="h6" sx={{ mb: 2, color: '#3f51b5', fontWeight: 500 }}>
+            <Typography variant="h6" sx={{ mb: 2, color: '#5D4037', fontWeight: 500 }}>
               Add Students from School
             </Typography>
             <Box sx={{
@@ -640,7 +1041,7 @@ const TeacherDashboardPopUp = () => {
                       sx={{
                         py: 1.5,
                         px: 2,
-                        borderBottom: '1px solid #eeeeee',
+                        borderBottom: '1px solid #5D4037',
                         '&:last-child': { borderBottom: 'none' },
                         '&:hover': { bgcolor: 'rgba(63, 81, 181, 0.05)' }
                       }}
@@ -718,26 +1119,75 @@ const TeacherDashboardPopUp = () => {
         //alignItems: "center",
         p: 2,
       }}>
+      {/* HEADER: left = title, middle = room name (centered), right = settings */}
       <Box
         sx={{
-
           py: 2,
           px: 3,
           mb: 4,
           display: "flex",
-          alignItems: "center"
+          alignItems: "center",
+          justifyContent: 'space-between' // This is key for distributing space
         }}
       >
-        <DashboardIcon sx={{ mr: 2, color: "#5D4037", fontSize: 32 }} />
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, color: "#5D4037" }}>
-            Teacher Dashboard
-          </Typography>
-          <Typography variant="body1" sx={{ color: "#5D4037" }}>
-            {userData.firstName ? `Welcome, ${userData.firstName} ${userData.lastName}` : "LingguaHey Learning Platform"}
-          </Typography>
+        {/* left: icon + dashboard title */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <DashboardIcon sx={{ color: "#5D4037", fontSize: 32 }} />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 600, color: "#5D4037" }}>
+              Teacher Dashboard
+            </Typography>
+            <Typography variant="body1" sx={{ color: "#5D4037" }}>
+              {userData.firstName ? `Welcome, ${userData.firstName} ${userData.lastName}` : "LingguaHey Learning Platform"}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* middle: centered room name */}
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            color: '#5D4037',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            fontSize: { xs: '1.6rem', sm: '2.2rem', md: '3rem' },
+            textAlign: 'center',
+            mb: 0,
+            flexGrow: 1,
+            marginRight: '350px',
+          }}
+        >
+          {currentRoomName}
+        </Typography>
+
+        {/* right: settings button */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Button
+            sx={{
+              borderRadius: 2,
+              //border: "1px solid #5D4037",
+              bgcolor: "transparent",
+              height: 50,
+              width: 50,
+              p: 1,
+              minWidth: 'auto',
+            }}
+            onClick={handleMenuOpen}
+            aria-controls={isMenuOpen ? 'back-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={isMenuOpen ? 'true' : undefined}
+          >
+            <SettingsIcon
+              sx={{
+                height: 50,
+                width: 50,
+                color: "#5D4037"
+              }} />
+          </Button>
         </Box>
       </Box>
+
       <Divider />
 
       <Box
@@ -745,72 +1195,352 @@ const TeacherDashboardPopUp = () => {
           py: 0,
           px: 0,
           display: 'flex',
-          justifyContent: 'space-between', // Changed from 'flex-start' to 'space-between'
+          justifyContent: 'space-between',
           alignItems: 'center',
-
-
           pt: { md: 0 }
         }}
       >
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          //borderStyle: "solid",
-          ml: 10
-        }}>
 
-          <Stack direction="column">
-            <Typography
-              variant="h3"
-              sx={{
-                color: "#5D4037",
-                letterSpacing: "0.02em",
-                fontSize: 40, // ✅ number = px, so this is 40px
-                textAlign: "left",
-                flex: 1,
-                mx: 2,
-
-              }}
-            >
-              Classroom 1
-            </Typography>
-
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{
-                color: '#5D4037',
-                fontWeight: 700,
-                letterSpacing: '0.02em',
-                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                textAlign: 'left', // Added textAlign center
-                flex: 1, // Added flex 1 to ensure it takes available space
-                mx: 2, // Added horizontal margin for spacing
-
-                //borderStyle: "solid"
-              }}
-            >
-              {currentRoomName}
-            </Typography>
-          </Stack>
-
-          <Button
-            sx={{
-              ...commonButtonStyle,
-
-              ml:100
-            }}
-            onClick={() => navigate(`/teacherdashboard`)}
+        <Box sx={{ display: 'flex', alignItems: 'center', ml: 10 }}>
+          {/*<Button
+            sx={{ ...commonButtonStyle, ml: 100 }}
+            onClick={handleMenuOpen}
+            aria-controls={isMenuOpen ? 'back-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={isMenuOpen ? 'true' : undefined}
           >
-            <Typography variant="body1">
-              Back to Dashboard
-            </Typography>
-          </Button>
+            <Typography variant="body1">settings</Typography>
+          </Button>*/}
+
+          <Menu
+            id="back-menu"
+            anchorEl={menuAnchor}
+            open={isMenuOpen}
+            onClose={handleMenuClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          >
+            <MenuItem onClick={handleGoBack}>Go back to Dashboard</MenuItem>
+            <MenuItem onClick={handleOpenEdit}>Edit current room</MenuItem>
+            <MenuItem onClick={handleOpenDelete} sx={{ color: 'error.main' }}>Delete room</MenuItem>
+          </Menu>
         </Box>
       </Box>
+
+      {/* Edit Room Dialog */}
+      <Dialog open={editRoomDialogOpen} onClose={() => setEditRoomDialogOpen(false)}>
+        <DialogTitle
+          sx={{
+            borderTop: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          Edit Classroom
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Classroom name"
+            fullWidth
+            value={editRoomName}
+            onChange={(e) => setEditRoomName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions
+          sx={{
+            borderBottom: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          <Button onClick={() => setEditRoomDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveEdit} disabled={!editRoomName.trim()}>Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+        <DialogTitle
+          sx={{
+            borderTop: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          Delete Classroom?
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          <Typography>Are you sure you want to delete this classroom? This action cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions sx={{
+          borderBottom: '5px solid #5D4037',
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button color="error" onClick={handleConfirmDelete}>Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete activity confirm dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={closeDeleteDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title"
+          sx={{
+            borderTop: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          {"Confirm Delete Activity"}
+        </DialogTitle>
+        <DialogContent sx={{
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
+          <DialogContentText id="alert-dialog-description"
+            sx={{
+              bgcolor: '#F7CB97'
+            }}>
+            {deleteDialogMessage}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{
+          borderBottom: '5px solid #5D4037',
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
+          <Button onClick={closeDeleteDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDeleteActivity} color="primary" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete question confirm dialog */}
+      <Dialog
+        open={openQuestionDeleteDialog}
+        onClose={closeDeleteQuestionDialog}
+        aria-labelledby="delete-question-dialog-title"
+        aria-describedby="delete-question-dialog-description"
+      >
+        <DialogTitle id="delete-question-dialog-title"
+          sx={{ borderTop: '5px solid #5D4037', borderLeft: '5px solid #5D4037', borderRight: '5px solid #5D4037', bgcolor: '#F7CB97' }}>
+          {"Confirm Delete Question"}
+        </DialogTitle>
+        <DialogContent sx={{ borderLeft: '5px solid #5D4037', borderRight: '5px solid #5D4037', bgcolor: '#F7CB97' }}>
+          <DialogContentText id="delete-question-dialog-description">{deleteLiveActivityDialogMessage}</DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ borderBottom: '5px solid #5D4037', borderLeft: '5px solid #5D4037', borderRight: '5px solid #5D4037', bgcolor: '#F7CB97' }}>
+          <Button onClick={closeDeleteQuestionDialog} color="primary">Cancel</Button>
+          <Button onClick={confirmDeleteQuestion} color="primary" autoFocus>Delete</Button>
+        </DialogActions>
+      </Dialog>
+      {/* end delete question confirm dialog */}
+
+      {/* "Go To Activity" Dialog */}
+      <Dialog
+        open={openActivityDialog}
+        onClose={closeActivityDialog}
+        aria-labelledby="activity-dialog-title"
+        aria-describedby="activity-dialog-description"
+        maxWidth="md"
+        fullWidth={true}
+        PaperProps={{
+          sx: {
+            maxHeight: "90vh",
+            overflowY: "auto",
+            borderRadius: 2,
+            bgcolor: '#F7CB97',
+            border: '5px solid #5D4037',
+          },
+        }}
+      >
+        <DialogTitle id="activity-dialog-title"
+          sx={{
+            borderTop: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+          {selectedActivity ? `Configure ${selectedActivity.activity_ActivityName}` : "Configure Activity"}
+        </DialogTitle>
+        <DialogContent dividers sx={{
+          pt: 2,
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
+          {/* List of Questions */}
+          {activityQuestions.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" color="text.primary" fontWeight="bold" mb={2}>
+                Existing Questions:
+              </Typography>
+              <List sx={{ border: '3px solid #5D4037', borderRadius: 1, p: 2 }}>
+                {activityQuestions.map((question, index) => {
+                  const imgSrc = imageUrls[question.questionId] ?? getQuestionImageSrc(question); // getQuestionImageSrc = your existing resolver
+                  // render image only when src exists
+                  return (
+                    <ListItem key={question.questionId} divider={index < activityQuestions.length - 1} sx={{ py: 1 }}>
+                      {question.gameType === "GAME1" ? (
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Typography variant="body1" fontWeight="medium">{`Question ${index + 1}:`}</Typography>
+                              {imgSrc ? (
+                                <Box
+                                  component="img"
+                                  src={`data:image/png;base64,${imgSrc}`}
+                                  alt={question.questionText || `activity-img-${index}`}
+                                  sx={{ maxWidth: 160, maxHeight: 90, objectFit: "cover", borderRadius: 1 }}
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                />
+                              ) : (
+                                <Box sx={{
+                                  width: 160, height: 90, borderRadius: 1, display: 'flex',
+                                  alignItems: 'center', justifyContent: 'center',
+                                  bgcolor: 'rgba(0,0,0,0.04)', color: '#5D4037', border: '1px dashed #ccc'
+                                }}>
+                                  <Typography variant="caption">No image</Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          }
+                          secondary="One Pic Four Words"
+                        />
+                      ) : question.gameType === "GAME2" ? (
+                        <ListItemText
+                          primary={
+                            <Typography variant="body1" fontWeight="medium">
+                              {/* prefer explicit phrase field, fallback to questionText */}
+                              {`Question ${index + 1}: ${question.phrase || question.questionText || question.question || "Untitled Phrase"}`}
+                            </Typography>
+                          }
+                          secondary="Phrase Translation"
+                        />
+                      ) : (
+                        <ListItemText
+                          primary={
+                            <Typography variant="body1" fontWeight="medium">
+                              {`Question ${index + 1}: ${question.questionText || question.question || "Untitled Question"}`}
+                            </Typography>
+                          }
+                          secondary={`Game Type: ${question.gameType === "GAME3" ? "Word Translation" : question.gameType
+                            }`}
+                        />
+                      )}
+                      <ListItemSecondaryAction>
+                        <IconButton edge="end" aria-label="edit" onClick={() => handleOpenQuestionEdit(question)} sx={{ mr: 1 }}>
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton edge="end" aria-label="delete" onClick={() => openDeleteQuestionDialog(question.questionId, question.questionText)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  );
+                })}
+              </List>
+            </Box>
+          )}
+          <Typography variant="subtitle1" color="text.secondary" mb={2}>
+            Select the game type to add new questions to this activity.
+          </Typography>
+          {/* Game type selection */}
+          {!selectedQuestionType && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, justifyContent: "center", mt: 2 }}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="game-type-select-label">Select Game Type</InputLabel>
+                <Select
+                  labelId="game-type-select-label"
+                  id="game-type-select"
+                  value={selectedQuestionType || ""}
+                  label="Select Game Type"
+                  onChange={(e) => handleQuestionTypeSelect(e.target.value)}
+                >
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  <MenuItem value="GAME1">One Pic Four Words</MenuItem>
+                  <MenuItem value="GAME2">Phrase Translation</MenuItem>
+                  <MenuItem value="GAME3">Word Translation</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          )}
+          {/* Render the appropriate game component based on the selected game type */}
+          {selectedQuestionType === "GAME1" && (
+            <Box mt={3}>
+              <LiveActOnePicFourWords
+                activityId={selectedActivity.activity_ActivityId}
+                classroomId={roomId}
+                onGameCreated={resetSelectedQuestionType}
+                question={questionToEdit}                      // pass question to enter EDIT MODE
+                onClose={() => { setQuestionToEdit(null); setSelectedQuestionType(null); }}
+              />
+            </Box>
+          )}
+          {selectedQuestionType === "GAME2" && (
+            <Box mt={3}>
+              <LiveActPhraseTranslation
+                activityId={selectedActivity.activity_ActivityId}
+                classroomId={roomId}
+                onGameCreated={resetSelectedQuestionType}
+                question={questionToEdit}                      // pass question to enter EDIT MODE
+                onClose={() => { setQuestionToEdit(null); setSelectedQuestionType(null); }}
+              />
+            </Box>
+          )}
+          {selectedQuestionType === "GAME3" && selectedActivity?.activity_ActivityId && (
+            <Box mt={3}>
+              <LiveActWordTranslation
+                activityId={selectedActivity.activity_ActivityId}
+                classroomId={roomId}
+                onGameCreated={resetSelectedQuestionType}
+                question={questionToEdit}                      // pass question to enter EDIT MODE
+                onClose={() => { setQuestionToEdit(null); setSelectedQuestionType(null); }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{
+          p: 2,
+          borderBottom: '5px solid #5D4037',
+          borderLeft: '5px solid #5D4037',
+          borderRight: '5px solid #5D4037',
+          bgcolor: '#F7CB97'
+        }}>
+          <Button onClick={closeActivityDialog} color="secondary" variant="outlined">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Divider />
 
-      <Grid container sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 4 }, pt: { md: 0 }, mt:3}}>
+      <Grid container sx={{ flexGrow: 1, p: { xs: 2, sm: 3, md: 4 }, pt: { md: 0 }, mt: 3 }}>
 
         <Grid item xs={12} md={6} sx={{ pr: { md: 6 }, mb: { xs: 4, md: 0 }, pl: { md: 10 } }}>
           <Stack direction="column" sx={{
@@ -820,66 +1550,90 @@ const TeacherDashboardPopUp = () => {
               <Stack direction="column" >
                 <Box sx={{
                   mb: 4, justifyContent: 'center',
-                  backgroundImage: `url(${GameTextFieldBig})`,
+                  backgroundImage: `url(${GameTextFieldBigger})`,
                   backgroundSize: "contain",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center",
-                  width:600,
-                  height:750,
-                  p: 5,
-
+                  width: 600,
+                  height: 600,
+                  pl: 5,
+                  pr: 5,
+                  pt: 8,
+                  pb: 8,
                 }}>
 
 
-                  <Stack direction="row" sx={{
-                    width: 500, justifyContent: 'center',
-                    //borderStyle: "solid", 
-                    height: 50,
-                  }}>
-                    <Typography variant="h6" sx={{ mb: 3, color: '#5D4037', ml: 5 }}>Activity Data</Typography>
+                  <Stack direction="row"
+                    sx={{
+                      width: "100%",
+                      maxWidth: 600,
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      height: 60,
+                      gap: 2,   // use gap for consistent spacing (theme spacing * 2 = 16px)
+                      mb: 3
+                    }}>
+                    <Typography variant="h6" sx={{ mb: 0, color: '#5D4037', lineHeight: '1', display: 'flex', alignItems: 'center' }}>Activity Data</Typography>
                     <Button
                       sx={{
-                        ...commonButtonStyle,
-                        ml: 20,
-                        height: 40
+                        borderRadius: 2,
+                        border: '1px solid #5D4037',
+                        bgcolor: 'transparent',
+                        height: 50,
+                        width: 230,
+                        p: 2
                       }}
-                      onClick={() => navigate(`/teacher/live-activities/${roomId}`)}
+                      onClick={handleOpenActivityCreateModal}
                     >
                       <Typography sx={{}}>
-                        Add New Activity
+                        Add New Activity +
                       </Typography>
                     </Button>
                   </Stack>
 
-                  <Divider sx={{mb:2,mt:2}}/>
+                  <Divider sx={{ mb: 2, mt: 2 }} />
                   <Box sx={{
                     //borderStyle: "solid" 
                   }}>
-                    <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', boxShadow: 1 }}>
+                    <Box sx={{ mb: 1, p: 2, bgcolor: 'rgba(185, 43, 174, 0)' }}>
                       <Typography variant="body2" color="text.secondary" id="select-activity-label" mb={1}>
                         Select Activity
                       </Typography>
-                      <FormControl fullWidth>                  <Select
-                        labelId="select-activity-label"
-                        value={selectedActivity}
-                        onChange={handleActivityChange}
-                        displayEmpty
-                        sx={{ bgcolor: 'background.paper' }}
-                      >
-                        <MenuItem value="" disabled>
-                          <em>Select an activity</em>
-                        </MenuItem>
-                        {activities && activities.map((activity) => (
-                          <MenuItem key={activity.activity_ActivityId} value={activity.activity_ActivityId}>
-                            {activity.activity_ActivityName || 'Untitled Activity'}
-                          </MenuItem>
-                        ))}
-                        {(!activities || activities.length === 0) && (
-                          <MenuItem value="" disabled>
-                            No activities available
-                          </MenuItem>
-                        )}
-                      </Select>
+                      <FormControl fullWidth>
+                        <Select
+                          labelId="select-activity-label"
+                          value={selectedActivity?.activity_ActivityId || ""}
+                          onChange={handleActivityChange}
+                          displayEmpty
+                          sx={{ bgcolor: 'rgba(185, 43, 174, 0)' }}
+                        >
+                          {activities && activities.map((activity) => (
+                            <MenuItem key={activity.activity_ActivityId} value={activity.activity_ActivityId}>
+                              {activity.activity_ActivityName || 'Untitled Activity'}
+                            </MenuItem>
+                          ))}
+                          {(!activities || activities.length === 0) && (
+                            <MenuItem value="" disabled >
+                              No activities available
+                            </MenuItem>
+                          )}
+                        </Select>
+                        <Button
+                          disabled={!isDeployed}
+                          variant="contained"
+                          sx={{
+                            bgcolor: 'transparent',
+                            flexGrow: { xs: 1, sm: 0 },
+                            borderRadius: 2,
+                            border: "1px solid #5D4037",
+                            color: '#5D4037',
+                            mt: 1
+                          }}
+                          onClick={() => {
+                            setMultiplayerOpen(true);
+                            setActivityMode(true);
+                          }}
+                        >Enter Lobby</Button>
                       </FormControl>
                     </Box>
 
@@ -894,8 +1648,7 @@ const TeacherDashboardPopUp = () => {
                         flexDirection: "column",
                         justifyContent: "center",
                         alignItems: "center",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-                        backgroundColor: "#fff",
+                        backgroundColor: "rgba(255, 255, 255, 0)",
                         mb: 4,
                         mx: 'auto'
                       }}
@@ -914,7 +1667,7 @@ const TeacherDashboardPopUp = () => {
                     </Card>
 
 
-                    <Stack direction="column" spacing={2} sx={{ mb: 2, justifyContent: 'center' }}>
+                    <Stack direction="column" spacing={2} sx={{ mb: 2, justifyContent: 'center', alignItems: "center" }}>
                       <Grid container spacing={3} mb={4}>
                         {scoreStatsCards.map((item, i) => (
                           <Grid item xs={12} sm={4} key={i}>
@@ -930,7 +1683,7 @@ const TeacherDashboardPopUp = () => {
                                 justifyContent: "center",
                                 alignItems: "center",
                                 boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-                                backgroundColor: "#fff",
+                                backgroundColor: "rgba(199, 162, 60, 0)",
                               }}
                             >
                               <CardContent sx={{ width: "100%", p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -954,7 +1707,13 @@ const TeacherDashboardPopUp = () => {
                       <Box sx={{ display: 'flex', gap: 2.4, mb: 4, paddingTop: 0.1, flexWrap: 'wrap', justifyContent: 'center' }}>
                         <Button
                           variant="contained"
-                          sx={{ bgcolor: '#9e9e9e', '&:hover': { bgcolor: '#757575' }, flexGrow: { xs: 1, sm: 0 } }}
+                          sx={{
+                            bgcolor: 'transparent',
+                            flexGrow: { xs: 1, sm: 0 },
+                            borderRadius: 2,
+                            border: "1px solid #5D4037",
+                            color: '#5D4037',
+                          }}
                           disabled={!selectedActivity || selectedRoomStudents.length === 0}
                           onClick={() => {
                             fetchStudentScores(selectedActivity);
@@ -966,26 +1725,36 @@ const TeacherDashboardPopUp = () => {
                         <Button
                           variant="contained"
                           sx={{
-                            ...commonButtonStyle,
+                            borderRadius: 2,
+                            border: "1px solid #5D4037",
+                            bgcolor: "transparent",
+                            color: '#5D4037',
                             flexGrow: { xs: 1, sm: 0 }
                           }}
-
+                          onClick={() => openDeleteActivityDialog(selectedActivity?.activity_ActivityId)}
                         >
                           Delete
                         </Button>
                         <Button
                           variant="contained"
                           sx={{
-                            ...commonButtonStyle,
+                            borderRadius: 2,
+                            border: "1px solid #5D4037",
+                            bgcolor: "transparent",
+                            color: "#5D4037",
                             flexGrow: { xs: 1, sm: 0 }
                           }}
+                          onClick={() => handleOpenActivityEdit(selectedActivity)}
                         >
                           Edit
                         </Button>
                         <Button
                           variant="contained"
                           sx={{
-                            ...commonButtonStyle,
+                            borderRadius: 2,
+                            border: "1px solid #5D4037",
+                            bgcolor: "transparent",
+                            color: "#5D4037",
                             flexGrow: { xs: 1, sm: 0 }
                           }}
                           onClick={handleUndeploy}
@@ -996,7 +1765,10 @@ const TeacherDashboardPopUp = () => {
                         <Button
                           variant="contained"
                           sx={{
-                            ...commonButtonStyle,
+                            borderRadius: 2,
+                            border: "1px solid #5D4037",
+                            bgcolor: "transparent",
+                            color: "#5D4037",
                             flexGrow: { xs: 1, sm: 0 }
                           }}
                           onClick={handleDeploy}
@@ -1013,15 +1785,30 @@ const TeacherDashboardPopUp = () => {
 
 
               </Stack>
-              
-              <Box sx={{ p: 3, bgcolor: 'background.paper', boxShadow: 1, height: 300, overflowY: 'auto' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+
+              <Box sx={{
+                p: 10, justifyContent: 'center',
+                bgcolor: 'rgba(185, 43, 174, 0)',
+                height: 300,
+                overflowY: 'auto',
+                backgroundImage: `url(${GameTextFieldBig})`,
+                backgroundSize: "contain",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 4 }}>
                   <Typography variant="subtitle1" fontWeight={600}>Enrolled Students ({selectedRoomStudents.length})</Typography>
-                  <Button startIcon={<EditIcon />} size="small" sx={{ color: '#3f51b5', textTransform: 'none' }} onClick={handleOpenStudentListModal}>
-                    Edit Student List
+                  <Button
+                    sx={{
+                      bgcolor: "transparent",
+                      color: '#5D4037',
+                    }}
+                    onClick={handleOpenStudentListModal}>
+
+                    <EditIcon />
                   </Button>
                 </Box>
-                <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1, minHeight: 150, maxHeight: 200, overflowY: 'auto', }}>
+                <Box sx={{ bgcolor: 'rgba(245, 245, 245, 0)', p: 2, borderRadius: 1, minHeight: 150, maxHeight: 200, overflowY: 'auto', boxShadow: 1 }}>
                   {selectedRoomStudents.length > 0 ? selectedRoomStudents.map((student) => (
                     <Typography key={student.userId} variant="body2" sx={{ mb: 0.5 }}>{`${student.firstName} ${student.lastName}`}</Typography>
                   )) : <Typography variant="body2" color="text.secondary">No students enrolled.</Typography>}
@@ -1033,6 +1820,111 @@ const TeacherDashboardPopUp = () => {
       </Grid>
       <StudentListModalContent />
       <ScoresModalContent />
+
+      {/* Activity Creation Modal */}
+      <Modal
+        open={openActivityCreateModal}
+        onClose={handleCloseActivityCreateModal}
+        aria-labelledby="activity-create-modal-title"
+        aria-describedby="activity-create-modal-description"
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: '#F7CB97',
+          border: '5px solid #5D4037',
+          boxShadow: 24,
+          p: 4,
+        }}>
+          <Typography id="activity-create-modal-title" variant="h6" component="h2">
+            Create New Activity
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="activity-name"
+            label="Activity Name"
+            type="text"
+            fullWidth
+            value={newActivityName}
+            onChange={(e) => setNewActivityName(e.target.value)}
+          />
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={handleCloseActivityCreateModal} sx={{ mr: 1 }}>Cancel</Button>
+            <Button variant="contained" onClick={handleCreateActivity} disabled={!newActivityName.trim()}>Create</Button>
+          </Box>
+        </Box>
+      </Modal>
+      <Modal
+        open={multiplayerOpen}
+        onClose={() => {
+          setMultiplayerOpen(false);
+          setActivityMode(false);
+        }}
+        closeAfterTransition
+        BackdropProps={{ timeout: 500 }}
+      >
+        <Fade in={multiplayerOpen}>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '98vw',
+              height: '100vh',
+              backgroundImage: `url(${modalBg})`,
+              p: 3,
+              overflowY: 'auto',
+            }}
+          >
+            <Stack direction="row" justifyContent="space-between">
+              <IconButton onClick={() => {
+                if (liveActivityRef.current?.handleReturn) {
+                  liveActivityRef.current.handleReturn();
+                } else {
+                  setMultiplayerOpen(false);
+                  setActivityMode(false);
+                }
+              }}>
+                <ArrowBackIcon />
+              </IconButton>
+              <IconButton onClick={() => {
+                setMultiplayerOpen(false);
+                setActivityMode(false);
+              }}>
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+            <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
+              King of the Hill!
+            </Typography>
+            <Box
+              sx={{
+                flexGrow: 1,
+                maxHeight: '80vh',
+                overflowY: 'auto',
+                '&::-webkit-scrollbar': { width: '25px' },
+                '&::-webkit-scrollbar-track': { background: '#FFF0F5', borderRadius: '8px' },
+                '&::-webkit-scrollbar-thumb': { background: '#F5C0E7', borderRadius: '8px' },
+                '&::-webkit-scrollbar-thumb:hover': { background: '#E79FD9' },
+                scrollbarColor: '#F5C0E7 #FFF0F5',
+                scrollbarWidth: 'thick',
+              }}
+            >
+              <LiveActivityGame
+                ref={liveActivityRef}
+                activityId={selectedActivity?.activity_ActivityId || null}
+                userId={userData?.userId}
+                onStarted={() => setMultiplayerOpen(false)}
+                onReturn={() => setMultiplayerOpen(false)}
+              />
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </Box>
 
   );

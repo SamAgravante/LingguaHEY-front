@@ -29,19 +29,22 @@ export default function ShopSection({
 }) {
   return (
     <Grid container direction="column" alignItems="center" >
-      <Button 
-        sx={{ 
-          position: 'absolute', 
-          bottom: 20, 
+      <Button
+        sx={{
+          position: 'absolute',
+          bottom: 20,
           right: 20,
+          height: 60,
+          width: 300,
           backgroundImage: `url(${GameTextField})`,
           backgroundSize: 'cover',
-        }} 
+          fontSize: 19
+        }}
         onClick={handleBackClick}
       >
         Leave Shop
       </Button>
-      
+
       <Box sx={{
         position: 'absolute',
         backgroundImage: `url(${GameTextBoxMediumLong})`,
@@ -73,8 +76,8 @@ export default function ShopSection({
       {renderGemAndCoinsTab()}
 
       <Box sx={{
-        position: 'absolute', 
-        top: 150, 
+        position: 'absolute',
+        top: 150,
         right: 150,
         backgroundImage: `url(${GameShopField})`,
         backgroundSize: 'cover',
@@ -93,7 +96,7 @@ export default function ShopSection({
             For Sale
           </Typography>
           <Divider sx={{ borderBottomWidth: 5, borderColor: '#5D4037', my: 1, width: 400 }} />
-          
+
           {/* Health Potion Section */}
           <Stack direction="row" spacing={.5} sx={{ alignItems: 'center', justifyContent: 'center' }}>
 
@@ -124,13 +127,13 @@ export default function ShopSection({
               </Stack>
             </Box>
             <Button variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 10,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 10,
+              height: 60,
+              color: '#5D4037',
             }}
               disabled={shopHealthPotion <= 0}
               onClick={() => { setShopHealthPotion(shopHealthPotion - 1); setShopTotal(shopTotal - 100); }}>
@@ -139,26 +142,26 @@ export default function ShopSection({
               </Typography>
             </Button>
             <Box variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 60,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 60,
+              height: 60,
+              color: '#5D4037',
             }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 {shopHealthPotion}
               </Typography>
             </Box>
             <Button variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 10,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 10,
+              height: 60,
+              color: '#5D4037',
             }}
               onClick={() => { setShopHealthPotion(shopHealthPotion + 1); setShopTotal(shopTotal + 100); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
@@ -195,13 +198,13 @@ export default function ShopSection({
 
             </Box>
             <Button variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 10,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 10,
+              height: 60,
+              color: '#5D4037',
             }}
               disabled={shopShieldPotion <= 0}
               onClick={() => { setShopShieldPotion(shopShieldPotion - 1); setShopTotal(shopTotal - 200); }}>
@@ -210,26 +213,26 @@ export default function ShopSection({
               </Typography>
             </Button>
             <Box variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 60,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 60,
+              height: 60,
+              color: '#5D4037',
             }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 {shopShieldPotion}
               </Typography>
             </Box>
             <Button variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 10,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 10,
+              height: 60,
+              color: '#5D4037',
             }}
               onClick={() => { setShopShieldPotion(shopShieldPotion + 1); setShopTotal(shopTotal + 200); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
@@ -265,13 +268,13 @@ export default function ShopSection({
               </Stack>
             </Box>
             <Button variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 10,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 10,
+              height: 60,
+              color: '#5D4037',
             }}
               disabled={shopSkipPotion <= 0}
               onClick={() => { setShopSkipPotion(shopSkipPotion - 1); setShopTotal(shopTotal - 300); }}>
@@ -280,26 +283,26 @@ export default function ShopSection({
               </Typography>
             </Button>
             <Box variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 60,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 60,
+              height: 60,
+              color: '#5D4037',
             }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 {shopSkipPotion}
               </Typography>
             </Box>
             <Button variant="contained" sx={{
-                backgroundImage: `url(${ItemBox})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                width: 10,
-                height: 60,
-                color: '#5D4037',
+              backgroundImage: `url(${ItemBox})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              width: 10,
+              height: 60,
+              color: '#5D4037',
             }}
               onClick={() => { setShopSkipPotion(shopSkipPotion + 1); setShopTotal(shopTotal + 300); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
