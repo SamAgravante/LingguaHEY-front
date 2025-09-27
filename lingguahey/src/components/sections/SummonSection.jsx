@@ -8,7 +8,7 @@ import GameTextField from '../../assets/images/backgrounds/GameTextField.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png';
 import GameShopField from '../../assets/images/backgrounds/GameShopField.png';
 import GameShopBoxSmall from '../../assets/images/backgrounds/GameShopBoxSmall.png';
-import ItemBox from '../../assets/images/backgrounds/ItemBox.png';
+import ItemBox from '../../assets/images/backgrounds/Itembox.png';
 import GameTextBox from '../../assets/images/backgrounds/GameTextBox.png';
 import API from '../../api';
 
