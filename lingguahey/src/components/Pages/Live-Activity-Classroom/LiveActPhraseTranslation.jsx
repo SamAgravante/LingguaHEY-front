@@ -27,10 +27,14 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
     if (question) {
       setNewPhrase(question.questionDescription || "");
       setTranslation(question.questionText || "");
-      setNewChoices((question.choices || []).map(c => c.choiceText) || []);
-      const correct = (question.choices || []).filter(c => c.correct).map(c => c.choiceText) || [];
-      setCorrectChoices(correct);
-      setChoiceOrder(correct);
+      const allChoices = (question.choices || []).map(c => c.choiceText) || [];
+      setNewChoices(allChoices);
+      const sortedCorrect = (question.choices || [])
+        .filter(c => c.correct)
+        .sort((a, b) => (a.choiceOrder ?? 0) - (b.choiceOrder ?? 0))
+        .map(c => c.choiceText);
+      setCorrectChoices(sortedCorrect);
+      setChoiceOrder(sortedCorrect);
       setIsEditMode(true);
     }
   }, [question]);
@@ -66,19 +70,19 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
   };
 
   const removeChoice = (choice) => {
-    setNewChoices(newChoices.filter((c) => c !== choice));
-    setCorrectChoices(correctChoices.filter((c) => c !== choice));
-    setChoiceOrder(choiceOrder.filter((c) => c !== choice));
+    setNewChoices(prev => prev.filter((c) => c !== choice));
+    setCorrectChoices(prev => prev.filter((c) => c !== choice));
+    setChoiceOrder(prev => prev.filter((c) => c !== choice));
     setNewMessage("");
   };
 
   const toggleCorrect = (choice) => {
     setCorrectChoices((prev) => {
       if (prev.includes(choice)) {
-        setChoiceOrder(choiceOrder.filter(c => c !== choice));
+        setChoiceOrder((orderPrev) => orderPrev.filter(c => c !== choice));
         return prev.filter((c) => c !== choice);
       } else {
-        setChoiceOrder([...choiceOrder, choice]);
+        setChoiceOrder((orderPrev) => [...orderPrev, choice]);
         return [...prev, choice];
       }
     });
@@ -128,6 +132,20 @@ function PhraseTranslation({ activityId, classroomId, onGameCreated, question, o
           { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
         );
         qId = qRes.data.questionId;
+      }
+
+      // delete existing choices when editing to avoid duplicates
+      if (isEditMode && question && Array.isArray(question.choices)) {
+        try {
+          const headers = { headers: { Authorization: `Bearer ${token}` } };
+          for (const oldChoice of question.choices) {
+            if (oldChoice && oldChoice.choiceId) {
+              await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/choices/${oldChoice.choiceId}`, headers);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to delete one or more existing choices before re-creating:', e);
+        }
       }
 
       // post choices (no scoring logic)

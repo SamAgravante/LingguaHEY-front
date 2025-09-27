@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -52,10 +52,10 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
 
   const token = localStorage.getItem("token");
-  const api = axios.create({
+  const api = useMemo(() => axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }), [token]);
 
    useEffect(() => {
     if (question) {
@@ -86,7 +86,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
       }
     }
     fetchData();
-  }, [activityId, api]);
+  }, [activityId]);
 
   // Add this useEffect to initialize edit fields when editing
   useEffect(() => {

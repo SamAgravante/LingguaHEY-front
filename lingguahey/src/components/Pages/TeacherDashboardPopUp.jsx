@@ -31,7 +31,6 @@ import {
 } from "@mui/material";
 import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
@@ -40,8 +39,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InputLabel from '@mui/material/InputLabel';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
-import SchoolIcon from "@mui/icons-material/School";
-import CancelIcon from "@mui/icons-material/Cancel";
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -50,39 +47,9 @@ import BlockIcon from '@mui/icons-material/Block';
 import API from "../../api"; // Adjust the import path as necessary
 
 // Background assets
-import LandingBackgroundPic from "../../assets/images/backgrounds/CrystalOnly.png";
-import MenuBoxHor from "../../assets/images/backgrounds/MenuBox1var.png";
-import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong.png";
-import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
-import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
-import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
-import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
-import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
-import GameTextFieldBigger from "../../assets/images/backgrounds/GameTextFieldBigger.png";
-import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
-import MonsterEditUIOuter from "../../assets/images/backgrounds/MonsterEditUIOuter.png";
 import MonsterEditUIOuterLight from "../../assets/images/backgrounds/MonsterEditUIOuterLight.png";
-import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
-import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
-import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
-import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
-import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
-import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
-import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
-import NameTab from "../../assets/images/backgrounds/NameTab.png";
-import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
-import HealthPotion from "../../assets/images/objects/HealthPotion.png";
-import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
-import SkipPotion from "../../assets/images/objects/SkipPotion.png";
-import GoldCoins from "../../assets/images/objects/GoldCoins.png";
-import Tablet from "../../assets/images/objects/Tablet.png";
-import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
-import MCHeadshot from "../../assets/images/objects/MCHeadshot.png";
-import Gems from "../../assets/images/objects/Gems.png";
-import Gears from "../../assets/images/objects/gears.png";
-import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
-import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
-import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
+import GameTextFieldBigger from "../../assets/images/backgrounds/GameTextFieldBigger.png";
+import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
 import SettingsIcon from '@mui/icons-material/Settings';
 
 // Import game components
@@ -110,11 +77,10 @@ const TeacherDashboardPopUp = () => {
   const [scoreSort, setScoreSort] = useState("highest");
 
   const [activityStats, setActivityStats] = useState({
-    averag: 0,
+    average: 0,
     lowest: 0,
     highest: 0,
   });
-  const [progressData, setProgressData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userData, setUserData] = useState({
@@ -149,39 +115,19 @@ const TeacherDashboardPopUp = () => {
 
   // Activity deployment states
   const [openActivityDialog, setOpenActivityDialog] = useState(false);
-  const [openActivityEditModal, setOpenActivityEditModal] = useState(false);
-  const [selectedQuestionType, setSelectedQuestionType] = useState(null);
+    const [selectedQuestionType, setSelectedQuestionType] = useState(null);
   const [activityQuestions, setActivityQuestions] = useState([]);
   const [questionToEdit, setQuestionToEdit] = useState(null);
 
   const [imageUrls, setImageUrls] = useState({});
 
-  const { musicOn, toggleMusic, setActivityMode } = useContext(MusicContext);
+  const { setActivityMode } = useContext(MusicContext);
   const liveActivityRef = useRef(null);
   const [multiplayerOpen, setMultiplayerOpen] = useState(false);
-  const [deployedActivityId, setDeployedActivityId] = useState(null);
   const [secVisibility, setSecVisibility] = useState(true);
 
 
-  useEffect(() => {
-    const fetchDeployedActivity = async () => {
-      if (multiplayerOpen && roomDetails) {
-        try {
-          const res = await API.get(`/live-activities/classrooms/${roomDetails.classroomId}/deployed`);
-          setDeployedActivityId(res.data);
-        } catch (err) {
-          if (err.response && err.response.status === 403) {
-            setDeployedActivityId(null);
-          } else {
-            console.error('Failed to fetch deployed activity:', err);
-            setDeployedActivityId(null);
-          }
-        }
-      }
-    };
-    fetchDeployedActivity();
-  }, [multiplayerOpen, roomDetails]);
-
+  
   const getSortedScores = () => {
     if (scoreSort === "highest") {
       return [...studentScores].sort((a, b) => b.score - a.score);
@@ -242,7 +188,6 @@ const TeacherDashboardPopUp = () => {
       console.error("Failed to fetch classroom data:", err);
       setError(`Failed to load classroom data: ${err.message || "Unknown error"}`);
       setActivityStats({ average: 0, lowest: 0, highest: 0 });
-      setProgressData([]);
     } finally {
       setIsLoading(false);
     }
@@ -253,8 +198,7 @@ const TeacherDashboardPopUp = () => {
       try {
         const enrolledStudentsResponse = await API.get(`/classrooms/${roomId}/students`);
         setSelectedRoomStudents(enrolledStudentsResponse.data || []);
-        console.log('Enrolled Students:', enrolledStudentsResponse.data);
-      } catch (err) {
+              } catch (err) {
         console.error("Failed to fetch enrolled students:", err);
         setSelectedRoomStudents([]);
       }
@@ -340,40 +284,36 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
-  // New useEffect to fetch activity statistics
+  // New: fetch activity statistics helper
+  const fetchActivityStatistics = useCallback(async () => {
+    const selectedId = typeof selectedActivity === "string"
+      ? selectedActivity
+      : selectedActivity?.activity_ActivityId;
+
+    if (!API || !selectedId) {
+      setActivityStats({ average: 0, lowest: 0, highest: 0 });
+      return;
+    }
+
+    try {
+      const adminToken = localStorage.getItem("token");
+      if (adminToken) API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
+      const url = `/scores/live-activities/${selectedId}/stats`;
+      const response = await API.get(url);
+      setActivityStats({
+        average: response.data.average || 0,
+        lowest: response.data.lowest || 0,
+        highest: response.data.highest || 0,
+      });
+    } catch (err) {
+      console.error("Failed to fetch activity statistics:", err, "selectedId:", selectedId);
+      setActivityStats({ average: 0, lowest: 0, highest: 0 });
+    }
+  }, [selectedActivity, API]);
+
   useEffect(() => {
-    const fetchActivityStatistics = async () => {
-      // normalize selectedActivity to an id string
-      const selectedId = typeof selectedActivity === "string"
-        ? selectedActivity
-        : selectedActivity?.activity_ActivityId;
-
-      if (!API || !selectedId) {
-        setActivityStats({ average: 0, lowest: 0, highest: 0 });
-        return;
-      }
-
-      try {
-        // ensure auth header present
-        const adminToken = localStorage.getItem("token");
-        if (adminToken) API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
-
-        const url = `/scores/live-activities/${selectedId}/stats`;
-        console.log("Fetching activity stats from:", url);
-        const response = await API.get(url);
-        setActivityStats({
-          average: response.data.average || 0,
-          lowest: response.data.lowest || 0,
-          highest: response.data.highest || 0,
-        });
-      } catch (err) {
-        console.error("Failed to fetch activity statistics:", err, "selectedId:", selectedId);
-        setActivityStats({ average: 0, lowest: 0, highest: 0 });
-      }
-    };
-
     fetchActivityStatistics();
-  }, [selectedActivity, API]); // Re-run when selectedActivity or API changes
+  }, [fetchActivityStatistics]);
 
   useEffect(() => {
     fetchRoomData();
@@ -572,6 +512,7 @@ const TeacherDashboardPopUp = () => {
     setSelectedQuestionType(null);
     if (selectedActivity) {
       await fetchActivityQuestions(selectedActivity.activity_ActivityId);
+      await fetchActivityStatistics();
     }
   };
 
@@ -586,13 +527,7 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
-  const handleEditQuestion = (question) => {
-    setQuestionToEdit(question);
-    // You might want to open a different modal for editing questions
-    // For now, let's just log the question to edit
-    console.log("Editing question:", question);
-  };
-
+  
   const handleDeleteQuestion = async (questionId) => {
     if (!API || !selectedActivity) return;
     try {
@@ -645,31 +580,66 @@ const TeacherDashboardPopUp = () => {
     try {
       (activityQuestions || []).forEach((q) => {
         const id = q.questionId;
-        const imgCandidate = q.image || q.file || q.media?.[0] || q.imageData;
-        if (!imgCandidate) return;
+        const candidates = [
+          q.questionImage, q.image, q.file, q.media?.[0], q.imageData, q.photo, q.picture, q.img
+        ].filter(Boolean);
 
-        // If it's already a string data URL or http(s) url, use it directly
-        if (typeof imgCandidate === "string" && imgCandidate.trim()) {
-          created[id] = imgCandidate.trim();
-          return;
+        const pickMime = (obj, fallback = "image/jpeg") => {
+          const t = (obj && (obj.contentType || obj.mimeType || obj.type)) || "";
+          if (typeof t === "string" && t.startsWith("image/")) return t;
+          return fallback;
+        };
+
+        const extractBytes = (obj) => {
+          if (!obj) return null;
+          if (obj instanceof ArrayBuffer) return new Uint8Array(obj);
+          if (ArrayBuffer.isView(obj)) return new Uint8Array(obj.buffer);
+          if (Array.isArray(obj)) return new Uint8Array(obj);
+          if (Array.isArray(obj?.data)) return new Uint8Array(obj.data);
+          if (Array.isArray(obj?.data?.data)) return new Uint8Array(obj.data.data);
+          if (Array.isArray(obj?.bytes)) return new Uint8Array(obj.bytes);
+          if (Array.isArray(obj?.buffer)) return new Uint8Array(obj.buffer);
+          if (obj?.data?.type === "Buffer" && Array.isArray(obj?.data?.data)) {
+            return new Uint8Array(obj.data.data);
+          }
+          if (obj?.type === "Buffer" && Array.isArray(obj?.data)) {
+            return new Uint8Array(obj.data);
+          }
+          return null;
+        };
+
+        let resolved = null;
+
+        for (const cand of candidates) {
+          if (typeof cand === "string" && cand.trim()) {
+            const s = cand.trim();
+            if (/^(data:image|blob:|https?:\/\/|\/)/i.test(s)) {
+              resolved = s;
+              break;
+            }
+            const isB64 = /^[A-Za-z0-9+/=]+$/.test(s) && s.length % 4 === 0;
+            if (isB64) {
+              resolved = `data:image/jpeg;base64,${s}`;
+              break;
+            }
+          }
+
+          if (typeof Blob !== "undefined" && cand instanceof Blob) {
+            resolved = URL.createObjectURL(cand);
+            break;
+          }
+
+          const bytes = extractBytes(cand);
+          if (bytes) {
+            const mime = pickMime(cand);
+            const blob = new Blob([bytes], { type: mime });
+            resolved = URL.createObjectURL(blob);
+            break;
+          }
         }
 
-        // If it's a Blob/File, create an object URL
-        if (imgCandidate instanceof Blob) {
-          created[id] = URL.createObjectURL(imgCandidate);
-          return;
-        }
-
-        // If backend returned a binary array (Array or nested), convert to Blob then object URL
-        const maybeArray = Array.isArray(imgCandidate)
-          ? imgCandidate
-          : (imgCandidate && Array.isArray(imgCandidate.data) ? imgCandidate.data : null);
-
-        if (maybeArray) {
-          const uint8 = new Uint8Array(maybeArray);
-          const blob = new Blob([uint8], { type: "image/jpeg" });
-          created[id] = URL.createObjectURL(blob);
-          return;
+        if (resolved) {
+          created[id] = resolved;
         }
       });
     } catch (err) {
@@ -696,11 +666,29 @@ const TeacherDashboardPopUp = () => {
   }, [activityQuestions]);
 
   // helper: resolve common image shapes to a usable src (returns null when none)
+  const normalizeImageSrc = (s) => {
+    if (!s || typeof s !== "string") return s || null;
+    const str = s.trim();
+    if (
+      str.startsWith("data:image") ||
+      str.startsWith("blob:") ||
+      str.startsWith("http://") ||
+      str.startsWith("https://") ||
+      str.startsWith("/")
+    ) {
+      return str;
+    }
+    const isBase64Like = /^[A-Za-z0-9+/=]+$/.test(str) && str.length % 4 === 0;
+    if (isBase64Like) return `data:image/jpeg;base64,${str}`;
+    return str;
+  };
+
+  // helper: resolve common image shapes to a usable src (returns null when none)
   const getQuestionImageSrc = (q) => {
     if (!q) return null;
 
     // direct string fields
-    const stringKeys = ["image", "imageUrl", "imagePath", "imageBase64", "photo", "url", "src", "fileUrl"];
+    const stringKeys = ["questionImage", "image", "imageUrl", "imagePath", "imageBase64", "photo", "url", "src", "fileUrl"];
     for (const k of stringKeys) {
       const v = q[k];
       if (typeof v === "string" && v.trim()) return v.trim();
@@ -726,9 +714,15 @@ const TeacherDashboardPopUp = () => {
 
     // buffer/byte-array -> data URL
     const maybeArray =
-      (q.image && Array.isArray(q.image)) ? q.image :
-        (q.image && q.image.data && Array.isArray(q.image.data)) ? q.image.data :
-          (q.data && Array.isArray(q.data)) ? q.data : null;
+      (Array.isArray(q?.questionImage?.data?.data) ? q.questionImage.data.data :
+      Array.isArray(q?.questionImage?.data) ? q.questionImage.data :
+      Array.isArray(q?.questionImage) ? q.questionImage :
+      Array.isArray(q?.image?.data?.data) ? q.image.data.data :
+      Array.isArray(q?.image?.data) ? q.image.data :
+      Array.isArray(q?.image) ? q.image :
+      Array.isArray(q?.data?.data) ? q.data.data :
+      Array.isArray(q?.bytes) ? q.bytes :
+      Array.isArray(q?.data) ? q.data : null);
 
     if (maybeArray) {
       try {
@@ -802,6 +796,11 @@ const TeacherDashboardPopUp = () => {
           newActivityName,
       };
       setActivities((prevActivities) => [...prevActivities, newActivity]);
+      // Auto-select the newly created activity for immediate interaction
+      setSelectedActivity(newActivity);
+      setSelectedActivityName(newActivity.activity_ActivityName || "");
+      setIsDeployed(!!newActivity.deployed);
+      setActivityStatus(newActivity.deployed ? "Deployed" : "Undeployed");
       setNewActivityName("");
       handleCloseActivityCreateModal(); // Close the modal after creating
     } catch (err) {
@@ -1086,23 +1085,7 @@ const TeacherDashboardPopUp = () => {
     },
   ];
 
-  // First, create a reusable button style object
-  const commonButtonStyle = {
-    backgroundImage: `url(${GameTextBox})`,
-    backgroundSize: "cover",
-    backgroundRepeat: "no-repeat",
-    color: "#5D4037",
-    '&:hover': {
-      backgroundImage: `url(${GameTextBox})`,
-      opacity: 0.9
-    },
-    // Remove any existing backgroundColor
-    backgroundColor: 'transparent',
-    // Ensure text is visible
-    textTransform: 'none',
-    fontWeight: 'bold'
-  };
-
+  
   return (
     <Box
       sx={{
@@ -1400,7 +1383,8 @@ const TeacherDashboardPopUp = () => {
               </Typography>
               <List sx={{ border: '3px solid #5D4037', borderRadius: 1, p: 2 }}>
                 {activityQuestions.map((question, index) => {
-                  const imgSrc = imageUrls[question.questionId] ?? getQuestionImageSrc(question); // getQuestionImageSrc = your existing resolver
+                  const rawImgSrc = imageUrls[question.questionId] ?? getQuestionImageSrc(question); // raw source may be blob:, data:, http, or base64
+                  const imgSrc = normalizeImageSrc(rawImgSrc);
                   // render image only when src exists
                   return (
                     <ListItem key={question.questionId} divider={index < activityQuestions.length - 1} sx={{ py: 1 }}>
@@ -1412,7 +1396,7 @@ const TeacherDashboardPopUp = () => {
                               {imgSrc ? (
                                 <Box
                                   component="img"
-                                  src={`data:image/png;base64,${imgSrc}`}
+                                  src={imgSrc}
                                   alt={question.questionText || `activity-img-${index}`}
                                   sx={{ maxWidth: 160, maxHeight: 90, objectFit: "cover", borderRadius: 1 }}
                                   onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -1497,8 +1481,8 @@ const TeacherDashboardPopUp = () => {
                 activityId={selectedActivity.activity_ActivityId}
                 classroomId={roomId}
                 onGameCreated={resetSelectedQuestionType}
-                question={questionToEdit}                      // pass question to enter EDIT MODE
-                onClose={() => { setQuestionToEdit(null); setSelectedQuestionType(null); }}
+                question={questionToEdit}
+                onClose={async () => { setQuestionToEdit(null); await resetSelectedQuestionType(); }}
               />
             </Box>
           )}
@@ -1508,8 +1492,8 @@ const TeacherDashboardPopUp = () => {
                 activityId={selectedActivity.activity_ActivityId}
                 classroomId={roomId}
                 onGameCreated={resetSelectedQuestionType}
-                question={questionToEdit}                      // pass question to enter EDIT MODE
-                onClose={() => { setQuestionToEdit(null); setSelectedQuestionType(null); }}
+                question={questionToEdit}
+                onClose={async () => { setQuestionToEdit(null); await resetSelectedQuestionType(); }}
               />
             </Box>
           )}
@@ -1519,8 +1503,8 @@ const TeacherDashboardPopUp = () => {
                 activityId={selectedActivity.activity_ActivityId}
                 classroomId={roomId}
                 onGameCreated={resetSelectedQuestionType}
-                question={questionToEdit}                      // pass question to enter EDIT MODE
-                onClose={() => { setQuestionToEdit(null); setSelectedQuestionType(null); }}
+                question={questionToEdit}
+                onClose={async () => { setQuestionToEdit(null); await resetSelectedQuestionType(); }}
               />
             </Box>
           )}
@@ -1696,8 +1680,7 @@ const TeacherDashboardPopUp = () => {
                                 <Typography variant="h4" sx={{ fontWeight: 700, color: item.color, textAlign: "center" }}>
                                   {item.count}
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: '#5D4037', opacity: 0.8, textAlign: 'center' }}>{item.description}</Typography>
-                              </CardContent>
+                                                              </CardContent>
                             </Card>
                           </Grid>
                         ))}
