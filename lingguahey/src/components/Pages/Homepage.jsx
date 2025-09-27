@@ -53,8 +53,6 @@ import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
 import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
 import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
-import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
-import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
 import NameTab from "../../assets/images/backgrounds/NameTab.png";
 import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
 import HealthPotion from "../../assets/images/objects/HealthPotion.png";
@@ -79,10 +77,13 @@ import InventoryUIArea from "../../assets/images/objects/InventoryUIArea.png";
 import InventoryItemArea from "../../assets/images/objects/InventoryItemArea.png";
 import DungeonArrowLeft from "../../assets/images/objects/DungeonArrowLeft.png";
 import DungeonArrowRight from "../../assets/images/objects/DungeonArrowRight.png";
+import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
+import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
 
 //Weapons
 import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
 import HellfireStaff from '../../assets/images/weapons/HellfireStaff.png';
+
 
 
 const PastelProgress = styled(LinearProgress)(() => ({
@@ -137,6 +138,9 @@ export default function Homepage() {
   const liveActivityRef = useRef(null);
   const [multiplayerOpen, setMultiplayerOpen] = useState(false);
   const [deployedActivityId, setDeployedActivityId] = useState(null);
+
+  const [completedLevels,setCompletedLevels]= useState([]);
+  const [dungeonBackground, setDungeonBackground] = useState(DungeonOpen || "linear-gradient(#000, #333)");
 
   useEffect(() => {
     const fetchDeployedActivity = async () => {
@@ -211,6 +215,10 @@ export default function Homepage() {
     }
   }
 
+  //Dungeon background if open
+  async function changeDungeonBackground(){
+    
+  }
 
 
   //function 
@@ -309,7 +317,6 @@ export default function Homepage() {
 
 
 
-
         //Monster List
         setIsLoading(true)
 
@@ -324,7 +331,10 @@ export default function Homepage() {
         setItemEquipped(equipResp.data?.equippedCosmetic || {});
         console.log("Equipped Item:", equipResp.data);
 
-
+        //Level Completed
+        const completedLevelsResp = await API.get(`/levels/completed/users/${user.userId}`);
+        setCompletedLevels(completedLevelsResp.data);
+        console.log("Completed levels" + completedLevelsResp.data);
 
         const monsterResp = await API.get(`/monsters`);
         if (isMounted) {
@@ -623,6 +633,8 @@ export default function Homepage() {
             dungeonPreperatory={dungeonPreperatory}
             setDungeonPreparatory={setDungeonPreparatory}
             user={user}
+            completedLevels={completedLevels}
+            setDungeonBackground={setDungeonBackground}
           />
         );
       } else if (section === 'Shop') {
@@ -882,7 +894,7 @@ export default function Homepage() {
                 ? ShopUI
                 : section === 'Summon'
                   ? SummonUI
-                  : DungeonOpen})`,
+                  : dungeonBackground})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               width: '100vw',
