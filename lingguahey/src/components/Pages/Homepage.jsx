@@ -663,6 +663,8 @@ export default function Homepage() {
             renderGemAndCoinsTab={renderGemAndCoinsTab}
             userDetails={userDetails}
             setGems={setGems}
+            SetInventory={SetInventory}
+            inventory={inventory}
           />
         );
       }
