@@ -19,6 +19,7 @@ import Activities from "./components/Pages/Activities";
 import OnePicFourWords from "./components/Pages/Games/GameCreation/OnePicFourWords";
 import PhraseTranslation from "./components/Pages/Games/GameCreation/PhraseTranslation";
 import WordTranslation from "./components/Pages/Games/GameCreation/WordTranslation";
+import DungeonGame from './components/Pages/DungeonGame';
 
 import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/LiveActClassroom";
 import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
@@ -29,6 +30,10 @@ import VerificationStatusPage from "./components/VerificationStatusPage";
 import LiveActivityGame from "./components/Pages/LiveActivityGame";
 import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
 import MultiplayerGameRoom from "./components/Pages/MultiplayerGameRoom";
+
+import LevelEditor from "./components/Pages/Editors/LevelEditor";
+import MonsterEditor from "./components/Pages/Editors/MonsterEditor";
+import AddLevelForm from "./components/Pages/Editors/AddLevelForm";
 
 function App() {
   const { token } = useAuth();
@@ -69,8 +74,15 @@ function App() {
         <Route path="/teacher/live-activities/:roomId" element={<LiveActClassroom />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
 
-        {/* Lesson Activities */}
+        {/* Game Editors */}
+        {/* Change Name Later */}
         <Route path="/activities" element={<Activities />} />
+        <Route path="/leveleditor" element={<LevelEditor />} />
+        <Route path="/add-level" element={<AddLevelForm />} />
+        <Route path="/monstereditor" element={<MonsterEditor />} />
+
+        {/* Game */}
+        <Route path="/dungeon" element={<DungeonGame />} />
 
         {/* Live Activities under a classroom context */}
         <Route

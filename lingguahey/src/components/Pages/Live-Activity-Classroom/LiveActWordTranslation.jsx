@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -20,6 +20,12 @@ import axios from "axios";
 
 export default function WordTranslation({ activityId, classroomId, onGameCreated,  question, onClose }) {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!activityId) {
+      console.error("Activity ID is undefined in WordTranslation component.");
+    }
+  }, [activityId]);
 
   // Use question prop to initialize state if editing
   const [word, setWord] = useState(question ? question.word : "");
@@ -46,10 +52,10 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
 
   const token = localStorage.getItem("token");
-  const api = axios.create({
+  const api = useMemo(() => axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }), [token]);
 
    useEffect(() => {
     if (question) {
@@ -59,13 +65,23 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
     }
   }, [question]);
   
+  // small debug & guard: log incoming prop and skip fetch until defined
+  useEffect(() => {
+    console.log("LiveActWordTranslation: received activityId =", activityId);
+  }, [activityId]);
+
   useEffect(() => {
     async function fetchData() {
-      if (!activityId) return;
+      if (!activityId) {
+        // explicit early exit so no request goes to .../undefined
+        console.warn("fetchData skipped: activityId is falsy");
+        return;
+      }
       try {
         const res = await api.get(`/api/lingguahey/questions/liveactivities/${activityId}`);
         setQuestions(res.data);
-      } catch {
+      } catch (error) {
+        console.error("Failed to fetch questions:", error);
         setNewMessage("Failed to load questions.");
       }
     }
@@ -108,6 +124,12 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
   };
 
   const handleSaveNew = async () => {
+    if (!activityId) {
+      console.error("Activity ID is undefined.");
+      setNewMessage("Activity ID is undefined. Please refresh the page.");
+      return;
+    }
+
     if (!newWord.trim()) return setNewMessage("Enter a word.");
     if (newChoices.length < 3) return setNewMessage("Add at least 3 choices.");
     if (!correctAnswer) return setNewMessage("Select correct answer.");
@@ -273,7 +295,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
 
         {/* EDIT MODE */}
         {question ? (
-          <Paper sx={{ p: 4, borderRadius: 3 }} elevation={3}>
+          <Paper sx={{ p: 4, borderRadius: 3, bgcolor: '#F7CB97', border:'3px solid #5D4037' }} elevation={3}>
             <Typography variant="h6" fontWeight="bold" color="black" sx={{ mb: 2 }}>Edit Question</Typography>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
               <Box flex={1}>
@@ -289,7 +311,11 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                       '& fieldset': { borderColor: '#616161' },
                       '&:hover fieldset': { borderColor: '#81D4FA' },
                       '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
-                    }
+                    },
+                    boxShadow:2,
+                    bgcolor:'transparent',
+                    border:'2px solid #5D4037',
+                    borderRadius:2
                   }}
                 />
               </Box>
@@ -328,7 +354,7 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
           </Paper>
         ) : (
         // CREATE MODE
-          <Paper sx={{ p: 4, borderRadius: 3 }} elevation={3}>
+          <Paper sx={{ p: 4, borderRadius: 3, bgcolor: '#F7CB97', border:'3px solid #5D4037' }} elevation={3}>
             <Typography variant="h6" fontWeight="bold" color="black" sx={{ mb: 2 }}>{questions.length + 1}.</Typography>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
               <Box flex={1}>
@@ -344,7 +370,11 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                       '& fieldset': { borderColor: '#616161' },
                       '&:hover fieldset': { borderColor: '#81D4FA' },
                       '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
-                    }
+                    },
+                    boxShadow:2,
+                    bgcolor:'transparent',
+                    border:'2px solid #5D4037',
+                    borderRadius:2
                   }}
                 />
               </Box>
@@ -364,7 +394,11 @@ export default function WordTranslation({ activityId, classroomId, onGameCreated
                         '& fieldset': { borderColor: '#616161' },
                         '&:hover fieldset': { borderColor: '#81D4FA' },
                         '&.Mui-focused fieldset': { borderColor: '#81D4FA' }
-                      }
+                      },
+                      boxShadow:2,
+                      bgcolor:'transparent',
+                      border:'2px solid #5D4037',
+                      borderRadius:2
                     }}
                   />
                   <Button variant="contained" onClick={handleAddChoice} disabled={!inputChoice.trim() || newChoices.length>=5} sx={{ bgcolor: '#81D4FA', color: '#000'}}>Add</Button>

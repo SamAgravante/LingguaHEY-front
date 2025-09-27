@@ -23,6 +23,15 @@ import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.pn
 import { mockQuestions } from './mockQuestions';
 import MultiplayerGameRoomGameContent from './MultiplayerGameRoomGameContent';
 
+import char_1 from '../../assets/images/characters/lingguahey-char1-wave.png';
+import char_2 from '../../assets/images/characters/lingguahey-char1-stand.png';
+
+// Build a simple lookup array: integer → image import
+const CHARACTERS = [
+  { value: 1, img: char_1, label: 'Char 1' },
+  { value: 2, img: char_2, label: 'Char 2' },
+];
+
 const pastels = [
   '#FFCDD2', // light red
   '#C8E6C9', // light green
@@ -135,55 +144,107 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
 
   // --- WebSocket logic: listen for NEXT_QUESTION and submit answer then advance ---
   useEffect(() => {
-    if (!activityId) return;
-    const socket = new SockJS(`${import.meta.env.VITE_API_BASE_URL}/ws`);
-    const client = Stomp.over(socket);
-    client.debug = () => {};
-    stompClientRef.current = client;
-
-    client.connect({}, () => {
-      subscriptionRef.current = client.subscribe(
-        `/topic/activity/${activityId}`,
-        async msg => {
-          const payload = JSON.parse(msg.body);
-          setLiveActivityUpdate(payload);
-
-          // On NEXT_QUESTION, submit answer if present, then advance
-          if (payload.status === "NEXT_QUESTION" && payload.payload?.questionIndex !== undefined) {
-            if (pendingAnswer !== null) {
-              await submitPendingAnswer();
-            }
-            setPendingAnswer(null);
-            setWaitingForTeacher(false);
-            
-            // Update index and progress together to ensure they stay in sync
-            const nextIndex = payload.payload.questionIndex;
-            const confirmedIndex = lastConfirmedRef.current;
-            setIndex(nextIndex);
-            setLastConfirmedIndex(confirmedIndex);
-            setProgress(((confirmedIndex + 1) / questions.length) * 100);
-            
-            fetchLeaderboard();
-          }
-          // Handle FINISH_QUIZ event for all users
-          if (payload.status === "FINISH_QUIZ") {
-            if (pendingAnswer !== null) {
-              await submitPendingAnswer();
-              setPendingAnswer(null);
-            }
-            lastConfirmedRef.current = questions.length - 1;
-            setLastConfirmedIndex(questions.length - 1);
-            setProgress(100);
-            setShowDialog(true);
-            fetchLeaderboard();
-          }
+    let isSubscribed = true; // Add flag to track if component is still mounted
+    
+    async function connectWebSocket() {
+      if (!activityId) return;
+      
+      // Clean up any existing connection first
+      if (stompClientRef.current?.connected) {
+        try {
+          subscriptionRef.current?.unsubscribe();
+          stompClientRef.current.disconnect();
+        } catch (err) {
+          console.error('Error cleaning up WebSocket:', err);
         }
-      );
-    });
+      }
+
+      const socket = new SockJS(`${import.meta.env.VITE_API_BASE_URL}/ws`);
+      const client = Stomp.over(socket);
+      client.debug = () => {};
+
+      try {
+        await new Promise((resolve, reject) => {
+          client.connect({}, 
+            () => {
+              if (!isSubscribed) {
+                client.disconnect();
+                return;
+              }
+              
+              stompClientRef.current = client;
+              subscriptionRef.current = client.subscribe(
+                `/topic/activity/${activityId}`,
+                async msg => {
+                  if (!isSubscribed) return;
+                  
+                  const payload = JSON.parse(msg.body);
+                  setLiveActivityUpdate(payload);
+
+                  // On NEXT_QUESTION, submit answer if present, then advance
+                  if (payload.status === "NEXT_QUESTION" && payload.payload?.questionIndex !== undefined) {
+                    if (pendingAnswer !== null) {
+                      await submitPendingAnswer();
+                    }
+                    setPendingAnswer(null);
+                    setWaitingForTeacher(false);
+                    
+                    // Update index and progress together to ensure they stay in sync
+                    const nextIndex = payload.payload.questionIndex;
+                    const confirmedIndex = lastConfirmedRef.current;
+                    setIndex(nextIndex);
+                    setLastConfirmedIndex(confirmedIndex);
+                    setProgress(((confirmedIndex + 1) / questions.length) * 100);
+                    
+                    fetchLeaderboard();
+                  }
+                  // Handle FINISH_QUIZ event for all users
+                  if (payload.status === "FINISH_QUIZ") {
+                    if (pendingAnswer !== null) {
+                      await submitPendingAnswer();
+                      setPendingAnswer(null);
+                    }
+                    lastConfirmedRef.current = questions.length - 1;
+                    setLastConfirmedIndex(questions.length - 1);
+                    setProgress(100);
+                    setShowDialog(true);
+                    fetchLeaderboard();
+                  }
+                }
+              );
+              resolve();
+            },
+            error => {
+              console.error('STOMP error:', error);
+              reject(error);
+            }
+          );
+        });
+      } catch (err) {
+        console.error('Failed to connect to WebSocket:', err);
+      }
+    }
+
+    connectWebSocket();
 
     return () => {
-      subscriptionRef.current?.unsubscribe();
-      if (stompClientRef.current?.connected) stompClientRef.current.disconnect();
+      isSubscribed = false; // Mark component as unmounted
+      
+      // Clean up WebSocket connection
+      if (subscriptionRef.current) {
+        try {
+          subscriptionRef.current.unsubscribe();
+        } catch {}
+      }
+      if (stompClientRef.current?.connected) {
+        try {
+          stompClientRef.current.disconnect();
+        } catch {}
+      }
+      
+      // Clear refs
+      subscriptionRef.current = null;
+      stompClientRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityId, questions.length, pendingAnswer]);
@@ -208,69 +269,100 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
   }, [activityId]);
 
   // Fetch leaderboard from API and merge with initial users
-  async function fetchLeaderboard() {
+    async function fetchLeaderboard() {
     if (!activityId) return;
     try {
       const scoresRes = await API.get(`/scores/live-activities/${activityId}/leaderboard`);
       const scoresArr = Array.isArray(scoresRes.data) ? scoresRes.data : [];
+
       // On first call, use initialUsers; after that, only update scores
       if (!leaderboardInitialized) {
         const usersArr = Array.isArray(initialUsers) ? initialUsers : [];
+
+        // Build a quick map from userId → score + profilePic info:
         const scoreMap = {};
         scoresArr.forEach(entry => {
           const id = entry.userId;
           const score = entry.score ?? entry.totalScore ?? 0;
-          scoreMap[id] = {
-            userId: id,
-            name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
-            score
-          };
-        });          const merged = usersArr.map(user => {
+          const picInt = entry.profilePic;  // <-- the integer from your backend
+          scoreMap[id] = { score, picInt };
+        });
+
+        const merged = usersArr.map(user => {
           const id = user.userId;
+          const { score = 0, picInt = null } = scoreMap[id] || {};
+          // Look up the correct character image by integer:
+          const charObj = CHARACTERS.find(c => c.value === picInt);
+          const profileCharacterUrl = charObj ? charObj.img : null;
+
           return {
             userId: id,
             name: user.name || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
-            score: scoreMap[id]?.score ?? 0,
+            score,
             role: user.role,
+            profileCharacterUrl,
           };
         });
-        // Add any scores for users not in initialUsers
+
+        // Add any users from scoresArr not in initialUsers (edge case):
         scoresArr.forEach(entry => {
-          if (!merged.find(u => u.userId === entry.userId)) {            merged.push({
+          if (!merged.find(u => u.userId === entry.userId)) {
+            const picInt = entry.profilePic;
+            const charObj = CHARACTERS.find(c => c.value === picInt);
+            const profileCharacterUrl = charObj ? charObj.img : null;
+
+            merged.push({
               userId: entry.userId,
               name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
               score: entry.score ?? entry.totalScore ?? 0,
               role: entry.role,
+              profileCharacterUrl,
             });
           }
         });
+
         setLeaderboard(merged);
         setLeaderboardInitialized(true);
       } else {
-        // Only update scores for users already in leaderboard
+        // Subsequent updates: only update scores (and in case a new user appears, map their pic too)
         setLeaderboard(prev => {
           const prevMap = {};
           prev.forEach(u => { prevMap[u.userId] = u; });
+
           scoresArr.forEach(entry => {
-            if (prevMap[entry.userId]) {
-              prevMap[entry.userId] = {
-                ...prevMap[entry.userId],
-                score: entry.score ?? entry.totalScore ?? 0
+            const id = entry.userId;
+            const newScore = entry.score ?? entry.totalScore ?? 0;
+            const picInt = entry.profilePic;
+            const charObj = CHARACTERS.find(c => c.value === picInt);
+            const profileCharacterUrl = charObj ? charObj.img : null;
+
+            if (prevMap[id]) {
+              // Update existing user’s score (and in case their pic changed…)
+              prevMap[id] = {
+                ...prevMap[id],
+                score: newScore,
+                profileCharacterUrl: profileCharacterUrl ?? prevMap[id].profileCharacterUrl,
               };
             } else {
-              // New user (edge case)
-              prevMap[entry.userId] = {
-                userId: entry.userId,
+              // A brand-new user not in prevMap
+              prevMap[id] = {
+                userId: id,
                 name: entry.name || `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim(),
-                score: entry.score ?? entry.totalScore ?? 0,
+                score: newScore,
+                role: entry.role,
+                profileCharacterUrl,
               };
             }
           });
+
           return Object.values(prevMap);
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+    }
   }
+
 
   // Fetch leaderboard on mount, on question index change, and every 5 seconds
   useEffect(() => {
@@ -401,7 +493,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       // Only teachers can stop the activity
       if (userRole === 'TEACHER') {
         // Stop the activity and clear scores
-        await API.post(`/lobby/${activityId}/stop`, null, { params: { teacherId: userId } });
+        //await API.post(`/lobby/${activityId}/stop`, null, { params: { teacherId: userId } });
       }
       
       // Leave lobby/game room for all users after quiz finishes

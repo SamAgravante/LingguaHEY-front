@@ -1,5 +1,5 @@
 // src/components/OnePicFourWordGame.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -20,6 +20,7 @@ import API from "../../api";
 import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
 import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
 import speechBubble from '../../assets/images/objects/speech-bubble.png';
+import { MusicContext } from '../../contexts/MusicContext';
 
 // 🎨 Styled components for pastel aesthetic
 const PastelContainer = styled(Box)(() => ({
@@ -74,7 +75,7 @@ function shuffleArray(array) {
   return arr;
 }
 
-export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
+export default function OnePicFourWord({ activityId, onBack, isCompleted = false }) {
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
   const [shuffledOptions, setShuffledOptions] = useState([]);
@@ -83,6 +84,7 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
   const [userId, setUserId] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const { setLevelClearMode } = useContext(MusicContext);  // Add this line
 
   useEffect(() => {
     const user = getUserFromToken();
@@ -115,30 +117,31 @@ export default function OnePicFourWord({ activityId, onBack, isCompleted }) {
 
   const q = questions[index];
 
-  const handleChoice = (choice) => {
+  const handleChoice = async (choice) => {
     const isCorrect = choice.correct;
     const earnedScore = isCorrect ? (q.score?.score || 1) : 0;
     const newScore = score + earnedScore;
-
     setScore(newScore);
+
+    // Update progress before changing index
     const nextIndex = index + 1;
-    setProgress((nextIndex / questions.length) * 100);
+    const newProgress = (nextIndex / questions.length) * 100;
+    setProgress(newProgress);
 
-    if (userId && !isCompleted) {
-      API.post(
-        `scores/award/questions/${q.questionId}/users/${userId}?selectedChoiceId=${choice.choiceId}`
-      ).catch(err => console.error('Error awarding score:', err));
-    }
-
-    if (nextIndex < questions.length) {
-      setIndex(nextIndex);
-    } else {
+    if (index === questions.length - 1) {
       setFinalScore(newScore);
       setShowDialog(true);
+      setLevelClearMode(true);
+      
+      setTimeout(() => {
+        setLevelClearMode(false);
+      }, 4000);
+
       if (newScore === questions.length && userId && !isCompleted) {
-        API.put(`activities/${activityId}/completed/${userId}`)
-          .catch(err => console.error('Error marking activity as completed:', err));
+        API.put(`/activities/${activityId}/completed/${userId}`).catch(console.error);
       }
+    } else {
+      setIndex(nextIndex);
     }
   };
 
