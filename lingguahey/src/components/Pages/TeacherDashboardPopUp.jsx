@@ -103,6 +103,7 @@ const TeacherDashboardPopUp = () => {
   const [editRoomDialogOpen, setEditRoomDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [editRoomName, setEditRoomName] = useState("");
+  const [deleteRoomError, setDeleteRoomError] = useState("");
 
   const [activityToDelete, setActivityToDelete] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -112,6 +113,11 @@ const TeacherDashboardPopUp = () => {
   const [questionToDeleteId, setQuestionToDeleteId] = useState(null);
   const [openQuestionDeleteDialog, setOpenQuestionDeleteDialog] = useState(false);
   const [deleteLiveActivityDialogMessage, setDeleteLiveActivityDialogMessage] = useState("");
+
+  // Remove student confirmation dialog
+  const [openStudentRemoveDialog, setOpenStudentRemoveDialog] = useState(false);
+  const [studentToRemove, setStudentToRemove] = useState(null);
+  const [reopenStudentListAfterConfirm, setReopenStudentListAfterConfirm] = useState(false);
 
   // Activity deployment states
   const [openActivityDialog, setOpenActivityDialog] = useState(false);
@@ -353,6 +359,33 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
+  // Remove student dialog handlers
+  const openRemoveStudentDialog = (student) => {
+    setStudentToRemove(student);
+    if (openStudentListModal) {
+      setReopenStudentListAfterConfirm(true);
+      setOpenStudentListModal(false);
+      setTimeout(() => setOpenStudentRemoveDialog(true), 0);
+    } else {
+      setOpenStudentRemoveDialog(true);
+    }
+  };
+
+  const closeRemoveStudentDialog = () => {
+    setOpenStudentRemoveDialog(false);
+    setStudentToRemove(null);
+    if (reopenStudentListAfterConfirm) {
+      setOpenStudentListModal(true);
+      setReopenStudentListAfterConfirm(false);
+    }
+  };
+
+  const confirmRemoveStudent = async () => {
+    if (!studentToRemove) return;
+    await handleRemoveStudentFromClassroom(studentToRemove.userId);
+    closeRemoveStudentDialog();
+  };
+
   const handleMenuOpen = (e) => setMenuAnchor(e.currentTarget);
   const handleMenuClose = () => setMenuAnchor(null);
 
@@ -382,18 +415,38 @@ const TeacherDashboardPopUp = () => {
 
   const handleOpenDelete = () => {
     handleMenuClose();
+    setDeleteRoomError("");
     setDeleteConfirmOpen(true);
   };
 
   const handleConfirmDelete = async () => {
     if (!API || !roomId) return;
+
+    // Clear previous error, if any
+    setDeleteRoomError("");
+
+    // Pre-check: prevent deletion if live activities exist
+    try {
+      const resp = await API.get(`/live-activities/${roomId}/live-activities`);
+      if (Array.isArray(resp.data) && resp.data.length > 0) {
+        setDeleteRoomError("Classroom cannot be deleted while live activities exist. Delete all live activities first.");
+        return;
+      }
+    } catch (checkErr) {
+      console.error("Failed to verify live activities before deletion:", checkErr);
+      setDeleteRoomError("Failed to verify live activities. Please try again.");
+      return;
+    }
+
+    // Proceed with deletion if no activities
     try {
       await API.delete(`/classrooms/${roomId}`);
       setDeleteConfirmOpen(false);
       navigate("/teacherdashboard");
     } catch (err) {
       console.error("Failed to delete classroom:", err);
-      // optionally show feedback
+      const message = err?.response?.data?.message || "Failed to delete classroom. Please try again.";
+      setDeleteRoomError(message);
     }
   };
 
@@ -472,7 +525,7 @@ const TeacherDashboardPopUp = () => {
     if (!API || !activityToDelete) return;
     try {
       await API.delete(`/live-activities/${activityToDelete?.activity_ActivityId}`);
-      setActivities(prevActivities => prevActivities.filter(activity => activity.activity_ActivityId !== activityToDelete.activity_ActivityId));
+      setActivities(prevActivities => prevActivities.filter (activity => activity.activity_ActivityId !== activityToDelete.activity_ActivityId));
       closeDeleteDialog();
     } catch (err) {
       console.error("Failed to delete activity:", err);
@@ -978,7 +1031,7 @@ const TeacherDashboardPopUp = () => {
                     secondaryAction={
                       <IconButton
                         edge="end"
-                        onClick={() => handleRemoveStudentFromClassroom(student.userId)}
+                        onClick={() => openRemoveStudentDialog(student)}
                         sx={{ color: '#f44336', '&:hover': { color: '#d32f2f', bgcolor: 'rgba(244, 67, 54, 0.1)' } }}
                         aria-label={`Remove ${student.firstName} ${student.lastName}`}
                       >
@@ -1266,6 +1319,11 @@ const TeacherDashboardPopUp = () => {
             bgcolor: '#F7CB97'
           }}>
           <Typography>Are you sure you want to delete this classroom? This action cannot be undone.</Typography>
+          {deleteRoomError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteRoomError}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions sx={{
           borderBottom: '5px solid #5D4037',
@@ -1341,6 +1399,48 @@ const TeacherDashboardPopUp = () => {
         </DialogActions>
       </Dialog>
       {/* end delete question confirm dialog */}
+
+      {/* Remove student confirm modal */}
+      <Modal
+        open={openStudentRemoveDialog}
+        onClose={closeRemoveStudentDialog}
+        aria-labelledby="remove-student-modal-title"
+        aria-describedby="remove-student-modal-description"
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: '#F7CB97',
+          border: '5px solid #5D4037',
+          boxShadow: 24,
+          p: 0,
+        }}>
+          <Box sx={{
+            p: 2,
+            borderBottom: '1px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}>
+            <Typography id="remove-student-modal-title" variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+              Remove Student?
+            </Typography>
+          </Box>
+          <Box sx={{ p: 2 }}>
+            <Typography id="remove-student-modal-description">
+              {studentToRemove
+                ? `Remove ${studentToRemove.firstName} ${studentToRemove.lastName} from this classroom?`
+                : 'Remove this student from the classroom?'}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, p: 2, bgcolor: '#F7CB97' }}>
+            <Button onClick={closeRemoveStudentDialog}>Cancel</Button>
+            <Button color="error" variant="contained" onClick={confirmRemoveStudent}>Remove</Button>
+          </Box>
+        </Box>
+      </Modal>
+      {/* end remove student confirm modal */}
 
       {/* "Go To Activity" Dialog */}
       <Dialog
