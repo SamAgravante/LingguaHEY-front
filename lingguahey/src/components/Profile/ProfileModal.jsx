@@ -80,6 +80,12 @@ const ProfileModal = ({ open, onClose }) => {
     };
 
     const handleSave = async () => {
+        // Check for missing fields
+        if (!formData.firstName || !formData.middleName || !formData.lastName || !formData.email) {
+            showSnack("All fields are required.", "warning");
+            return;
+        }
+
         const payload = {
             userId: formData.userId,
             firstName: formData.firstName,
@@ -104,6 +110,7 @@ const ProfileModal = ({ open, onClose }) => {
             showSnack('Update failed', 'error');
         }
     };
+
 
     const handlePwdDialogOpen = () => {
         setCurrentPassword("");
@@ -218,6 +225,7 @@ const ProfileModal = ({ open, onClose }) => {
                                         value={formData.firstName || ''}
                                         onChange={handleChange}
                                         fullWidth
+                                        required
                                         variant="outlined"
                                         InputProps={{
                                             sx: {
@@ -273,6 +281,7 @@ const ProfileModal = ({ open, onClose }) => {
                                         value={formData.lastName || ''}
                                         onChange={handleChange}
                                         fullWidth
+                                        required
                                         variant="outlined"
                                         InputProps={{
                                             sx: {
@@ -300,6 +309,7 @@ const ProfileModal = ({ open, onClose }) => {
                                         value={formData.email || ''}
                                         disabled
                                         fullWidth
+                                        required
                                         variant="outlined"
                                         InputProps={{
                                             sx: {
@@ -401,7 +411,7 @@ const ProfileModal = ({ open, onClose }) => {
                 }}>
                     <DialogTitle sx={{ textAlign: 'center', color: '#5D4037' }}>Confirm Password Change</DialogTitle>
                     <Divider sx={{ mb: 1 }} />
-                        
+
                     <DialogContent>
                         <Stack spacing={2} sx={{ mt: 1 }}>
                             <TextField
@@ -420,6 +430,7 @@ const ProfileModal = ({ open, onClose }) => {
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
                                 fullWidth
+                                required
                                 variant="outlined"
                                 InputLabelProps={{
                                     sx: {
@@ -447,6 +458,7 @@ const ProfileModal = ({ open, onClose }) => {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 fullWidth
+                                required
                                 variant="outlined"
                                 InputLabelProps={{
                                     sx: {
@@ -473,6 +485,7 @@ const ProfileModal = ({ open, onClose }) => {
                                 value={confirmNewPassword}
                                 onChange={(e) => setConfirmNewPassword(e.target.value)}
                                 fullWidth
+                                required
                                 variant="outlined"
                                 InputLabelProps={{
                                     sx: {
@@ -497,11 +510,22 @@ const ProfileModal = ({ open, onClose }) => {
                 autoHideDuration={4000}
                 onClose={handleSnackClose}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                container={document.body}
+                sx={{
+                    position: "fixed",      // not relative to modal
+                    zIndex: 20000,          // force much higher than modal/dialog
+                }}
             >
-                <Alert onClose={handleSnackClose} severity={snackSeverity} sx={{ width: '100%' }}>
+                <Alert
+                    onClose={handleSnackClose}
+                    severity={snackSeverity}
+                    sx={{ width: '100%' }}
+                >
                     {snackMessage}
                 </Alert>
             </Snackbar>
+
+
         </>
     );
 };
