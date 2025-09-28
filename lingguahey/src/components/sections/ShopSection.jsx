@@ -5,6 +5,7 @@ import GameTextField from '../../assets/images/backgrounds/GameTextField.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png';
 import GameShopField from '../../assets/images/backgrounds/GameShopField.png';
 import GameShopBoxSmall from '../../assets/images/backgrounds/GameShopBoxSmall.png';
+import GameShopBoxSmallRed from '../../assets/images/backgrounds/GameShopBoxSmallRed.png';
 import ItemBox from '../../assets/images/backgrounds/ItemBox.png';
 import GameTextBox from '../../assets/images/backgrounds/GameTextBox.png';
 import HealthPotion from '../../assets/images/objects/HealthPotion.png';
@@ -25,7 +26,8 @@ export default function ShopSection({
   setMakeMessageAppear,
   buyPotion,
   handleBackClick,
-  renderGemAndCoinsTab
+  renderGemAndCoinsTab,
+  coins
 }) {
   return (
     <Grid container direction="column" alignItems="center" >
@@ -62,13 +64,36 @@ export default function ShopSection({
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          <Typography>Confirm Purchase</Typography>
-          <Typography>Health Potion {shopHealthPotion}x</Typography>
-          <Typography>Shield Potion {shopShieldPotion}x</Typography>
-          <Typography>Skip Potion {shopSkipPotion}x</Typography>
-          <Stack direction='row'>
-            <Button onClick={() => buyPotion()}>Confirm</Button>
-            <Button onClick={() => setMakeMessageAppear(false)}>Cancel</Button>
+          <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 40 }}>
+            Confirm Purchase
+          </Typography>
+          <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20 }}>
+            Health Potion {shopHealthPotion}x</Typography>
+          <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20 }}>
+            Shield Potion {shopShieldPotion}x</Typography>
+          <Typography color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20 }}>
+            Skip Potion {shopSkipPotion}x</Typography>
+          <Stack direction='row' spacing={5}>
+            <Button
+              sx={{
+                backgroundImage: `url(${GameShopBoxSmall})`,
+                backgroundSize: 'cover',
+                width: '210px',
+                height: '60px',
+                top: 20,
+                color: '#5D4037'
+              }}
+              onClick={() => buyPotion()}>Confirm</Button>
+            <Button
+              sx={{
+                backgroundImage: `url(${GameShopBoxSmallRed})`,
+                backgroundSize: 'cover',
+                width: '210px',
+                height: '60px',
+                top: 20,
+                color: '#5D4037'
+              }}
+              onClick={() => setMakeMessageAppear(false)}>Cancel</Button>
           </Stack>
         </Stack>
       </Box>
@@ -314,15 +339,20 @@ export default function ShopSection({
           <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', marginTop: 2 }}>
             Total: {shopTotal} Gold
           </Typography>
+          <Box width={400} height={10}>
+            {(shopTotal > coins) && <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+              You don't have enough coins</Typography>}
+          </Box>
+
           <Button
             sx={{
               width: 400,
               height: 80,
-              marginTop: 2,
-              backgroundImage: `url(${shopTotal === 0 ? GameTextBox : GameTextField})`,
+              marginTop: 3,
+              backgroundImage: `url(${shopTotal === 0 || shopTotal > coins ? GameTextBox : GameTextField})`,
               backgroundSize: 'cover',
             }}
-            disabled={shopTotal === 0}
+            disabled={shopTotal === 0 || shopTotal > coins}
             onClick={() => setMakeMessageAppear(true)}
           >
             <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>

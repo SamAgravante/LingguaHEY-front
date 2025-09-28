@@ -654,6 +654,7 @@ export default function Homepage() {
             buyPotion={buyPotion}
             handleBackClick={handleBackClick}
             renderGemAndCoinsTab={renderGemAndCoinsTab}
+            coins={coins}
           />
         );
       } else if (section === 'Summon') {
