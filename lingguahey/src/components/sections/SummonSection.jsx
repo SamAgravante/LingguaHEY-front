@@ -16,8 +16,11 @@ export default function SummonSection({
   handleBackClick,
   renderGemAndCoinsTab,
   userDetails,
-  setGems
+  setGems,
+  SetInventory,
+  inventory
 }) {
+
   const [visibilityGacha, setVisibilityGacha] = useState('hidden');
   const [makeMessageAppear, setMakeMessageAppear] = useState(false);
   const [pulledItem, setPulledItem] = useState({});
@@ -37,6 +40,10 @@ export default function SummonSection({
       // Minus gem cost
       const userResp = await API.get(`/users/${userDetails.userId}`);
       setGems(userResp.data.gems);
+
+      const inventoryResp = await API.get(`/inventory/${userDetails.userId}`);
+      SetInventory(inventoryResp.data);
+      console.log("Inventory contains:" + inventoryResp.data);
     } catch (err) {
       console.error('Error during gacha pull:', err);
     }
@@ -194,15 +201,15 @@ export default function SummonSection({
           position: 'absolute',
           bottom: 20,
           right: 20,
-          height:60,
-          width:300,
+          height: 60,
+          width: 300,
           backgroundImage: `url(${GameTextField})`,
           backgroundSize: 'cover',
-          fontSize:19
+          fontSize: 19
         }}
         onClick={handleBackClick}
       >
-        Leave Summoning Altar 
+        Leave Summoning Altar
       </Button>
 
       {/* Summon Button */}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { motion } from "framer-motion";
 
 import axios from 'axios';
 import {
@@ -39,6 +40,13 @@ import Laser from '../../assets/images/effects/Laser.png';
 import GoldCoins from "../../assets/images/objects/GoldCoins.png";
 import Gems from "../../assets/images/objects/Gems.png";
 
+import BossAura from "../../assets/images/effects/BossAura.gif";
+import LaserFail from "../../assets/images/effects/LaserFail.gif";
+import LaserSuccess from "../../assets/images/effects/LaserSuccess.gif";
+import Shield from "../../assets/images/effects/Shield.png";
+import ShieldEnemy from "../../assets/images/effects/ShieldEnemy.png";
+import MCNoWeaponHit from '../../assets/images/characters/MCNoWeaponHit.png';
+
 // Fisher–Yates shuffle
 function shuffleArray(array) {
   const arr = array.slice();
@@ -62,6 +70,10 @@ export default function DungeonGame() {
   const [messageDetails, setMessageDetails] = useState({});
   const [coinReward, setCoinReward] = useState(0);
   const [gemReward, setGemReward] = useState(0);
+  const [itemEquipped, setItemEquipped] = useState({});
+  const [enemyAttacking, setEnemyAttacking] = useState(false);
+  const [impactVisible, setImpactVisible] = useState(false);
+
   const hints = [
     'Read the Codex to learn about the monsters',
     'Use your potions wisely',
@@ -76,6 +88,9 @@ export default function DungeonGame() {
   const [showLaser, setShowLaser] = useState(false);
 
   const [shieldActive, setShieldActive] = useState(false);
+  const [laserEffect, setLaserEffect] = useState(null);
+  const [enemyDefeated, setEnemyDefeated] = useState(false);
+
 
   const getMonster = async () => {
     try {
@@ -104,7 +119,12 @@ export default function DungeonGame() {
         });
         setCoinReward(lvl.data.coinsReward);
         setGemReward(lvl.data.gemsReward);
-        
+
+        const equipResp = await API.get(`/users/${userId}/equipped-cosmetic`);
+        // API shape: { equippedCosmetic: { cosmeticId, name, rarity, cosmeticImage } }
+        setItemEquipped(equipResp.data?.equippedCosmetic || {});
+        console.log("Equipped Item:", equipResp.data);
+
         const userResp = await API.get(`/users/${userId}`);
         setUserDetails(userResp.data);
         const gameInfo = await API.post(`/game/start`, { levelId, userId });
@@ -140,44 +160,80 @@ export default function DungeonGame() {
       const userAnswer = await API.post(`/game/guess`, { guessedName });
       console.log('Answer response:', userAnswer.data);
       setSelectedTiles([]);
-      setShieldActive(false);
 
-      // inside handleSubmitAnswer
-if (!userAnswer.data.correct) {
-  setHp(userAnswer.data.lives);
-  if (userAnswer.data.gameOver) {
-    setIsGameOver(true);
-    setMakeMessageAppear(true);
-    setMessageDetails({
-      mainMessage: 'Level Failed',
-      subMessage: 'Hint:'
-    });
-  }
-} else {
-  // Show laser effeect
-  setShowLaser(true);
+      if (!userAnswer.data.correct) {
+        // Wrong answer -> play fail laser
+        setLaserEffect("fail");
 
-  setTimeout(() => {
-    if (userAnswer.data.gameOver) {
-      setIsGameOver(true);
-      setMakeMessageAppear(true);
-      setMessageDetails({
-        mainMessage: 'Level Cleared',
-        subMessage: `Rewards: `
-      });
-    } else {
-      getMonster();
-      setRoundCounter(prev => prev + 1);
-    }
-    // Hide laser once next monster appears
-    setShowLaser(false);
-  }, 800);
-}
+        setHp(userAnswer.data.lives);
+
+        if (userAnswer.data.gameOver) {
+          setIsGameOver(true);
+          setMakeMessageAppear(true);
+          setMessageDetails({
+            mainMessage: 'Level Failed',
+            subMessage: 'Hint:'
+          });
+        }
+
+        // Enemy counterattack sequence
+        setTimeout(() => {
+          setLaserEffect(null);
+          setEnemyAttacking(true);
+
+          // Show impact or consume shield after enemy reaches player (mga 0.8s)
+          setTimeout(() => {
+            if (shieldActive) {
+              // Shield absorbs this enemy attack, then disappears
+              setShieldActive(false);
+            } else {
+              // No shield active → take damage animation
+              setImpactVisible(true);
+              setTimeout(() => setImpactVisible(false), 500);
+            }
+          }, 800);
+
+          // Return enemy back
+          setTimeout(() => {
+            setEnemyAttacking(false);
+          }, 2000);
+        }, 1000);
+      }
+
+      else {
+        // Correct answer -> play success laser
+        setLaserEffect("success");
+
+        setTimeout(() => {
+          if (userAnswer.data.gameOver) {
+            setIsGameOver(true);
+            setMakeMessageAppear(true);
+            setMessageDetails({
+              mainMessage: 'Level Cleared',
+              subMessage: `Rewards: `
+            });
+            setLaserEffect(null);
+          } else {
+            // Trigger enemy stagger and fade sequence
+            setEnemyDefeated(true);
+
+            // load next monster
+            setTimeout(() => {
+              setEnemyDefeated(false);
+              getMonster();
+              setRoundCounter(prev => prev + 1);
+            }, 1200);
+
+            setLaserEffect(null);
+          }
+        }, 800);
+      }
 
     } catch (error) {
       console.error("Error submitting answer:", error);
     }
   };
+
 
 
   function confirmPotion(potionType) {
@@ -276,8 +332,8 @@ if (!userAnswer.data.correct) {
               width: 48, height: 43,
               //border: '2px solid red',
               backgroundImage: `url(${shieldActive
-                  ? (hp > i ? HeartShield : HeartNotFilled)
-                  : (hp > i ? HeartFilled : HeartNotFilled)
+                ? (hp > i ? HeartShield : HeartNotFilled)
+                : (hp > i ? HeartFilled : HeartNotFilled)
                 })`,
               backgroundSize: 'cover',
               marginLeft: i === 0 ? 10 : 2
@@ -343,17 +399,20 @@ if (!userAnswer.data.correct) {
 
 
       {/* Cast Button */}
-      <Button sx={{
-        backgroundImage: `url(${CastButton})`,
-        backgroundSize: 'cover',
-        width: '220px',
-        height: '80px',
-        position: 'absolute',
-        top: '20%',
-        color: '#5D4037',
-        visibility: selectedTiles.length > 0 ? 'visible' : 'hidden',
-      }}
+      <Button
+        sx={{
+          backgroundImage: `url(${CastButton})`,
+          backgroundSize: 'cover',
+          width: '220px',
+          height: '80px',
+          position: 'absolute',
+          top: '20%',
+          color: '#5D4037',
+          visibility: selectedTiles.length > 0 ? 'visible' : 'hidden',
+          opacity: enemyAttacking ? 0.5 : 1, // fade when disabled
+        }}
         onClick={handleSubmitAnswer}
+        disabled={enemyAttacking} // disable during enemy attack
       />
 
       {/* Selected Tiles */}
@@ -385,40 +444,145 @@ if (!userAnswer.data.correct) {
       </Box>
 
       {/* Characters */}
-      <Box sx={{ width: 1000, height: 400, top: '3%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-        <Stack direction='row'>
-          <Box sx={{
-            width: '220px', height: '215px', position: 'absolute', bottom: 0, left: 0,
-            //border: '2px solid red' 
-          }}>
-            <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-              <img src={MCNoWeapon} alt="Player" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
-              <img src={WeaponBasicStaff} alt="Weapon" style={{ position: 'absolute', top: 0, left: 0, width: '220px', height: '215px' }} />
+      <Box
+        sx={{
+          width: 1000,
+          height: 400,
+          top: "3%",
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+        }}
+      >
+        <Stack direction="row" sx={{ width: "100%" }}>
+          {/* Main Character */}
+          <motion.div
+            key={`mc-${roundCounter}`}
+            initial={{ x: "-200%" }}
+            animate={
+              impactVisible
+                ? {
+                  x: [0, -15, 15, -10, 10, -5, 5, 0] // shake sequence
+                }
+                : {
+                  x: 0
+                }
+            }
+            transition={{
+              duration: impactVisible ? 0.6 : 0.8, // quick shake if hit
+              ease: "easeInOut"
+            }}
+            style={{ position: "absolute", bottom: 0, left: 0, width: "220px", height: "215px" }}
+          >
+
+            <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
+              <img
+                src={MCNoWeapon}
+                alt="Player"
+                style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px" }}
+              />
+              {itemEquipped?.cosmeticImage ? (
+                <img
+                  src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
+                  alt="Weapon"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '220px',
+                    height: '215px'
+                  }}
+                />
+              ) : null}
+              {shieldActive && (
+                <img
+                  src={Shield}
+                  alt="Shield"
+                  style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px" }}
+                />
+              )}
+
             </Box>
-          </Box>
+            {impactVisible && (
+              <img
+                src={MCNoWeaponHit}
+                alt="Player"
+                style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px" }}
+              />
+            )}
+
+          </motion.div>
+
+          {/* Enemy */}
+          <motion.div
+            key={`enemy-${roundCounter}`}
+            initial={{ x: "100%", opacity: 0 }}
+            animate={
+              enemyDefeated
+                ? {
+                  x: [0, -15, 15, -10, 10, -5, 5, 0], // shake (stagger)
+                  opacity: 0 // fade out
+                }
+                : {
+                  x: enemyAttacking ? "-600px" : 0,
+                  opacity: 1
+                }
+            }
+            transition={{
+              duration: enemyDefeated ? 1.2 : 0.8,
+              ease: "easeInOut"
+            }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: "220px",
+              height: "215px",
+            }}
+          >
+            <img
+              src={`data:image/png;base64,${currentMonster.imageData}`}
+              alt="Enemy"
+              style={{ width: "220px", height: "215px" }}
+            />
+            {laserEffect === "fail" && (
+              <img
+                src={ShieldEnemy}
+                alt="Shield Enemy"
+                style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px" }}
+              />
+            )}
+          </motion.div>
+
+
+
+
+          {/* Laser Effect */}
           <Box
             sx={{
-              width: 600,
+              width: 700,
               height: 100,
-              position: 'relative',
-              display: showLaser ? 'flex' : 'none',
-              alignItems: 'center',
-              justifyContent: 'center',
+              position: "relative",
+              display: laserEffect ? "flex" : "none",
+              alignItems: "center",
+              justifyContent: "center",
               zIndex: 1000,
-              backgroundImage: `url(${Laser})`,
-              backgroundSize: 'cover',
-              animation: showLaser ? 'shoot 0.5s ease-in-out' : 'none'
+              mt: 10,
+              ml: 25,
             }}
-          />
-
-          <Box sx={{
-            width: '220px', height: '215px', position: 'absolute', bottom: 0, right: 0,
-            //border: '2px solid red' 
-          }}>
-            <img src={`data:image/png;base64,${currentMonster.imageData}`} alt="Enemy" style={{ width: '220px', height: '215px' }} />
+          >
+            {laserEffect === "success" && (
+              <img src={LaserSuccess} alt="Laser Success" style={{ width: "100%", height: "100%" }} />
+            )}
+            {laserEffect === "fail" && (
+              <img src={LaserFail} alt="Laser Fail" style={{ width: "100%", height: "100%" }} />
+            )}
           </Box>
         </Stack>
       </Box>
+
 
       {/* Message Box */}
       {makeMessageAppear && (
@@ -433,35 +597,35 @@ if (!userAnswer.data.correct) {
         }}>
           <Grid container direction="column" alignItems="center" sx={{ p: 4 }}>
             <Stack direction="column" alignItems="center">
-  <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-    {messageDetails.mainMessage}
-  </Typography>
+              <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                {messageDetails.mainMessage}
+              </Typography>
 
-  <Typography variant="h5" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', mt: 2 }}>
-    {messageDetails.subMessage}
-  </Typography>
+              <Typography variant="h5" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', mt: 2 }}>
+                {messageDetails.subMessage}
+              </Typography>
 
-  {/* If game cleared, show rewards nicely */}
-  {messageDetails.mainMessage === 'Level Cleared' && (
-    <Stack direction="row" spacing={4} mt={2}>
-      <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-        <img src={GoldCoins} alt="Coin" style={{ width: '20px', height: '20px', marginRight: '8px', verticalAlign: 'middle' }} />
-         {(levelData.coinsReward ?? 0)} Coins
-      </Typography>
-      <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
-        <img src={Gems} alt="Gems" style={{ width: '20px', height: '30px', marginRight: '8px', verticalAlign: 'middle' }} /> 
-        {(levelData.gemsReward ?? 0)} Gems
-      </Typography>
-    </Stack>
-  )}
+              {/* If game cleared, show rewards */}
+              {messageDetails.mainMessage === 'Level Cleared' && (
+                <Stack direction="row" spacing={4} mt={2}>
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    <img src={GoldCoins} alt="Coin" style={{ width: '20px', height: '20px', marginRight: '8px', verticalAlign: 'middle' }} />
+                    {(levelData.coinsReward ?? 0)} Coins
+                  </Typography>
+                  <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
+                    <img src={Gems} alt="Gems" style={{ width: '20px', height: '30px', marginRight: '8px', verticalAlign: 'middle' }} />
+                    {(levelData.gemsReward ?? 0)} Gems
+                  </Typography>
+                </Stack>
+              )}
 
-  {/* If failed, show hint */}
-  {isGameOver && messageDetails.mainMessage === 'Level Failed' && (
-    <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', mt: 2 }}>
-      {hints[Math.floor(Math.random() * hints.length)]}
-    </Typography>
-  )}
-</Stack>
+              {/* If failed, show hint */}
+              {isGameOver && messageDetails.mainMessage === 'Level Failed' && (
+                <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', mt: 2 }}>
+                  {hints[Math.floor(Math.random() * hints.length)]}
+                </Typography>
+              )}
+            </Stack>
 
 
             {/* Show potion confirm/cancel */}
@@ -604,7 +768,7 @@ if (!userAnswer.data.correct) {
                           fontWeight: 'bold',
                           fontFamily: 'RetroGaming',
                           fontSize: 24,
-                          opacity:  1,'&:hover': { opacity: 0.8, cursor: 'pointer' }
+                          opacity: 1, '&:hover': { opacity: 0.8, cursor: 'pointer' }
                         }}
                       >
                         {letter}
