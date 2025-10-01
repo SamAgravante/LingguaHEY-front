@@ -480,7 +480,7 @@ useEffect(() => {
 
         <Button sx={{borderRadius: 6, ml: "auto", backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/activities`)}>
           <Typography variant="body1" sx={{ color: "white" }}>
-            Lesson Creation
+            Game Editor
           </Typography>
         </Button>
       </Box>

@@ -85,7 +85,6 @@ const Layout = () => {
     lastName: "",
     role: null,
   });
-  const [totalPoints, setTotalPoints] = useState(0);
   const { setIntroMode } = useContext(MusicContext);
   const { refreshTrigger } = useScore();
 
@@ -106,9 +105,6 @@ const Layout = () => {
         const userRes = await API.get(`/users/${userId}`);
         setUserData(userRes.data);
 
-        const ptsRes = await API.get(`/scores/users/${userId}/total`);
-        setTotalPoints(ptsRes.data);
-
         // role-based redirect on initial login
         if (location.pathname === "/") {
           if (userRes.data.role === "USER") navigate("/homepage");
@@ -116,28 +112,12 @@ const Layout = () => {
           if (userRes.data.role === "ADMIN") navigate("/admindashboard");
         }
       } catch (err) {
-        console.error("Failed to fetch user or points:", err);
+        console.error("Failed to fetch user:", err);
       }
     };
 
     loadUser();
   }, [token, navigate, location.pathname]);
-
-  // Poll for updated points
-  useEffect(() => {
-    const fetchPoints = async () => {
-      if (!userData.userId || !token) return;
-
-      try {
-        const { data } = await API.get(`/scores/users/${userData.userId}/total`);
-        setTotalPoints(data);
-      } catch (err) {
-        console.error("Failed to fetch user points:", err);
-      }
-    };
-
-    fetchPoints();
-  }, [userData.userId, token, refreshTrigger]);
 
   const handleRoute = async (route) => {
     if (route.label === "Logout") {
@@ -182,12 +162,6 @@ const Layout = () => {
               {userData.firstName} {userData.middleName ? userData.middleName.charAt(0) + "." : ""}{" "}
               {userData.lastName}
             </Typography>
-
-            {userData.role !== "TEACHER" && (
-              <Typography variant="h7" align="center" sx={{ color: textColor, padding: 2 }}>
-                {totalPoints} Total Points
-              </Typography>
-            )}
             <Divider />
             <Box sx={{ p: 2 }}>
               <Button

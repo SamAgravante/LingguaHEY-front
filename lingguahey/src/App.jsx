@@ -31,6 +31,10 @@ import LiveActivityGame from "./components/Pages/LiveActivityGame";
 import TeacherDashboardPopUp from "./components/Pages/TeacherDashboardPopUp";
 import MultiplayerGameRoom from "./components/Pages/MultiplayerGameRoom";
 
+import LevelEditor from "./components/Pages/Editors/LevelEditor";
+import MonsterEditor from "./components/Pages/Editors/MonsterEditor";
+import AddLevelForm from "./components/Pages/Editors/AddLevelForm";
+
 function App() {
   const { token } = useAuth();
 
@@ -70,8 +74,14 @@ function App() {
         <Route path="/teacher/live-activities/:roomId" element={<LiveActClassroom />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
 
-        {/* Lesson Activities */}
+        {/* Game Editors */}
+        {/* Change Name Later */}
         <Route path="/activities" element={<Activities />} />
+        <Route path="/leveleditor" element={<LevelEditor />} />
+        <Route path="/add-level" element={<AddLevelForm />} />
+        <Route path="/monstereditor" element={<MonsterEditor />} />
+
+        {/* Game */}
         <Route path="/dungeon" element={<DungeonGame />} />
 
         {/* Live Activities under a classroom context */}
