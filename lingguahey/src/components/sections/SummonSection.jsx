@@ -67,7 +67,7 @@ export default function SummonSection({
   const rarityBackgrounds = {
     COMMON: CommonItem,
     RARE: RareItem,
-    MYTHICAL: MythicalItem,
+    MYTHIC: MythicalItem,
     LEGENDARY: LegendaryItem
   };
 

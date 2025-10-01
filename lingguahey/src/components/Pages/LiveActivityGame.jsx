@@ -143,9 +143,12 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     const client = Stomp.over(socket);
     client.debug = () => { };
     stompClientRef.current = client;
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
 
     client.connect(
-      {},
+      headers,
       () => {
         subscriptionRef.current = client.subscribe(
           `/topic/lobby/${activityId}`,
@@ -260,16 +263,16 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
               key={char.key}
               sx={{
                 //border: selectedChar === char.value ? '3px solid #1E88E5' : '2px solid #ccc',
-                
+
                 background: selectedChar === char.value ? '#E3F2FD' : '#fff',
                 transition: 'border 0.2s, background 0.2s',
                 boxShadow: selectedChar === char.value ? '0 0 8px #90caf9' : 'none',
                 backgroundImage: `url(${GameShopField})`,
                 backgroundSize: 'cover',
-                width:'6vw',
-                height:'13vh',
+                width: '6vw',
+                height: '13vh',
                 justifyContent: 'center',
-                alignItems: 'center',pt:4
+                alignItems: 'center', pt: 4
 
               }}
               onClick={() => setSelectedChar(char.value)}
