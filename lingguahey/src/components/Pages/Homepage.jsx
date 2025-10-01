@@ -79,6 +79,7 @@ import DungeonArrowLeft from "../../assets/images/objects/DungeonArrowLeft.png";
 import DungeonArrowRight from "../../assets/images/objects/DungeonArrowRight.png";
 import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
 import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
+import ScrollBig from '../../assets/images/objects/ScrollBig.png';
 
 //Weapons
 import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
@@ -139,7 +140,7 @@ export default function Homepage() {
   const [multiplayerOpen, setMultiplayerOpen] = useState(false);
   const [deployedActivityId, setDeployedActivityId] = useState(null);
 
-  const [completedLevels,setCompletedLevels]= useState([]);
+  const [completedLevels, setCompletedLevels] = useState([]);
   const [dungeonBackground, setDungeonBackground] = useState(DungeonOpen || "linear-gradient(#000, #333)");
 
   useEffect(() => {
@@ -216,8 +217,8 @@ export default function Homepage() {
   }
 
   //Dungeon background if open
-  async function changeDungeonBackground(){
-    
+  async function changeDungeonBackground() {
+
   }
 
 
@@ -666,6 +667,7 @@ export default function Homepage() {
             setGems={setGems}
             SetInventory={SetInventory}
             inventory={inventory}
+            gems={gems}
           />
         );
       }
@@ -1438,49 +1440,92 @@ export default function Homepage() {
         }}
         closeAfterTransition
         BackdropProps={{ timeout: 500 }}
+        
       >
-        <Fade in={multiplayerOpen}>
+        <Fade in={multiplayerOpen} >
           <Box
             sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '98vw',
-              height: '100vh',
-              backgroundImage: `url(${modalBg})`,
-              p: 3,
-              overflowY: 'auto',
+              position: 'relative',
+              top: 30,
+              left: 240,
+              width: '74%',
+              height: '90%',
+              backgroundImage: `url(${ScrollBig})`,
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: "cover",
+              backgroundPosition: 'center',
+              //padding: 3,
+              //m:4,
+              //border: 'solid',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              overflow: 'hidden',
             }}
           >
-            <Stack direction="row" justifyContent="space-between">
-              <IconButton onClick={() => {
-                if (liveActivityRef.current?.handleReturn) {
-                  liveActivityRef.current.handleReturn();
-                } else {
-                  setMultiplayerOpen(false);
-                  setActivityMode(false);
-                }
-              }}>
+            {/* Top bar with buttons 
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              sx={{
+                position: "absolute",
+                top: 16,
+                left: 16,
+                right: 16,
+              }}
+            >
+              <IconButton
+                onClick={() => {
+                  if (liveActivityRef.current?.handleReturn) {
+                    liveActivityRef.current.handleReturn();
+                  } else {
+                    setMultiplayerOpen(false);
+                    setActivityMode(false);
+                  }
+                }}
+              >
                 <ArrowBackIcon />
               </IconButton>
-              <IconButton onClick={() => {
-                setMultiplayerOpen(false);
-                setActivityMode(false);
-              }}>
+              <IconButton
+                onClick={() => {
+                  setMultiplayerOpen(false);
+                  setActivityMode(false);
+                }}
+              >
                 <CloseIcon />
               </IconButton>
             </Stack>
-            <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
+*/}
+            {/* Centered title */}
+            <Typography
+              variant="h1"
+              color="#5D4037"
+              sx={{
+                textAlign: 'center',
+                visibility: secVisibility ? 'visible' : 'hidden',
+                mb: 3,
+                fontWeight: 'bold'
+              }}
+            >
               King of the Hill!
             </Typography>
+
+            {/* Centered game box */}
             <Box
               sx={{
-                flexGrow: 1,
+                flexGrow: 0,
                 maxHeight: '80vh',
                 overflowY: 'auto',
                 '&::-webkit-scrollbar': { width: '25px' },
-                '&::-webkit-scrollbar-track': { background: '#FFF0F5', borderRadius: '8px' },
-                '&::-webkit-scrollbar-thumb': { background: '#F5C0E7', borderRadius: '8px' },
+                '&::-webkit-scrollbar-track': {
+                  background: '#FFF0F5',
+                  borderRadius: '8px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#F5C0E7',
+                  borderRadius: '8px',
+                },
                 '&::-webkit-scrollbar-thumb:hover': { background: '#E79FD9' },
                 scrollbarColor: '#F5C0E7 #FFF0F5',
                 scrollbarWidth: 'thick',

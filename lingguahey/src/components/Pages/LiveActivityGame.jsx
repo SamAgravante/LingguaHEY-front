@@ -24,6 +24,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import char_1 from '../../assets/images/characters/lingguahey-char1-wave.png';
 import char_2 from '../../assets/images/characters/lingguahey-char1-stand.png';
 import MultiplayerGameRoom from './MultiplayerGameRoom';
+import ScrollBig from '../../assets/images/objects/ScrollBig.png';
+import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
 
 const CHARACTERS = [
   { key: 'char_1', img: char_1, label: 'Char 1', value: 1 },
@@ -97,10 +99,10 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const disconnectWebsocket = () => {
     try {
       subscriptionRef.current?.unsubscribe();
-    } catch {}
+    } catch { }
     try {
       stompClientRef.current?.disconnect();
-    } catch {}
+    } catch { }
   };
 
   // ---- LOBBY JOIN & WEBSOCKET ----
@@ -139,7 +141,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     // 2) STOMP via SockJS
     const socket = new SockJS(`${BASE_URL}/ws`);
     const client = Stomp.over(socket);
-    client.debug = () => {};
+    client.debug = () => { };
     stompClientRef.current = client;
 
     client.connect(
@@ -257,12 +259,18 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             <Box
               key={char.key}
               sx={{
-                border: selectedChar === char.value ? '3px solid #1E88E5' : '2px solid #ccc',
-                borderRadius: '16px', p: 2, cursor: 'pointer',
+                //border: selectedChar === char.value ? '3px solid #1E88E5' : '2px solid #ccc',
+                
                 background: selectedChar === char.value ? '#E3F2FD' : '#fff',
                 transition: 'border 0.2s, background 0.2s',
                 boxShadow: selectedChar === char.value ? '0 0 8px #90caf9' : 'none',
-                
+                backgroundImage: `url(${GameShopField})`,
+                backgroundSize: 'cover',
+                width:'6vw',
+                height:'13vh',
+                justifyContent: 'center',
+                alignItems: 'center',pt:4
+
               }}
               onClick={() => setSelectedChar(char.value)}
             >
@@ -279,16 +287,16 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             setError('');
             try {
               const payload = {
-                userId:      userDetails.userId,
-                firstName:   userDetails.firstName,
-                middleName:  userDetails.middleName,
-                lastName:    userDetails.lastName,
-                email:       userDetails.email,
-                password:    userDetails.password,
-                idNumber:    userDetails.idNumber,
+                userId: userDetails.userId,
+                firstName: userDetails.firstName,
+                middleName: userDetails.middleName,
+                lastName: userDetails.lastName,
+                email: userDetails.email,
+                password: userDetails.password,
+                idNumber: userDetails.idNumber,
                 totalPoints: userDetails.totalPoints,
-                profilePic:  selectedChar,
-                role:        userDetails.role,
+                profilePic: selectedChar,
+                role: userDetails.role,
               };
               await USER_API.put(`/${user}`, payload);
               setHasJoined(true);
@@ -316,7 +324,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     <Box sx={{ p: 4 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>Lobby</Typography>
       <Typography variant="subtitle1" gutterBottom>Users in Lobby:</Typography>
-      
+
       {/* 
         Changed the container to flex so that each user's avatar + name
         is arranged horizontally. 

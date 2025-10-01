@@ -5,6 +5,7 @@ import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png'
 import { MusicContext } from "../../contexts/MusicContext";
 import LandingBackgroundPic from '../../assets/images/backgrounds/CrystalOnly.png';
 import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
+import TitleCard from '../../assets/images/backgrounds/TitleCard.png';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -46,12 +47,22 @@ export default function LandingPage() {
             height: 700,
             //border: '4px solid #FFF3E0',
             pt: 5,
+            justifyContent:"center",
+            alignItems:"center"
             }}>
           
             
-          <Typography variant="h4" pt={2} color={textColor} sx={{ fontWeight: 'bold', height: 264,fontFamily: 'RetroGaming' }}>
-            LingguaHEY
-          </Typography>
+          <Box  sx={{
+            backgroundImage: `url(${TitleCard})`, 
+            backgroundSize: 'contain', 
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            height: 120,
+            width:300,
+            //border:"solid",
+            ml:2
+            }}>
+          </Box>
           <Typography variant="subtitle1" pb={3} color={textColor}>
             A Filipino Language Learning App
           </Typography>
@@ -65,6 +76,7 @@ export default function LandingPage() {
               color: textColor,
               textTransform: 'none',
               mb: 2,
+              mt:20
             }}
             onClick={() => navigate('/login')}
           >
@@ -73,7 +85,7 @@ export default function LandingPage() {
 
           <Typography
             align="center"
-            sx={{ color: primaryBtn, cursor: 'pointer' }}
+            sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 15, color: '#5D4037', cursor: 'pointer' }}
             onClick={() => navigate('/roleselect')}
           >
             No Account? Register Now!

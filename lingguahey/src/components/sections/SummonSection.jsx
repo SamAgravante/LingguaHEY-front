@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Grid, Typography, Button, Stack, Box } from '@mui/material';
 import CommonItem from '../../assets/images/ui-assets/CommonItem.png';
 import RareItem from '../../assets/images/ui-assets/RareItem.png';
@@ -6,9 +6,10 @@ import MythicalItem from '../../assets/images/ui-assets/MythicalItem.png';
 import LegendaryItem from '../../assets/images/ui-assets/LegendaryItem.png';
 import GameTextField from '../../assets/images/backgrounds/GameTextField.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png';
-import GameShopField from '../../assets/images/backgrounds/GameShopField.png';
 import GameShopBoxSmall from '../../assets/images/backgrounds/GameShopBoxSmall.png';
-import ItemBox from '../../assets/images/backgrounds/ItemBox.png';
+import GameShopBoxSmallRed from '../../assets/images/backgrounds/GameShopBoxSmallRed.png';
+import SummonAnimation from '../../assets/images/effects/SummonAnimation.png';
+import SummonAnimationGIF from '../../assets/images/effects/SummonAnimation.gif';
 import GameTextBox from '../../assets/images/backgrounds/GameTextBox.png';
 import API from '../../api';
 
@@ -18,12 +19,15 @@ export default function SummonSection({
   userDetails,
   setGems,
   SetInventory,
-  inventory
+  inventory,
+  gems
 }) {
-
   const [visibilityGacha, setVisibilityGacha] = useState('hidden');
   const [makeMessageAppear, setMakeMessageAppear] = useState(false);
   const [pulledItem, setPulledItem] = useState({});
+  const [showItem, setShowItem] = useState(false);
+  const [animationKey, setAnimationKey] = useState(Date.now()); // force replay
+
   function handleMakeMessageAppear() {
     setMakeMessageAppear(true);
   }
@@ -31,31 +35,35 @@ export default function SummonSection({
   async function handleSummonClick() {
     try {
       setMakeMessageAppear(false);
+      setVisibilityGacha('visible');
+      setShowItem(false);
+      setAnimationKey(Date.now()); // refresh animation
+
       const response = await API.post(`/gacha/pull`, {
         userId: userDetails.userId
       });
-      setPulledItem(response.data.cosmetic); // store cosmetic details directly
-      console.log('Gacha pull response:', response);
+      setPulledItem(response.data.cosmetic);
 
-      // Minus gem cost
       const userResp = await API.get(`/users/${userDetails.userId}`);
       setGems(userResp.data.gems);
 
       const inventoryResp = await API.get(`/inventory/${userDetails.userId}`);
       SetInventory(inventoryResp.data);
-      console.log("Inventory contains:" + inventoryResp.data);
+
+      // Delay showing the item for 5 seconds
+      setTimeout(() => {
+        setShowItem(true);
+      }, 1000);
     } catch (err) {
       console.error('Error during gacha pull:', err);
     }
-    setVisibilityGacha('visible');
   }
 
   function handleConfirmClick() {
     setVisibilityGacha('hidden');
-    //setPulledItem(null);
+    setShowItem(false);
   }
 
-  // Map rarity to background image
   const rarityBackgrounds = {
     COMMON: CommonItem,
     RARE: RareItem,
@@ -65,6 +73,7 @@ export default function SummonSection({
 
   return (
     <Grid container direction="column" alignItems="center" sx={{ mt: 2 }}>
+      {/* Result Screen */}
       <Box
         sx={{
           visibility: visibilityGacha,
@@ -73,70 +82,73 @@ export default function SummonSection({
           width: '100%',
           height: '100%',
           textAlign: 'center',
-          mb: 2,
-          backgroundColor: '#FFF3E0',
+          backgroundImage: `url(${SummonAnimation}?t=${animationKey})`,
+          backgroundSize: 'cover',
           position: 'absolute',
           top: 0,
           left: 0,
           zIndex: 1
         }}
       >
-        <Box sx={{ position: 'absolute', top: 600, left: 550, color: "#5D4037" }}>
-          <Typography variant='h1' sx={{ color: "#5D4037" }}>
-            You got a new weapon!
-          </Typography>
-          <Typography variant='h1' sx={{ color: "#5D4037" }}>
-            {pulledItem.name}
-          </Typography>
-        </Box>
+        {showItem && (
+          <>
+            <Box sx={{ position: 'absolute', top: 600, left: 550 }}>
+              <Typography
+                sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 40, color: '#5D4037' }}
+              >
+                You got a new weapon!
+              </Typography>
+              <Typography
+                sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 30, color: '#5D4037' }}
+              >
+                {pulledItem.name}
+              </Typography>
+            </Box>
 
-        {/* Item Rarity Indicator */}
-        {pulledItem && (
-          <Box
-            sx={{
-              //borderStyle: 'solid',
-              height: 500,
-              width: 500,
-              backgroundImage: `url(${rarityBackgrounds[pulledItem.rarity] || CommonItem})`,
-              backgroundSize: 'cover',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {/* Cosmetic Image */}
             <Box
               sx={{
-                //borderStyle: 'solid',
-                height: 250,
-                width: 250,
-                backgroundImage: `url(data:image/png;base64,${pulledItem.cosmeticImage})`,
-                backgroundSize: 'contain',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                mb: 2
+                height: 500,
+                width: 500,
+                backgroundImage: `url(${rarityBackgrounds[pulledItem.rarity] || CommonItem})`,
+                backgroundSize: 'cover',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
-            />
+            >
+              <Box
+                sx={{
+                  height: 250,
+                  width: 250,
+                  backgroundImage: `url(data:image/png;base64,${pulledItem.cosmeticImage})`,
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  mb: 2
+                }}
+              />
+            </Box>
 
-          </Box>
+            <Button
+              sx={{
+                width: 200,
+                height: 50,
+                backgroundImage: `url(${GameTextField})`,
+                backgroundSize: 'cover',
+                mt: 10
+              }}
+              onClick={handleConfirmClick}
+            >
+              <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
+                Confirm
+              </Typography>
+            </Button>
+          </>
         )}
-
-        <Button
-          sx={{
-            width: 200,
-            height: 50,
-            backgroundImage: `url(${GameTextField})`,
-            backgroundSize: 'cover',
-            mt: 10
-          }}
-          onClick={handleConfirmClick}
-        >
-          Confirm
-        </Button>
       </Box>
 
-      {/* Purchase confirm modal */}
+      {/* Confirm Summon Modal */}
       <Box
         sx={{
           position: 'absolute',
@@ -152,42 +164,40 @@ export default function SummonSection({
           zIndex: 1000
         }}
       >
-        <Stack
-          direction="column"
-          sx={{
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <Typography>Confirm Purchase</Typography>
-          <Stack direction='row' spacing={2}>
+        <Stack direction="column" sx={{ alignItems: 'center', justifyContent: 'center' }}>
+          <Typography
+            sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 40, color: '#5D4037' }}
+          >
+            Confirm Summon
+          </Typography>
+          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
             <Button
               sx={{
                 backgroundImage: `url(${GameShopBoxSmall})`,
                 backgroundSize: 'cover',
                 width: '210px',
                 height: '60px',
-                top: 20,
                 color: '#5D4037'
               }}
-              onClick={() => handleSummonClick()}
+              onClick={handleSummonClick}
             >
-              <Typography sx={{ fontFamily: 'RetroGaming' }}>Confirm</Typography>
+              <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
+                Confirm
+              </Typography>
             </Button>
             <Button
               sx={{
-                backgroundImage: `url(${GameShopBoxSmall})`,
+                backgroundImage: `url(${GameShopBoxSmallRed})`,
                 backgroundSize: 'cover',
                 width: '210px',
                 height: '60px',
-                top: 20,
                 color: '#5D4037'
               }}
-              onClick={() => {
-                setMakeMessageAppear(false);
-              }}
+              onClick={() => setMakeMessageAppear(false)}
             >
-              <Typography sx={{ fontFamily: 'RetroGaming' }}>Cancel</Typography>
+              <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
+                Cancel
+              </Typography>
             </Button>
           </Stack>
         </Stack>
@@ -209,7 +219,9 @@ export default function SummonSection({
         }}
         onClick={handleBackClick}
       >
-        Leave Summoning Altar
+        <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
+          Leave Summoning Altar
+        </Typography>
       </Button>
 
       {/* Summon Button */}
@@ -219,32 +231,48 @@ export default function SummonSection({
           position: 'absolute',
           top: '75%',
           left: '39%',
-          backgroundImage: `url(${GameTextField})`,
+          backgroundImage: `url(${gems === 0 || 100 > gems ? GameTextBox : GameTextField})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           width: 400,
           height: 80
         }}
+        disabled={gems < 100}
         onClick={handleMakeMessageAppear}
         variant="contained"
       >
-        <Stack direction="column" alignItems="center">
+        {(gems < 100) && <Stack direction="column" alignItems="center">
           <Typography
-            variant="h6"
-            color="#5D4037"
-            sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}
+            sx={{
+              fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037',
+
+            }}
+          >
+            Summon for 100 Gems
+          </Typography>
+          <Typography
+            sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}
+          >
+             (You only have {gems} gems)
+          </Typography>
+        </Stack>}
+        {(gems > 100) && <Stack direction="column" alignItems="center">
+          <Typography
+            sx={{
+              fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037',
+
+            }}
           >
             Summon for
           </Typography>
           <Typography
-            variant="h6"
-            color="#5D4037"
-            sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}
+            sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}
           >
             100 Gems
           </Typography>
-        </Stack>
+        </Stack>}
+
       </Button>
     </Grid>
   );

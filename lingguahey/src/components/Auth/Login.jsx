@@ -128,7 +128,7 @@ export default function Login() {
   // styling tokens
 
   const panelBg = "#FFFFFF";
-  const primaryBtn = "#FFCC80";
+  const primaryBtn = '#5D4037';
   const textColor = "#5D4037";
 
   return (
@@ -238,11 +238,7 @@ export default function Login() {
 
             <Typography
               align="center"
-              sx={{
-                color: primaryBtn,
-                cursor: "pointer",
-                mt: 1,
-              }}
+              sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 15, color: '#5D4037', cursor: 'pointer' }}
               onClick={() => navigate("/roleselect")}
             >
               No Account? Register Now!
