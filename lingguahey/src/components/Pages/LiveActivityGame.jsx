@@ -21,10 +21,11 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import Snackbar from '@mui/material/Snackbar'; // ✅ new
+import MuiAlert from '@mui/material/Alert';    // ✅ for snackbar style
 import char_1 from '../../assets/images/characters/lingguahey-char1-wave.png';
 import char_2 from '../../assets/images/characters/lingguahey-char1-stand.png';
 import MultiplayerGameRoom from './MultiplayerGameRoom';
-import ScrollBig from '../../assets/images/objects/ScrollBig.png';
 import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
 
 const CHARACTERS = [
@@ -74,7 +75,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const [userDetails, setUserDetails] = useState(null);
   const [gameRoomOpen, setGameRoomOpen] = useState(false);
   const [frozenInitialUsers, setFrozenInitialUsers] = useState([]);
-  const [hasDeployedActivity, setHasDeployedActivity] = useState(true); // Add this state
+  const [reconnected, setReconnected] = useState(false); // ✅ snackbar trigger
 
   const user = userId || getUserFromToken().userId;
   const role = useRef(getUserFromToken().role?.toUpperCase());
@@ -83,6 +84,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const didInitRef = useRef(false);
   const onStartedRef = useRef(onStarted);
   const lastNonEmptyUsersRef = useRef([]); // Always keep the latest non-empty user list
+  const isLeavingRef = useRef(false);
 
   useEffect(() => {
     onStartedRef.current = onStarted;
@@ -97,6 +99,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   }, [user]);
 
   const disconnectWebsocket = () => {
+    isLeavingRef.current = true; // prevent reconnect
     try {
       subscriptionRef.current?.unsubscribe();
     } catch { }
@@ -128,9 +131,14 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       })
       .catch(err => {
         if (err.response?.status === 409) {
-          // already joined: refresh users
+          // already joined: refresh users and mark joined
           LOBBY_API.get(`/${activityId}/users`)
-            .then(r => setUsers(r.data))
+            .then(r => {
+              setUsers(r.data);
+              setHasJoined(true);
+              setReconnected(true); // ✅ trigger snackbar
+              setError('');
+            })
             .catch(() => setError('Failed to fetch lobby users'));
         } else {
           setError('Failed to join lobby or fetch users');
@@ -142,69 +150,94 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     const socket = new SockJS(`${BASE_URL}/ws`);
     const client = Stomp.over(socket);
     client.debug = () => { };
+    client.heartbeat.outgoing = 20000;
+    client.heartbeat.incoming = 20000;
+
     stompClientRef.current = client;
+    isLeavingRef.current = false;
+
     const headers = {
       Authorization: `Bearer ${token}`,
     };
 
-    client.connect(
-      headers,
-      () => {
-        subscriptionRef.current = client.subscribe(
-          `/topic/lobby/${activityId}`,
-          msg => {
-            let payload;
-            try {
-              payload = JSON.parse(msg.body);
-            } catch {
-              return;
-            }
-            if (Array.isArray(payload.users)) {
-              setUsers(payload.users);
-              if (payload.users.length > 0) {
-                lastNonEmptyUsersRef.current = payload.users;
+    const connectStomp = () => {
+      if (!stompClientRef.current) return;
+
+      stompClientRef.current.connect(
+        headers,
+        () => {
+          console.log("✅ STOMP connected");
+          setError("");
+
+          subscriptionRef.current = stompClientRef.current.subscribe(
+            `/topic/lobby/${activityId}`,
+            msg => {
+              let payload;
+              try {
+                payload = JSON.parse(msg.body);
+              } catch {
+                return;
               }
-              const me = payload.users.find(u => u.userId === user);
-              if (me?.role && role.current !== me.role.toUpperCase()) {
-                role.current = me.role.toUpperCase();
+
+              if (Array.isArray(payload.users)) {
+                setUsers(payload.users);
+                if (payload.users.length > 0) {
+                  lastNonEmptyUsersRef.current = payload.users;
+                }
+                const me = payload.users.find(u => u.userId === user);
+                if (me?.role && role.current !== me.role.toUpperCase()) {
+                  role.current = me.role.toUpperCase();
+                }
+                if (!me?.character && selectedChar) {
+                  setLocalUserChar(selectedChar);
+                }
+                return;
               }
-              if (!me?.character && selectedChar) {
-                setLocalUserChar(selectedChar);
+
+              if (payload.type === "JOIN" && payload.user) {
+                setUsers(prev =>
+                  prev.some(u => u.userId === payload.user.userId)
+                    ? prev
+                    : [...prev, payload.user]
+                );
               }
-              return;
+
+              if (payload.type === "START") {
+                setFrozenInitialUsers(lastNonEmptyUsersRef.current);
+                setGameRoomOpen(true);
+                subscriptionRef.current?.unsubscribe();
+                stompClientRef.current?.disconnect();
+              }
             }
-            if (payload.type === 'JOIN' && payload.user) {
-              setUsers(prev =>
-                prev.some(u => u.userId === payload.user.userId)
-                  ? prev
-                  : [...prev, payload.user]
-              );
-            }
-            if (payload.type === 'START') {
-              setFrozenInitialUsers(lastNonEmptyUsersRef.current);
-              setGameRoomOpen(true);
-              // Immediately tear down this lobby WS
-              subscriptionRef.current?.unsubscribe();
-              client.disconnect();
-            }
-          },
-          error => {
-            setError('WebSocket connection failed');
-            console.error('STOMP error:', error);
+          );
+        },
+        error => {
+          if (isLeavingRef.current) {
+            console.log("❌ STOMP closed intentionally, not reconnecting");
+            return;
           }
-        );
-      }
-    );
+          console.error("❌ STOMP connection error:", error);
+          setError("WebSocket connection failed. Retrying in 5s...");
+          setTimeout(connectStomp, 5000);
+        }
+      );
+    };
+
+    connectStomp();
 
     return () => {
-      // Always leave the lobby & fully tear down the WS
+      isLeavingRef.current = true;
       LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } }).finally(() => {
-        subscriptionRef.current?.unsubscribe();
-        stompClientRef.current?.disconnect();
+        try {
+          subscriptionRef.current?.unsubscribe();
+        } catch { }
+        try {
+          stompClientRef.current?.disconnect();
+        } catch { }
         didInitRef.current = false;
       });
     };
-  }, [activityId, user, hasJoined, selectedChar]);
+  }, [activityId, user, hasJoined, selectedChar, token]);
 
   // ---- HANDLERS ----
   const handleStart = () => {
@@ -214,37 +247,24 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       null,
       { params: { teacherId: user } }
     )
-      .then(() => {
-        // Let STOMP “START” message trigger opening the game room
-      })
       .catch(() => setError('Failed to start activity'))
       .finally(() => setStarting(false));
   };
 
   const handleReturn = () => {
-    // First try to leave the lobby gracefully
+    isLeavingRef.current = true;
     LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } })
       .catch(err => console.error('Error leaving lobby:', err))
       .finally(() => {
-        // Cleanup websocket connections
-        if (subscriptionRef.current) {
-          try {
-            subscriptionRef.current.unsubscribe();
-          } catch (e) {
-            console.error('Error unsubscribing:', e);
-          }
-        }
-        if (stompClientRef.current) {
-          try {
-            stompClientRef.current.disconnect(() => {
-              console.log('WebSocket disconnected');
-              onReturn?.();
-            });
-          } catch (e) {
-            console.error('Error disconnecting:', e);
+        try {
+          subscriptionRef.current?.unsubscribe();
+        } catch { }
+        try {
+          stompClientRef.current?.disconnect(() => {
+            console.log('WebSocket disconnected intentionally');
             onReturn?.();
-          }
-        } else {
+          });
+        } catch {
           onReturn?.();
         }
       });
@@ -252,7 +272,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
 
   useImperativeHandle(ref, () => ({ handleReturn }));
 
-  // --- Character selection UI (unchanged) ---
+  // --- Character selection UI ---
   if (!hasJoined) {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -262,8 +282,6 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             <Box
               key={char.key}
               sx={{
-                //border: selectedChar === char.value ? '3px solid #1E88E5' : '2px solid #ccc',
-
                 background: selectedChar === char.value ? '#E3F2FD' : '#fff',
                 transition: 'border 0.2s, background 0.2s',
                 boxShadow: selectedChar === char.value ? '0 0 8px #90caf9' : 'none',
@@ -273,7 +291,6 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 height: '13vh',
                 justifyContent: 'center',
                 alignItems: 'center', pt: 4
-
               }}
               onClick={() => setSelectedChar(char.value)}
             >
@@ -289,22 +306,26 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             setJoining(true);
             setError('');
             try {
-              const payload = {
-                userId: userDetails.userId,
-                firstName: userDetails.firstName,
-                middleName: userDetails.middleName,
-                lastName: userDetails.lastName,
-                email: userDetails.email,
-                password: userDetails.password,
-                idNumber: userDetails.idNumber,
-                totalPoints: userDetails.totalPoints,
-                profilePic: selectedChar,
-                role: userDetails.role,
-              };
-              await USER_API.put(`/${user}`, payload);
+              await LOBBY_API.post(
+                `/${activityId}/join`,
+                { character: selectedChar },
+                { params: { userId: user } }
+              );
               setHasJoined(true);
             } catch (err) {
-              setError(err?.response?.data?.message || 'Failed to update profile');
+              if (err.response?.status === 409) {
+                try {
+                  const res = await LOBBY_API.get(`/${activityId}/users`);
+                  setUsers(res.data);
+                  setHasJoined(true);
+                  setReconnected(true); // ✅ trigger snackbar
+                  setError('');
+                } catch {
+                  setError('Failed to fetch existing lobby state');
+                }
+              } else {
+                setError(err?.response?.data?.message || 'Failed to join lobby');
+              }
             } finally {
               setJoining(false);
             }
@@ -312,12 +333,13 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
         >
           {joining ? <CircularProgress size={24} /> : 'Join Lobby'}
         </Button>
+
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </Box>
     );
   }
 
-  // --- Lobby view UI (modified to display characters side-by-side) ---
+  // --- Lobby view UI ---
   function getCharImgByValue(val) {
     const found = CHARACTERS.find(c => c.value === val);
     return found ? found.img : null;
@@ -328,10 +350,6 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       <Typography variant="h5" sx={{ mb: 2 }}>Lobby</Typography>
       <Typography variant="subtitle1" gutterBottom>Users in Lobby:</Typography>
 
-      {/* 
-        Changed the container to flex so that each user's avatar + name
-        is arranged horizontally. 
-      */}
       <Box
         sx={{
           display: 'flex',
@@ -347,7 +365,6 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           </Typography>
         ) : (
           users.map(u => {
-            // Decide which character image to show for this user
             const charValue = u.character || u.profilePic || (u.userId === user ? localUserChar : null);
             const imgSrc = getCharImgByValue(charValue);
             return (
@@ -364,20 +381,9 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 }}
               >
                 {imgSrc ? (
-                  <img
-                    src={imgSrc}
-                    alt="char"
-                    style={{ width: 80, height: 80, objectFit: 'contain' }}
-                  />
+                  <img src={imgSrc} alt="char" style={{ width: 80, height: 80, objectFit: 'contain' }} />
                 ) : (
-                  <Box
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      backgroundColor: '#f0f0f0',
-                      borderRadius: '50%',
-                    }}
-                  />
+                  <Box sx={{ width: 80, height: 80, backgroundColor: '#f0f0f0', borderRadius: '50%' }} />
                 )}
                 <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
                   {u.name || u.firstName || u.userId}
@@ -433,11 +439,10 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        {/* Pass activityId and filtered users (excluding teachers) to MultiplayerGameRoom */}
         <MultiplayerGameRoom
           activityId={activityId}
-          initialUsers={frozenInitialUsers.filter(user => user.role?.toUpperCase() !== 'TEACHER')}
-          onLeave={(e) => {
+          initialUsers={frozenInitialUsers.filter(u => u.role?.toUpperCase() !== 'TEACHER')}
+          onLeave={() => {
             disconnectWebsocket();
             setGameRoomOpen(false);
             handleReturn();
@@ -445,12 +450,17 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
         />
       </Dialog>
 
-      {/* Deployed Activity Check (NEW) */}
-      {activityId === null && (
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          There is no activity deployed. Click return to go back.
-        </Alert>
-      )}
+      {/* ✅ Snackbar for reconnection */}
+      <Snackbar
+        open={reconnected}
+        autoHideDuration={3000}
+        onClose={() => setReconnected(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <MuiAlert severity="info" elevation={6} variant="filled">
+          Reconnected to lobby
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 });
