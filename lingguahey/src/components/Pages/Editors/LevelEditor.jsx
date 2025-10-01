@@ -488,6 +488,18 @@ const LevelEditor = () => {
                   </MenuItem>
                 ))}
               </TextField>
+              <TextField
+                select
+                label="Type"
+                value={monster.monsterType}
+                onChange={(e) =>
+                  handleMonsterFieldChange(index, "monsterType", e.target.value)
+                }
+                sx={{ flex: 1 }}
+              >
+                <MenuItem value="MINION">Minion</MenuItem>
+                <MenuItem value="BOSS">Boss</MenuItem>
+              </TextField>
 
               <IconButton color="error" onClick={() => handleRemoveMonsterField(index)}>
                 <Delete />
