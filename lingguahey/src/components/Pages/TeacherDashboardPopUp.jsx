@@ -213,45 +213,53 @@ const TeacherDashboardPopUp = () => {
     fetchEnrolledStudents();
   }, [roomId, API]);
 
-  const fetchStudentScores = async (activityId) => {
-    if (!API || !activityId || !selectedRoomStudents.length) return;
+
+
+  //FETCH STUDENT SCORES
+  const fetchStudentScores = async (activity) => {
+    if (!API) return;
+    const id = typeof activity === "string"
+      ? activity
+      : activity?.activity_ActivityId || activity?.activityId || selectedActivity?.activity_ActivityId;
+    if (!id) {
+      console.warn("fetchStudentScores called without a valid activity id");
+      return;
+    }
+    if (!selectedRoomStudents || selectedRoomStudents.length === 0) {
+      setStudentScores([]);
+      return;
+    }
+
     try {
-      // Add admin token to the request
       const adminToken = localStorage.getItem('token');
-      API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
+      if (adminToken) API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
 
-      // First, get the total possible score for the activity
-      const totalScoreResponse = await API.get(`/scores/live-activities/${activityId}/total-score`);
-      const totalPossibleScore = totalScoreResponse.data;
+      // Use leaderboard (per-user totals) + total-score to compute percentages
+      const [totalResp, leaderboardResp] = await Promise.all([
+        API.get(`/scores/live-activities/${id}/total-score`),
+        API.get(`/scores/live-activities/${id}/leaderboard`)
+      ]);
 
-      // Fetch scores for each enrolled student
-      const scores = await Promise.all(
-        selectedRoomStudents.map(async (student) => {
-          try {
-            const response = await API.get(`/scores/users/${student.userId}/total-live`);
-            const studentScore = response.data || 0;
-            // Calculate percentage
-            const percentage = totalPossibleScore > 0
-              ? Math.round((studentScore / totalPossibleScore) * 100)
-              : 0;
+      const totalPossibleScore = Number(totalResp?.data) || 0;
+      const leaderboard = Array.isArray(leaderboardResp?.data) ? leaderboardResp.data : [];
 
-            return {
-              userId: student.userId,
-              firstName: student.firstName,
-              lastName: student.lastName,
-              score: percentage
-            };
-          } catch (err) {
-            console.error(`Failed to fetch score for student ${student.firstName}:`, err);
-            return {
-              userId: student.userId,
-              firstName: student.firstName,
-              lastName: student.lastName,
-              score: 0
-            };
-          }
-        })
-      );
+      const lbMap = new Map();
+      leaderboard.forEach(entry => {
+        const uid = entry.userId ?? entry.user_id ?? entry.user?.userId ?? entry.user?.id ?? entry.id;
+        const total = entry.totalScore ?? entry.score ?? entry.total_score ?? entry.points ?? 0;
+        if (uid != null) lbMap.set(Number(uid), Number(total));
+      });
+
+      const scores = selectedRoomStudents.map(student => {
+        const raw = lbMap.get(Number(student.userId)) ?? 0;
+        const percentage = totalPossibleScore > 0 ? Math.round((raw / totalPossibleScore) * 100) : Math.round(Number(raw) || 0);
+        return {
+          userId: student.userId,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          score: percentage
+        };
+      });
 
       const sortedScores = scores.sort((a, b) => b.score - a.score);
       setStudentScores(sortedScores);
@@ -260,9 +268,10 @@ const TeacherDashboardPopUp = () => {
       setStudentScores([]);
     }
   };
-
-  // update fetchActivities to work with selectedActivity as object
-  const fetchActivities = async () => {
+ 
+ 
+   // update fetchActivities to work with selectedActivity as object
+   const fetchActivities = async () => {
     if (!API || !roomId) return;
     try {
       const response = await API.get(`/live-activities/${roomId}/live-activities`);
@@ -304,18 +313,72 @@ const TeacherDashboardPopUp = () => {
     try {
       const adminToken = localStorage.getItem("token");
       if (adminToken) API.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
-      const url = `/scores/live-activities/${selectedId}/stats`;
-      const response = await API.get(url);
-      setActivityStats({
-        average: response.data.average || 0,
-        lowest: response.data.lowest || 0,
-        highest: response.data.highest || 0,
+
+      // Primary approach: use leaderboard to compute avg/min/max; fallback to stats endpoint
+      const [totalResp, leaderboardResp] = await Promise.all([
+        API.get(`/scores/live-activities/${selectedId}/total-score`),
+        API.get(`/scores/live-activities/${selectedId}/leaderboard`)
+      ]);
+
+      const totalPossible = Number(totalResp?.data) || 0;
+      const leaderboard = Array.isArray(leaderboardResp?.data) ? leaderboardResp.data : [];
+
+      // Build map of leaderboard totals for fast lookup
+      const lbMap = new Map();
+      leaderboard.forEach(entry => {
+        const uid = entry.userId ?? entry.user_id ?? entry.user?.userId ?? entry.user?.id ?? entry.id;
+        const total = entry.totalScore ?? entry.score ?? entry.total_score ?? entry.points ?? 0;
+        if (uid != null) lbMap.set(Number(uid), Number(total));
       });
+
+      // Use enrolled students as the canonical set so users with no score are counted as 0
+      let totals = [];
+      if (selectedRoomStudents && selectedRoomStudents.length > 0) {
+        totals = selectedRoomStudents.map(s => lbMap.get(Number(s.userId)) ?? 0);
+      } else if (leaderboard.length > 0) {
+        totals = leaderboard.map(entry => Number(entry.totalScore ?? entry.score ?? entry.total_score ?? entry.points ?? 0));
+      }
+
+      if (totals.length > 0) {
+        const avgRaw = totals.reduce((a, b) => a + b, 0) / totals.length;
+        const minRaw = Math.min(...totals);
+        const maxRaw = Math.max(...totals);
+        const toPct = (raw) => totalPossible > 0 ? Math.round((raw / totalPossible) * 100) : Math.round(raw);
+        setActivityStats({
+          average: toPct(avgRaw),
+          lowest: toPct(minRaw),
+          highest: toPct(maxRaw),
+        });
+        return;
+      }
+
+      // fallback: /stats endpoint (may already be percentages or raw)
+      const statsResp = await API.get(`/scores/live-activities/${selectedId}/stats`);
+      const stats = statsResp?.data || {};
+
+      if (totalPossible > 0) {
+        const toPct = (raw) => {
+          const n = Number(raw);
+          if (Number.isNaN(n)) return 0;
+          return Math.round((n / totalPossible) * 100);
+        };
+        setActivityStats({
+          average: stats.average != null ? toPct(stats.average) : 0,
+          lowest: stats.lowest != null ? toPct(stats.lowest) : 0,
+          highest: stats.highest != null ? toPct(stats.highest) : 0,
+        });
+      } else {
+        setActivityStats({
+          average: Number(stats.average) || 0,
+          lowest: Number(stats.lowest) || 0,
+          highest: Number(stats.highest) || 0,
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch activity statistics:", err, "selectedId:", selectedId);
       setActivityStats({ average: 0, lowest: 0, highest: 0 });
     }
-  }, [selectedActivity, API]);
+  }, [selectedActivity, API, selectedRoomStudents]);
 
   useEffect(() => {
     fetchActivityStatistics();
@@ -885,9 +948,10 @@ const TeacherDashboardPopUp = () => {
         transform: 'translate(-50%, -50%)',
         width: { xs: '95%', sm: '80%', md: '60%' },
         maxWidth: 600,
+        bgcolor: '#F7CB97',
+        border: '3px solid #5D4037',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         maxHeight: '90vh',
-
-        boxShadow: 24,
         p: 0,
       }}>
         <Box sx={{
@@ -1366,8 +1430,8 @@ const TeacherDashboardPopUp = () => {
         </DialogContent>
         <DialogActions sx={{
           borderBottom: '5px solid #5D4037',
-          borderLeft: '5px solid #5D4037',
-          borderRight: '5px solid #5D4037',
+          borderLeft: '5D4037',
+          borderRight: '5D4037',
           bgcolor: '#F7CB97'
         }}>
           <Button onClick={closeDeleteDialog} color="primary">
@@ -1393,7 +1457,7 @@ const TeacherDashboardPopUp = () => {
         <DialogContent sx={{ borderLeft: '5px solid #5D4037', borderRight: '5px solid #5D4037', bgcolor: '#F7CB97' }}>
           <DialogContentText id="delete-question-dialog-description">{deleteLiveActivityDialogMessage}</DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ borderBottom: '5px solid #5D4037', borderLeft: '5px solid #5D4037', borderRight: '5px solid #5D4037', bgcolor: '#F7CB97' }}>
+        <DialogActions sx={{ borderBottom: '5px solid #5D4037', borderLeft: '5D4037', borderRight: '5D4037', bgcolor: '#F7CB97' }}>
           <Button onClick={closeDeleteQuestionDialog} color="primary">Cancel</Button>
           <Button onClick={confirmDeleteQuestion} color="primary" autoFocus>Delete</Button>
         </DialogActions>
