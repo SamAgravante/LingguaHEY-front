@@ -259,27 +259,6 @@ const Dashboard = () => {
 
   const handleCloseModal = () => setOpen(false);
 
-  /*const handleSubjectSelect = (subject) => {
-    navigate(`/activities/${selectedClassroom}/${subject}`);
-    setOpen(false);
-  };*/
-
-  /*const handleDeleteClassroom = async (classroomId) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroomId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setClassroomData((prev) => prev.filter((classroom) => classroom.classroomId !== classroomId));
-      alert("Classroom deleted successfully.");
-    } catch (error) {
-      console.error("Failed to delete classroom:", error);
-      alert("Failed to delete classroom. Please try again.");
-    }
-  };*/
-
   const handleDelete = async (userId) => {
     try {
       const token = localStorage.getItem("token");
@@ -315,68 +294,6 @@ const Dashboard = () => {
       alert("Failed to delete activity. Please try again.");
     }
   };
-
-  /*const handleEditClassroom = async (classroomId, newName) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms/${classroomId}`,
-        { name: newName },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setClassroomData((prev) =>
-        prev.map((classroom) => (classroom.id === classroomId ? { ...classroom, label: newName } : classroom))
-      );
-      alert("Classroom name updated successfully.");
-    } catch (error) {
-      console.error("Failed to update classroom name:", error);
-      alert("Failed to update classroom name. Please try again.");
-    }
-  };*/
-
-  /*const handleCreateClassroom = async () => {
-    try {
-      const token = localStorage.getItem("token"); 
-      if (!classroomName.trim()) {
-        console.warn("Classroom name cannot be empty.");
-        return;
-      }
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`,
-        { classroomName: classroomName },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      console.log("Classroom created:", response.data);
-      setClassrooms((prev) => [
-        ...prev,
-        { name: response.data.classroomName, id: response.data.classroomID },
-      ]);
-      setClassroomName(""); 
-      navigate(`/classroom/${response.data.classroomID}`);
-    } catch (error) {
-      console.error("Failed to create classroom:", error);
-    }
-  };*/
-
-  /*const handleViewClassroom = (classroomId) => {
-    console.log("Navigating to classroom with ID:", classroomId);
-    if (!classroomId) {
-      alert("Classroom ID is invalid.");
-      return;
-    }
-    navigate(`/classroom/${classroomId}`);
-  };*/
 
   const handleOpenDialog = () => setOpenCreateDialog(true);
   const handleCloseDialog = () => setOpenCreateDialog(false);
@@ -454,6 +371,17 @@ useEffect(() => {
   fetchClassroomsAndGames();
 }, []);
 
+  // Small derived variable to keep UI rendering clean (precompute filtered users)
+const filteredUsers = users
+  .filter((user) =>
+    `${(user.firstName || "")} ${(user.lastName || "")}`
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  )
+  .filter((user) =>
+    roleFilter === "ALL" ? true : user.role === roleFilter
+  );
+
   return (
     <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
       {/* Header */}
@@ -462,74 +390,65 @@ useEffect(() => {
           backgroundColor: "#fff", 
           py: 2, 
           px: 3, 
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
           mb: 4,
           display: "flex",
-          alignItems: "center"
+          alignItems: "center",
+          gap: 2,
+          borderRadius: 2
         }}
       >
-        <DashboardIcon sx={{ mr: 2, color: "#3f51b5", fontSize: 32 }} />
+        <DashboardIcon sx={{ color: "#3f51b5", fontSize: 32 }} />
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, color: "#3f51b5" }}>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: "#3f51b5", lineHeight: 1 }}>
             Admin Dashboard
           </Typography>
-          <Typography variant="body1" sx={{ color: "#757575" }}>
+          <Typography variant="body2" sx={{ color: "#757575" }}>
             LingguaHey Learning Platform Management
           </Typography>
         </Box>
 
-        <Button sx={{borderRadius: 6, ml: "auto", backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/activities`)}>
-          <Typography variant="body1" sx={{ color: "white" }}>
-            Game Editor
-          </Typography>
-        </Button>
+        <Box sx={{ ml: "auto", display: "flex", gap: 2 }}>
+          <Button sx={{borderRadius: 6, backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/activities`)}>
+            <Typography variant="body1" sx={{ color: "white" }}>
+              Game Editor
+            </Typography>
+          </Button>
+        </Box>
       </Box>
 
-      <Box sx={{ maxWidth: 1600, mx: "auto", px: 3 }}>
+      <Box sx={{ maxWidth: 1400, mx: "auto", px: 3 }}>
         {/* Stats Cards */}
-        <Grid container spacing={3} mb={4}>
+        <Grid container spacing={2} mb={4}>
           {statsCards.map((item, i) => (
             <Grid item xs={12} sm={6} md={3} key={i}>
               <Card
-                elevation={activeFilter === item.label.toLowerCase().split(" ")[0] && item.clickable ? 6 : 2}
+                elevation={activeFilter === item.label.toLowerCase().split(" ")[0] && item.clickable ? 8 : 2}
                 sx={{
-                  width: "100%",
-                  minWidth: 220,
-                  maxWidth: 260,
-                  height: 140,
+                  width: 250,
+                  height: 128,
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
                   alignItems: "center",
-                  borderRadius: 3,
-                  boxShadow: activeFilter === item.label.toLowerCase().split(" ")[0] && item.clickable
-                    ? "0 4px 24px rgba(63,81,181,0.12)"
-                    : "0 2px 10px rgba(0,0,0,0.08)",
-                  cursor: item.clickable ? "pointer" : "default",
-                  transition: "box-shadow 0.2s, transform 0.2s",
+                  borderRadius: 2,
+                  px: 2,
                   backgroundColor: "#fff",
-                  "&:hover": item.clickable
-                    ? {
-                        boxShadow: "0 8px 32px rgba(63,81,181,0.18)",
-                        transform: "translateY(-3px) scale(1.03)"
-                      }
-                    : {},
+                  transition: "transform 0.12s ease, box-shadow 0.12s ease",
+                  cursor: item.clickable ? "pointer" : "default",
+                  "&:hover": item.clickable ? { transform: "translateY(-3px)" } : {}
                 }}
-                onClick={() => {
-                  if (item.clickable) setActiveFilter(item.label.toLowerCase().split(" ")[0]);
-                }}
+                onClick={() => { if (item.clickable) setActiveFilter(item.label.toLowerCase().split(" ")[0]); }}
               >
-                <CardContent sx={{ width: "100%", p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <Avatar sx={{ bgcolor: item.color, width: 44, height: 44, mb: 1 }}>
-                    {item.icon}
-                  </Avatar>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#444", mb: 0.5 }}>
+                <Avatar sx={{ bgcolor: item.color, width: 48, height: 48, mr: 2 }}>
+                  {item.icon}
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" sx={{ color: "#666", fontWeight: 600 }}>
                     {item.label}
                   </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: item.color, textAlign: "center" }}>
+                  <Typography variant="h5" sx={{ color: item.color, fontWeight: 700 }}>
                     {item.count}
                   </Typography>
-                </CardContent>
+                </Box>
               </Card>
             </Grid>
           ))}
@@ -539,9 +458,19 @@ useEffect(() => {
         {/* Line Chart and Users List Side-by-Side */}
         <Grid container spacing={3} mb={4}>
           {/* Line Chart */}
-          <Grid item xs={12} md={8}>
-            <Card elevation={2} sx={{ borderRadius: 2, p: 2, height: 500,width:980, display: "flex", flexDirection: "column" }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Grid item xs={12} md={9}>
+            <Card
+              elevation={2}
+              sx={{
+                borderRadius: 2,
+                p: 2,
+                height: 485,
+                width: "96%",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                 <Typography variant="h6" sx={{ fontWeight: 500, color: "#3f51b5" }}>
                   User Growth Trends
                 </Typography>
@@ -561,18 +490,20 @@ useEffect(() => {
                   ))}
                 </TextField>
               </Box>
-              <Box sx={{ flex: 1, width: "100%" }}>
+              <Box sx={{ flex: 1, width: "100%", mt: 1 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getFilteredChartData()} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <LineChart
+                    data={getFilteredChartData()}
+                    margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis
                       domain={[0, getYAxisMax()]}
                       interval={0}
-                      tick={{ fontSize: 14 }}
                     />
                     <RechartsTooltip />
-                    <Legend />
+                    <Legend verticalAlign="top" align="right" />
                     <Line
                       type="monotone"
                       dataKey="value"
@@ -586,7 +517,7 @@ useEffect(() => {
                           : "#f44336"
                       }
                       strokeWidth={3}
-                      activeDot={{ r: 8 }}
+                      activeDot={{ r: 6 }}
                       name={activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)}
                     />
                   </LineChart>
@@ -596,127 +527,146 @@ useEffect(() => {
           </Grid>
 
           {/* Users List with Search */}
-          <Grid item xs={12} md={4}>
-    <Card elevation={2} sx={{ borderRadius: 2, overflow: "hidden", height: 532, display: "flex", flexDirection: "column" }}>
-      <Box sx={{ px: 3, py: 2, backgroundColor: "#f44336", color: "#fff", display: "flex", alignItems: "center" }}>
-        <PersonIcon sx={{ mr: 1 }} />
-        <Typography variant="h6">Users</Typography>
-      </Box>
-      <Divider />
-      <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center" }}>
-        <TextField
-          fullWidth
-          size="small"
-          variant="outlined"
-          placeholder="Search users..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+          <Grid item xs={12} md={3}>
+            <Card
+              elevation={2}
+              sx={{
+                borderRadius: 2,
+                overflow: "hidden",
+                height: 515,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box
+                sx={{
+                  px: 3,
+                  py: 2,
+                  backgroundColor: "#f44336",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <PersonIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">Users</Typography>
+                <Typography variant="body2" sx={{ ml: "auto", opacity: 0.9 }}>
+                  {filteredUsers.length}
+                </Typography>
+              </Box>
+              <Divider />
+              <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center" }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  placeholder="Search users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </Box>
 
-        {/* Replace dropdown with clickable chips */}
-        <Box sx={{ display: "flex", gap: 1 }}>
-          {[
-            { label: "All Roles", value: "ALL", color: "default" },
-            { label: "User", value: "USER", color: "primary" },
-            { label: "Teacher", value: "TEACHER", color: "success" },
-            { label: "Admin", value: "ADMIN", color: "warning" },
-          ].map((role) => (
-            <Chip
-              key={role.value}
-              label={role.label}
-              clickable
-              color={roleFilter === role.value ? role.color : "default"}
-              variant={roleFilter === role.value ? "filled" : "outlined"}
-              onClick={() => setRoleFilter(role.value)}
-              sx={{ fontWeight: 500 }}
-            />
-          ))}
-        </Box>
-      </Box>
-      {error && (
-        <Box sx={{ p: 2, backgroundColor: "#ffebee" }}>
-          <Typography color="error">{error}</Typography>
-        </Box>
-      )}
-      <Box sx={{ flex: 1, overflowY: "auto", px: 2 }}>
-        <List sx={{ width: "100%" }}>
-          {users
-            .filter(user =>
-              `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            .filter(user =>
-              roleFilter === "ALL" ? true : user.role === roleFilter
-            )
-            .map((user, index, arr) => (
-              <React.Fragment key={index}>
+              <Box sx={{ px: 2, display: "flex", gap: 1, flexWrap: "wrap", pb: 1 }}>
+                {[
+                  { label: "All Roles", value: "ALL", color: "default" },
+                  { label: "User", value: "USER", color: "primary" },
+                  { label: "Teacher", value: "TEACHER", color: "success" },
+                  { label: "Admin", value: "ADMIN", color: "warning" },
+                ].map((role) => (
+                  <Chip
+                    key={role.value}
+                    label={role.label}
+                    clickable
+                    color={roleFilter === role.value ? role.color : "default"}
+                    variant={roleFilter === role.value ? "filled" : "outlined"}
+                    onClick={() => setRoleFilter(role.value)}
+                    sx={{ fontWeight: 500 }}
+                    size="small"
+                  />
+                ))}
+              </Box>
 
-                    <ListItem sx={{ py: 1.5 }}>
-                      <Avatar
-                        sx={{
-                          bgcolor:
-                            user.role === "USER"
-                              ? "#2196f3"
-                              : user.role === "TEACHER"
-                              ? "#4caf50"
-                              : user.role === "ADMIN"
-                              ? "#ff9800"
-                              : "#2196f3",
-                          mr: 2,
-                          color: "#fff"
-                        }}
-                      >
-                        {user.firstName.charAt(0)}
-                      </Avatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                            {user.firstName} {user.lastName}
-                          </Typography>
-                        }
-                        secondary={
-                          <Chip
-                            size="small"
-                            label={user.role}
-                            sx={{
-                              backgroundColor:
-                                user.role === "USER"
-                                  ? "#e3f2fd"
-                                  : user.role === "TEACHER"
-                                  ? "#e8f5e9"
-                                  : user.role === "ADMIN"
-                                  ? "#fff3e0"
-                                  : "#e3f2fd",
-                              color:
-                                user.role === "USER"
-                                  ? "#1976d2"
-                                  : user.role === "TEACHER"
-                                  ? "#388e3c"
-                                  : user.role === "ADMIN"
-                                  ? "#ff9800"
-                                  : "#1976d2",
-                              height: 24
-                            }}
-                          />
-                        }
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton
-                          edge="end"
+              {error && (
+                <Box sx={{ p: 2, backgroundColor: "#ffebee" }}>
+                  <Typography color="error">{error}</Typography>
+                </Box>
+              )}
+              <Box sx={{ flex: 1, overflowY: "auto", px: 2 }}>
+                <List sx={{ width: "100%" }}>
+                  {filteredUsers.length === 0 && (
+                    <Box sx={{ py: 6, textAlign: "center" }}>
+                      <Typography color="text.secondary">No users match your filters</Typography>
+                    </Box>
+                  )}
+                  {filteredUsers.map((user, index) => (
+                    <React.Fragment key={user.userId || index}>
+                      <ListItem sx={{ py: 1.5 }}>
+                        <Avatar
                           sx={{
-                            color: "#f44336",
-                            "&:hover": {
-                              backgroundColor: "#ffebee"
-                            }
+                            bgcolor:
+                              user.role === "USER"
+                                ? "#2196f3"
+                                : user.role === "TEACHER"
+                                ? "#4caf50"
+                                : user.role === "ADMIN"
+                                ? "#ff9800"
+                                : "#2196f3",
+                            mr: 2,
+                            color: "#fff",
                           }}
-                          onClick={() => handleDelete(user.userId)}
                         >
-                          <DeleteIcon />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                        {index < users.length - 1 && <Divider component="li" />}
-                      </React.Fragment>
-                    ))}
+                          {(user.firstName && user.firstName.charAt(0)) || (user.email && user.email.charAt(0)) || "?"}
+                        </Avatar>
+                        <ListItemText
+                          primary={
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              {user.firstName} {user.lastName}
+                            </Typography>
+                          }
+                          secondary={
+                            <Chip
+                              size="small"
+                              label={user.role}
+                              sx={{
+                                backgroundColor:
+                                  user.role === "USER"
+                                    ? "#e3f2fd"
+                                    : user.role === "TEACHER"
+                                    ? "#e8f5e9"
+                                    : user.role === "ADMIN"
+                                    ? "#fff3e0"
+                                    : "#e3f2fd",
+                                color:
+                                  user.role === "USER"
+                                    ? "#1976d2"
+                                    : user.role === "TEACHER"
+                                    ? "#388e3c"
+                                    : user.role === "ADMIN"
+                                    ? "#ff9800"
+                                    : "#1976d2",
+                                height: 26,
+                              }}
+                            />
+                          }
+                        />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            edge="end"
+                            sx={{
+                              color: "#f44336",
+                              "&:hover": {
+                                backgroundColor: "#ffebee",
+                              },
+                            }}
+                            onClick={() => handleDelete(user.userId)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                      {index < filteredUsers.length - 1 && <Divider component="li" />}
+                    </React.Fragment>
+                  ))}
                 </List>
               </Box>
             </Card>
@@ -727,101 +677,26 @@ useEffect(() => {
         {/* Main Content */}
         <Grid container spacing={3}>          {/* Classroom Data */}          
         </Grid>
-         {/* Game Usage Pie Chart 
-         
-         <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} md={4}>
-            <Card elevation={2} sx={{ borderRadius: 2, p: 2, height: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <Typography variant="h6" sx={{ fontWeight: 500, color: "#3f51b5", mb: 2 }}>
-                Game Usage by Classroom
-              </Typography>
-              <ResponsiveContainer width="100%" height={350}>
-                <PieChart>
-                  <Pie
-                    data={gameUsageData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {gameUsageData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={GAME_COLORS[idx % GAME_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <PieTooltip />
-                  <PieLegend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-          </Grid>
-        </Grid>
-        */}
       </Box>
-
-      {/* Create Classroom Dialog 
-      <Dialog 
-        open={openCreateDialog} 
-        onClose={handleCloseDialog}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            width: 400
-          }
-        }}
-      >
-        <DialogTitle sx={{ bgcolor: "#3f51b5", color: "#fff" }}>
-          Create a New Classroom
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Classroom Name"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={classroomName}
-            onChange={(e) => setClassroomName(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={handleCloseDialog} 
-            variant="outlined"
-            sx={{ borderColor: "#3f51b5", color: "#3f51b5" }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              handleCreateClassroom();
-              handleCloseDialog();
-            }}
-            variant="contained"
-            sx={{ backgroundColor: "#3f51b5" }}
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>*/}
 
       {/* Activities Modal */}
       <Modal open={open} onClose={handleCloseModal}>
         <Card
           sx={{
-            width: 500,
-            maxWidth: "90%",
-            margin: "auto",
-            marginTop: "10vh",
+            width: 640,
+            maxWidth: "95%",
+            maxHeight: "80vh",
+            position: "fixed",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
             borderRadius: 2,
             overflow: "hidden",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+            boxShadow: "0 8px 30px rgba(0,0,0,0.25)",
           }}
         >
           <Box sx={{ bgcolor: "#3f51b5", color: "#fff", px: 3, py: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h6">
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Lessons for {selectedClassroom?.name}
             </Typography>
             <IconButton onClick={handleCloseModal} sx={{ color: "#fff" }}>
@@ -829,7 +704,7 @@ useEffect(() => {
             </IconButton>
           </Box>
           <Divider />
-          <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
+          <Box sx={{ maxHeight: "60vh", overflowY: "auto" }}>
             <List>
               {selectedClassroom?.activities?.length > 0 ? (
                 selectedClassroom.activities.map((activity) => (
@@ -837,7 +712,7 @@ useEffect(() => {
                     <ListItem>
                       <ListItemText
                         primary={
-                          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                             {activity.activityName}
                           </Typography>
                         }
