@@ -1,4 +1,4 @@
-import { Grid, Box, Typography, Button, Paper, Divider, Stack } from "@mui/material";
+import { Grid, Box, Typography, Button, Paper, Divider, Stack, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from "@mui/material";
 import axios from "axios";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckIcon from "@mui/icons-material/Check";
@@ -47,6 +47,10 @@ export default function Subscription() {
   const token = localStorage.getItem("token");
   const [subscriptionType, setSubscriptionType] = useState("");
   const [subscriptionEndDate, setSubscriptionEndDate] = useState(null);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDialogMessage, setErrorDialogMessage] = useState("");
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [successDialogMessage, setSuccessDialogMessage] = useState("");
 
   const isMounted = useRef(false);
   const hasVerified = useRef(false);
@@ -159,13 +163,15 @@ export default function Subscription() {
           localStorage.removeItem("paymentReference");
           localStorage.removeItem("selectedPlan");
 
-          alert("Subscription activated successfully!");
+          setSuccessDialogMessage("Subscription activated successfully!");
+          setSuccessDialogOpen(true);
         }
       }
     } catch (error) {
       if (isMounted.current) {
         console.error("Error checking payment status:", error);
-        alert("Error updating subscription. Please try again or contact support.");
+        setErrorDialogMessage("Error updating subscription. Please try again or contact support.");
+        setErrorDialogOpen(true);
       }
     }
   };
@@ -200,11 +206,13 @@ export default function Subscription() {
         localStorage.setItem("selectedPlan", plan);
         window.open(paymentLink, "_blank");
       } else {
-        alert("Payment link not found. Please try again.");
+        setErrorDialogMessage("Payment link not found. Please try again.");
+          setErrorDialogOpen(true);
       }
     } catch (error) {
       console.error("Error making payment request:", error);
-      alert("Failed to create the payment link. Please try again.");
+      setErrorDialogMessage("Failed to create the payment link. Please try again.");
+      setErrorDialogOpen(true);
     }
   };
 
@@ -471,6 +479,68 @@ export default function Subscription() {
           )}
         </>
       )}
+    <Dialog open={errorDialogOpen} onClose={() => setErrorDialogOpen(false)}>
+        <DialogTitle
+          sx={{
+            borderTop: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}
+        >
+          Error
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}
+        >
+          <DialogContentText sx={{ bgcolor: '#F7CB97' }}>{errorDialogMessage}</DialogContentText>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            borderBottom: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}
+        >
+          <Button onClick={() => setErrorDialogOpen(false)}>OK</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={successDialogOpen} onClose={() => setSuccessDialogOpen(false)}>
+        <DialogTitle
+          sx={{
+            borderTop: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}
+        >
+          Success
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}
+        >
+          <DialogContentText sx={{ bgcolor: '#F7CB97' }}>{successDialogMessage}</DialogContentText>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            borderBottom: '5px solid #5D4037',
+            borderLeft: '5px solid #5D4037',
+            borderRight: '5px solid #5D4037',
+            bgcolor: '#F7CB97'
+          }}
+        >
+          <Button onClick={() => setSuccessDialogOpen(false)}>OK</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
