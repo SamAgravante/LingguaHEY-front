@@ -119,11 +119,9 @@ export default function Homepage() {
   const navigate = useNavigate();
 
   const [makeMessageAppear, setMakeMessageAppear] = useState(false);
-  const [selectedLevel, setSelectedLevel] = useState(0);
   const [levelDetails, setLevelDetails] = useState([]);
   const [dungeonPreperatory, setDungeonPreparatory] = useState(false);
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
-  const [monsterIndex, setMonsterIndex] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [codexOpen, setCodexOpen] = useState(false);
