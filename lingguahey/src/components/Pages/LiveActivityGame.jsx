@@ -22,7 +22,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import Snackbar from '@mui/material/Snackbar'; // ✅ new
-import MuiAlert from '@mui/material/Alert';    // ✅ for snackbar style
+import MuiAlert from '@mui/material/Alert';  // ✅ for snackbar style
 import char_1 from '../../assets/images/characters/lingguahey-char1-wave.png';
 import char_2 from '../../assets/images/characters/lingguahey-char1-stand.png';
 import MultiplayerGameRoom from './MultiplayerGameRoom';
@@ -115,13 +115,11 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     setJoining(true);
     setError('');
 
-    // 1) Join via REST
-    LOBBY_API.post(
-      `/${activityId}/join`,
-      { character: selectedChar },
-      { params: { userId: user } }
-    )
-      .then(() => LOBBY_API.get(`/${activityId}/users`))
+    // If the user has joined (setHasJoined(true) was called), we only need to fetch users
+    // and establish WebSocket connection, as the REST join part was handled in the
+    // character selection UI, including the character update.
+
+    LOBBY_API.get(`/${activityId}/users`)
       .then(res => {
         setUsers(res.data);
         const me = res.data.find(u => u.userId === user);
@@ -130,19 +128,9 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
         }
       })
       .catch(err => {
-        if (err.response?.status === 409) {
-          // already joined: refresh users and mark joined
-          LOBBY_API.get(`/${activityId}/users`)
-            .then(r => {
-              setUsers(r.data);
-              setHasJoined(true);
-              setReconnected(true); // ✅ trigger snackbar
-              setError('');
-            })
-            .catch(() => setError('Failed to fetch lobby users'));
-        } else {
-          setError('Failed to join lobby or fetch users');
-        }
+        // This catch is mainly for cases where the user was already joined
+        // but somehow ended up here without a successful join/rejoin flow in the UI.
+        setError('Failed to fetch lobby users');
       })
       .finally(() => setJoining(false));
 
@@ -161,7 +149,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     };
 
     const connectStomp = () => {
-      if (!stompClientRef.current) return;
+      if (!stompClientRef.current || isLeavingRef.current) return;
 
       stompClientRef.current.connect(
         headers,
@@ -306,25 +294,48 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
             setJoining(true);
             setError('');
             try {
+              // 1. Update the user's profile with the selected character
+              const payload = {
+                userId: userDetails.userId,
+                firstName: userDetails.firstName,
+                middleName: userDetails.middleName,
+                lastName: userDetails.lastName,
+                email: userDetails.email,
+                password: userDetails.password,
+                idNumber: userDetails.idNumber,
+                totalPoints: userDetails.totalPoints,
+                profilePic: selectedChar, // <-- THIS IS THE CRITICAL UPDATE
+                role: userDetails.role,
+              };
+              await USER_API.put(`/${user}`, payload);
+
+              // Update local user details with the new profilePic
+              setUserDetails(prev => ({ ...prev, profilePic: selectedChar }));
+
+              // 2. Join the lobby using the REST API (This should now pick up the profilePic)
               await LOBBY_API.post(
                 `/${activityId}/join`,
                 { character: selectedChar },
                 { params: { userId: user } }
               );
+
+              // 3. Proceed to the lobby state
               setHasJoined(true);
+
             } catch (err) {
               if (err.response?.status === 409) {
+                // User was already joined. Re-fetch and proceed to lobby.
                 try {
                   const res = await LOBBY_API.get(`/${activityId}/users`);
                   setUsers(res.data);
                   setHasJoined(true);
-                  setReconnected(true); // ✅ trigger snackbar
+                  setReconnected(true);
                   setError('');
                 } catch {
                   setError('Failed to fetch existing lobby state');
                 }
               } else {
-                setError(err?.response?.data?.message || 'Failed to join lobby');
+                setError(err?.response?.data?.message || 'Failed to update profile or join lobby');
               }
             } finally {
               setJoining(false);
