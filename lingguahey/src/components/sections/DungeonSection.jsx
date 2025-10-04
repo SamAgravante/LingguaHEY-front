@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Grid, Typography, Button, Box, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +30,12 @@ export default function DungeonSection({
   const [currentPage, setCurrentPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🔑 Derive current level completed instead of storing in state
+  const currentLevelId = currentLevel?.levelId;
+  const isCurrentLevelCompleted = completedLevels?.some(
+    (level) => level.levelId === currentLevelId
+  ) || false;
+
   useEffect(() => {
     (async () => {
       try {
@@ -46,58 +53,41 @@ export default function DungeonSection({
   }, [currentLevel]);
 
   useEffect(() => {
-    if (!completedLevels || completedLevels.length === 0) {
-      if (currentLevelIndex === 0) {
-        setDungeonBackground(DungeonOpen);
-        setDungeonIsOpen(true);
-        setDungeonMessage("← Click door to proceed");
-      } else {
-        setDungeonBackground(DungeonClosed);
-        setDungeonIsOpen(false);
-        setDungeonMessage("Level locked");
-      }
-      return;
-    }
+    const prevLevel = levelDetails[currentLevelIndex - 1];
 
+    let isOpen = false;
+    let message = "Level locked";
+    let background = DungeonClosed;
+
+    // --- Logic for Level 0 ---
     if (currentLevelIndex === 0) {
-      setDungeonBackground(DungeonOpen);
-      setDungeonIsOpen(true);
-
-      const currentLevelCompleted = completedLevels.some(
-        level => level.levelId === currentLevel?.levelId
-      );
-
-      setDungeonMessage(
-        currentLevelCompleted ? "Level completed" : "← Click door to proceed"
-      );
-    } else {
-      const prevLevel = levelDetails[currentLevelIndex - 1];
-      const prevLevelCompleted = completedLevels.some(
-        level => level.levelId === prevLevel.levelId
-      );
-      const currentLevelCompleted = completedLevels.some(
-        level => level.levelId === currentLevel?.levelId
-      );
+      isOpen = true;
+      background = DungeonOpen;
+      message = isCurrentLevelCompleted ? "Level completed" : "← Click door to proceed";
+    }
+    // --- Logic for Level 1 and above ---
+    else if (prevLevel) {
+      const prevLevelCompleted = completedLevels?.some(
+        (level) => level.levelId === prevLevel.levelId
+      ) || false;
 
       if (prevLevelCompleted) {
-        setDungeonBackground(DungeonOpen);
-        setDungeonIsOpen(true);
-
-        setDungeonMessage(
-          currentLevelCompleted ? "Level completed" : "← Click door to proceed"
-        );
-      } else {
-        setDungeonBackground(DungeonClosed);
-        setDungeonIsOpen(false);
-        setDungeonMessage("Level locked");
+        isOpen = true;
+        background = DungeonOpen;
+        message = isCurrentLevelCompleted ? "Level completed" : "← Click door to proceed";
       }
     }
+
+    setDungeonBackground(background);
+    setDungeonIsOpen(isOpen);
+    setDungeonMessage(message);
   }, [
     completedLevels,
     currentLevelIndex,
     currentLevel,
     levelDetails,
     setDungeonBackground,
+    isCurrentLevelCompleted
   ]);
 
   return (
@@ -119,7 +109,7 @@ export default function DungeonSection({
           {currentLevel?.levelName || "Unknown Level"}
         </Typography>
         {!dungeonIsOpen && (
-          <Box sx={{ justifyItems: 'center', width: 400, position: "absolute", bottom: 20,ml: 2 }}>
+          <Box sx={{ justifyItems: 'center', width: 400, position: "absolute", bottom: 20, ml: 2 }}>
             <Typography sx={{ fontSize: 22, color: '#ffe578' }}>
               Unlock previous
             </Typography>
@@ -198,7 +188,7 @@ export default function DungeonSection({
         disabled={!dungeonIsOpen}
         onClick={() => {
           setDungeonPreparatory(true);
-          setCurrentPage(0); // reset to first monster slide
+          setCurrentPage(0);
         }}
         sx={{
           width: '250px',
@@ -223,7 +213,7 @@ export default function DungeonSection({
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)', // dark overlay
+            backgroundColor: 'rgba(0,0,0,0.5)',
             zIndex: 1200,
             display: 'flex',
             alignItems: 'center',
@@ -298,22 +288,23 @@ export default function DungeonSection({
                     {currentPage < monsterList.length && monsterList[currentPage] ? (
                       <>
                         <Typography
-                        color="#3361AB"
-                        variant='h1'
-                        
-                        sx={{textAlign: "left",position:"absolute",top: 10,left:-51,width:500, WebkitTextStroke: '1px #180f0c'}}
-                        > In this room you will encounter:</Typography>
-                        <Box sx={{ width: "220px", height: "215px",mt:4 }}>
+                          color="#3361AB"
+                          variant='h1'
+                          sx={{ textAlign: "left", position: "absolute", top: 10, left: -51, width: 500, WebkitTextStroke: '1px #180f0c' }}
+                        >
+                          In this room you will encounter:
+                        </Typography>
+                        <Box sx={{ width: "220px", height: "215px", mt: 4 }}>
                           <img
                             src={`data:image/png;base64,${monsterList[currentPage].imageData}`}
                             alt="Enemy"
                             style={{ width: "220px", height: "215px" }}
                           />
                         </Box>
-                        <Typography color="#3361AB" variant={'h3'} sx={{ mt: 3, WebkitTextStroke: '1px #180f0c',width:500 }}>
+                        <Typography color="#3361AB" variant={'h3'} sx={{ mt: 3, WebkitTextStroke: '1px #180f0c', width: 500 }}>
                           Tagalog Name: {monsterList[currentPage].tagalogName}
                         </Typography>
-                        <Typography color="#3361AB" variant={'h3'} sx={{ mt: 3, WebkitTextStroke: '1px #180f0c',width:500 }}>
+                        <Typography color="#3361AB" variant={'h3'} sx={{ mt: 3, WebkitTextStroke: '1px #180f0c', width: 500 }}>
                           English Name: {monsterList[currentPage].englishName}
                         </Typography>
                       </>
@@ -325,23 +316,29 @@ export default function DungeonSection({
                         <Typography color="#3361AB" variant='h1' sx={{ mb: 3, WebkitTextStroke: '1px #180f0c' }}>
                           Are you ready?
                         </Typography>
-                        <Button
-                          sx={{
-                            backgroundImage: `url(${EnterDungeonBox})`,
-                            backgroundSize: 'cover',
-                            width: '200px',
-                            height: '60px',
-                            color: '#3361AB'
-                          }}
-                          onClick={() =>
-                            navigate('/dungeon', {
-                              state: {
+                        <Button sx={{
+                          backgroundImage: `url(${EnterDungeonBox})`,
+                          backgroundSize: 'cover',
+                          width: '200px',
+                          height: '60px',
+                          color: '#3361AB'
+                        }}
+                          onClick={() => {
+                            console.log("Navigating with state:",
+                              {
                                 levelId: currentLevel?.levelId,
                                 userId: user?.userId,
-                              },
-                            })
-                          }
-                        />
+                                isCurrentLevelCompleted: isCurrentLevelCompleted,
+                              }); navigate('/dungeon',
+                                {
+                                  state:
+                                  {
+                                    levelId: currentLevel?.levelId,
+                                    userId: user?.userId,
+                                    isCurrentLevelCompleted: isCurrentLevelCompleted,
+                                  },
+                                });
+                          }} />
                       </>
                     )}
                   </Box>
@@ -373,3 +370,4 @@ export default function DungeonSection({
     </Grid>
   );
 }
+

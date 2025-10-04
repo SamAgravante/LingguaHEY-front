@@ -68,8 +68,6 @@ export default function DungeonGame() {
   const [roundCounter, setRoundCounter] = useState();
   const [makeMessageAppear, setMakeMessageAppear] = useState(false);
   const [messageDetails, setMessageDetails] = useState({});
-  const [coinReward, setCoinReward] = useState(0);
-  const [gemReward, setGemReward] = useState(0);
   const [itemEquipped, setItemEquipped] = useState({});
   const [enemyAttacking, setEnemyAttacking] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
@@ -102,23 +100,32 @@ export default function DungeonGame() {
   };
 
   useEffect(() => {
-    if (!location.state || !location.state.levelId) {
-      console.error('No level ID provided in navigation state');
+    const {
+      levelId,
+      userId,
+      isCurrentLevelCompleted
+    } = location.state || {};
+
+    if (!levelId) {
+      console.error('No level ID provided in navigation state. Redirecting.');
       navigate('/homepage');
       return;
     }
 
     const fetchGameInfo = async () => {
       try {
-        const { levelId, userId } = location.state;
+        console.log("Completed?: " + isCurrentLevelCompleted);
+
         const lvl = await API.get(`/levels/${levelId}`);
-        // Fix: Set levelData as an object with the rewards
+
+        // 2. Use the guaranteed boolean value for calculating rewards
+        const coinsReward = isCurrentLevelCompleted ? 0 : lvl.data.coinsReward;
+        const gemsReward = isCurrentLevelCompleted ? 0 : lvl.data.gemsReward;
+
         setLevelData({
-          coinsReward: lvl.data.coinsReward,
-          gemsReward: lvl.data.gemsReward
+          coinsReward,
+          gemsReward
         });
-        setCoinReward(lvl.data.coinsReward);
-        setGemReward(lvl.data.gemsReward);
 
         const equipResp = await API.get(`/users/${userId}/equipped-cosmetic`);
         // API shape: { equippedCosmetic: { cosmeticId, name, rarity, cosmeticImage } }
