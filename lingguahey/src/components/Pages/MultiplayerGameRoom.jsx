@@ -507,22 +507,31 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
   // --- START: NON-HOOK LOGIC AND EARLY RETURNS ---
 
   // Define function handlers that don't need to be memoized or are not hooks
-  const handleNext = () => {
+ // Inside MultiplayerGameRoom.jsx, modify handleNext:
+
+const handleNext = () => {
     if (index < questions.length - 1) {
-      const currentIndex = index;
-      const nextIndex = currentIndex + 1;
+        const currentIndex = index;
+        const nextIndex = currentIndex + 1;
 
-      lastConfirmedRef.current = currentIndex;
-      setLastConfirmedIndex(currentIndex);
-      setProgress(((currentIndex + 1) / questions.length) * 100);
+        if (stompClientRef.current?.connected) {
+            stompClientRef.current.send(`/app/leaderboard/trigger/${activityId}`, {}, '');
+        }
 
-      API.post(
-        `/lobby/${activityId}/next-question`,
-        null,
-        { params: { questionIndex: nextIndex, teacherId: userId } }
-      ).catch(() => { });
+        setTimeout(() => {
+            API.post(
+                `/lobby/${activityId}/next-question`,
+                null,
+                { params: { questionIndex: nextIndex, teacherId: userId } }
+            ).catch(() => { /* handle error */ });
+        }, 100); // Added 100ms delay
+
+        lastConfirmedRef.current = currentIndex;
+        setLastConfirmedIndex(currentIndex);
+        setProgress(((currentIndex + 1) / questions.length) * 100);
+        setIndex(nextIndex); // Teacher advances index
     }
-  };
+};
 
   const handleLeave = async () => {
     if (!activityId || !userId) return;
