@@ -80,6 +80,7 @@ import DungeonArrowRight from "../../assets/images/objects/DungeonArrowRight.png
 import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
 import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
 import ScrollBig from '../../assets/images/objects/ScrollBig.png';
+import MCNoWeaponAnimated from '../../assets/images/characters/MCNoWeaponAnimated.png';
 
 //Weapons
 import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
@@ -611,7 +612,7 @@ export default function Homepage() {
           }}>
             <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
               <img
-                src={MCNoWeapon}
+                src={MCNoWeaponAnimated}
                 alt="Player"
                 style={{
                   position: 'absolute',
@@ -1212,7 +1213,7 @@ export default function Homepage() {
                   }}>
                   <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
                     <img
-                      src={MCNoWeapon}
+                      src={MCNoWeaponAnimated}
                       alt="Player"
                       style={{
                         position: 'absolute',
