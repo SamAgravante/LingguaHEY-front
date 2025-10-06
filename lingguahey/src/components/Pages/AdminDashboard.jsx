@@ -39,11 +39,15 @@ import API from "../../api";
 import { jwtDecode } from "jwt-decode";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
+// New background asset imports to apply Subscription design
+import MonsterEditUIOuterLight from "../../assets/images/backgrounds/MonsterEditUIOuterLight.png";
+import smallBox from '../../assets/images/backgrounds/DungeonHint.png';
+
 const Dashboard = () => {
   const [open, setOpen] = useState(false);
   const [selectedClassroom, setSelectedClassroom] = useState(null);
   const [recentUsers, setRecentUsers] = useState([]);
-  const [classroomData, setClassroomData] = useState([]); 
+  const [classroomData, setClassroomData] = useState([]);
   const [newClassroomName, setNewClassroomName] = useState("");
   const [selectedActivity, setSelectedActivity] = useState(null);
   const navigate = useNavigate();
@@ -63,14 +67,14 @@ const Dashboard = () => {
   const [classroomName, setClassroomName] = useState("");
   const [classrooms, setClassrooms] = useState([]);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("users"); 
+  const [activeFilter, setActiveFilter] = useState("users");
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [availableYears, setAvailableYears] = useState([currentYear]);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
 
-   const [monthlyData, setMonthlyData] = useState([
+  const [monthlyData, setMonthlyData] = useState([
     { name: 'Jan', users: 0, students: 0, teachers: 0 },
     { name: 'Feb', users: 0, students: 0, teachers: 0 },
     { name: 'Mar', users: 0, students: 0, teachers: 0 },
@@ -155,8 +159,8 @@ const Dashboard = () => {
         // New function to fetch concurrent users
         const fetchActiveTokenCount = async () => {
           try {
-            const response = await API.get(`/users/analytics/active-token-count`); 
-            console.log("For token",response);             
+            const response = await API.get(`/users/analytics/active-token-count`);
+            console.log("For token", response);
             setConcurrentUsers(response.data);
           } catch (err) {
             console.error("Failed to fetch active token count:", err);
@@ -177,7 +181,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
-        const token = localStorage.getItem("token"); 
+        const token = localStorage.getItem("token");
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -189,13 +193,13 @@ const Dashboard = () => {
         setClassrooms(
           response.data.map((classroom) => ({
             ...classroom,
-            name: classroom.name || classroom.classroomName || "Unnamed Classroom", 
+            name: classroom.name || classroom.classroomName || "Unnamed Classroom",
             id: classroom.classroomID,
           }))
         );
       } catch (error) {
         console.error("Failed to fetch classrooms:", error);
-        setClassrooms([]); 
+        setClassrooms([]);
       }
     };
 
@@ -203,25 +207,25 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-  const updatedMonthlyData = monthlyData.map((month, idx) => {
-    const startOfMonth = new Date(selectedYear, idx, 1, 0, 0, 0, 0);
-    const endOfMonth = new Date(selectedYear, idx + 1, 0, 23, 59, 59, 999);
-    const usersInMonth = users.filter(user => {
-      if (!user.createdAt) return false;
-      const created = new Date(user.createdAt);
-      return created >= startOfMonth && created <= endOfMonth;
+    const updatedMonthlyData = monthlyData.map((month, idx) => {
+      const startOfMonth = new Date(selectedYear, idx, 1, 0, 0, 0, 0);
+      const endOfMonth = new Date(selectedYear, idx + 1, 0, 23, 59, 59, 999);
+      const usersInMonth = users.filter(user => {
+        if (!user.createdAt) return false;
+        const created = new Date(user.createdAt);
+        return created >= startOfMonth && created <= endOfMonth;
+      });
+      const studentsInMonth = usersInMonth.filter(user => user.role === "USER");
+      const teachersInMonth = usersInMonth.filter(user => user.role === "TEACHER");
+      return {
+        name: month.name,
+        users: usersInMonth.length,
+        students: studentsInMonth.length,
+        teachers: teachersInMonth.length,
+      };
     });
-    const studentsInMonth = usersInMonth.filter(user => user.role === "USER");
-    const teachersInMonth = usersInMonth.filter(user => user.role === "TEACHER");
-    return {
-      name: month.name,
-      users: usersInMonth.length,
-      students: studentsInMonth.length,
-      teachers: teachersInMonth.length,
-    };
-  });
-  setMonthlyData(updatedMonthlyData);
-}, [users, selectedYear]);
+    setMonthlyData(updatedMonthlyData);
+  }, [users, selectedYear]);
 
   const getYAxisMax = () => {
     const data = getFilteredChartData();
@@ -268,7 +272,7 @@ const Dashboard = () => {
           "Content-Type": `application/json`
         },
       });
-      setUsers((prev) => prev.filter((user) => user.userId !== userId)); 
+      setUsers((prev) => prev.filter((user) => user.userId !== userId));
       alert("User deleted successfully.");
     } catch (error) {
       console.error("Failed to delete user:", error);
@@ -287,7 +291,7 @@ const Dashboard = () => {
       setSelectedClassroom((prev) => ({
         ...prev,
         activities: prev.activities.filter((activity) => activity.activityId !== activityId),
-      })); 
+      }));
       alert("Activity deleted successfully.");
     } catch (error) {
       console.error("Failed to delete activity:", error);
@@ -309,93 +313,105 @@ const Dashboard = () => {
   };
 
   const GAME_LABELS = {
-  GAME1: "One Pic Four Words",
-  GAME2: "Phrase Translation",
-  GAME3: "Word Translation"
-};
-const GAME_COLORS = ["#42a5f5", "#66bb6a", "#ffa726"];
-
-const [gameUsageData, setGameUsageData] = useState([
-  { name: "One Pic Four Words", value: 0 },
-  { name: "Phrase Translation", value: 0 },
-  { name: "Word Translation", value: 0 }
-]);
-
-// Fetch classrooms and count game usage
-useEffect(() => {
-  const fetchClassroomsAndGames = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const classroomsRes = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const classroomsArr = classroomsRes.data || [];
-      let gameClassroomSet = {
-        GAME1: new Set(),
-        GAME2: new Set(),
-        GAME3: new Set()
-      };
-
-      // For each classroom, fetch its activities and check which game types are present
-      await Promise.all(
-        classroomsArr.map(async (classroom) => {
-          const activitiesRes = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/activities/${classroom.classroomID}/activities`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          const activities = activitiesRes.data || [];
-          // For each game type, if at least one activity of that type exists in this classroom, count it
-          ["GAME1", "GAME2", "GAME3"].forEach(gameType => {
-            if (activities.some(a => a.gameType === gameType)) {
-              gameClassroomSet[gameType].add(classroom.classroomID);
-            }
-          });
-        })
-      );
-
-      setGameUsageData([
-        { name: GAME_LABELS.GAME1, value: gameClassroomSet.GAME1.size },
-        { name: GAME_LABELS.GAME2, value: gameClassroomSet.GAME2.size },
-        { name: GAME_LABELS.GAME3, value: gameClassroomSet.GAME3.size }
-      ]);
-    } catch (err) {
-      // fallback: zero data
-      setGameUsageData([
-        { name: GAME_LABELS.GAME1, value: 0 },
-        { name: GAME_LABELS.GAME2, value: 0 },
-        { name: GAME_LABELS.GAME3, value: 0 }
-      ]);
-    }
+    GAME1: "One Pic Four Words",
+    GAME2: "Phrase Translation",
+    GAME3: "Word Translation"
   };
-  fetchClassroomsAndGames();
-}, []);
+  const GAME_COLORS = ["#42a5f5", "#66bb6a", "#ffa726"];
+
+  const [gameUsageData, setGameUsageData] = useState([
+    { name: "One Pic Four Words", value: 0 },
+    { name: "Phrase Translation", value: 0 },
+    { name: "Word Translation", value: 0 }
+  ]);
+
+  // Fetch classrooms and count game usage
+  useEffect(() => {
+    const fetchClassroomsAndGames = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const classroomsRes = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/classrooms`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const classroomsArr = classroomsRes.data || [];
+        let gameClassroomSet = {
+          GAME1: new Set(),
+          GAME2: new Set(),
+          GAME3: new Set()
+        };
+
+        // For each classroom, fetch its activities and check which game types are present
+        await Promise.all(
+          classroomsArr.map(async (classroom) => {
+            const activitiesRes = await axios.get(
+              `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/activities/${classroom.classroomID}/activities`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const activities = activitiesRes.data || [];
+            // For each game type, if at least one activity of that type exists in this classroom, count it
+            ["GAME1", "GAME2", "GAME3"].forEach(gameType => {
+              if (activities.some(a => a.gameType === gameType)) {
+                gameClassroomSet[gameType].add(classroom.classroomID);
+              }
+            });
+          })
+        );
+
+        setGameUsageData([
+          { name: GAME_LABELS.GAME1, value: gameClassroomSet.GAME1.size },
+          { name: GAME_LABELS.GAME2, value: gameClassroomSet.GAME2.size },
+          { name: GAME_LABELS.GAME3, value: gameClassroomSet.GAME3.size }
+        ]);
+      } catch (err) {
+        // fallback: zero data
+        setGameUsageData([
+          { name: GAME_LABELS.GAME1, value: 0 },
+          { name: GAME_LABELS.GAME2, value: 0 },
+          { name: GAME_LABELS.GAME3, value: 0 }
+        ]);
+      }
+    };
+    fetchClassroomsAndGames();
+  }, []);
 
   // Small derived variable to keep UI rendering clean (precompute filtered users)
-const filteredUsers = users
-  .filter((user) =>
-    `${(user.firstName || "")} ${(user.lastName || "")}`
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  )
-  .filter((user) =>
-    roleFilter === "ALL" ? true : user.role === roleFilter
-  );
+  const filteredUsers = users
+    .filter((user) =>
+      `${(user.firstName || "")} ${(user.lastName || "")}`
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
+    )
+    .filter((user) =>
+      roleFilter === "ALL" ? true : user.role === roleFilter
+    );
 
   return (
-    <Box sx={{ backgroundColor: "#f5f5f5", minHeight: "100vh", pb: 5 }}>
+    <Box
+      sx={{
+        height: "95.8%",
+        pb: 5,
+        backgroundImage: `url(${MonsterEditUIOuterLight})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: "rgba(245,245,245,0.9)",
+      }}
+    >
       {/* Header */}
-      <Box 
-        sx={{ 
-          backgroundColor: "#fff", 
-          py: 2, 
-          px: 3, 
-          boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+      <Box
+        sx={{
+          backgroundColor: "transparent",
+          py: 2,
+          px: 3,
           mb: 4,
           display: "flex",
           alignItems: "center",
           gap: 2,
-          borderRadius: 2
+          borderRadius: 2,
+          paddingLeft: 6,
+          paddingRight: 6,
+          paddingTop: 3,
         }}
       >
         <DashboardIcon sx={{ color: "#3f51b5", fontSize: 32 }} />
@@ -409,7 +425,7 @@ const filteredUsers = users
         </Box>
 
         <Box sx={{ ml: "auto", display: "flex", gap: 2 }}>
-          <Button sx={{borderRadius: 6, backgroundColor: "#3f51b5", color: "#fff"}} onClick={() => navigate(`/activities`)}>
+          <Button sx={{ borderRadius: 6, backgroundColor: "#3f51b5", color: "#fff" }} onClick={() => navigate(`/activities`)}>
             <Typography variant="body1" sx={{ color: "white" }}>
               Game Editor
             </Typography>
@@ -425,13 +441,16 @@ const filteredUsers = users
               <Card
                 elevation={activeFilter === item.label.toLowerCase().split(" ")[0] && item.clickable ? 8 : 2}
                 sx={{
-                  width: 250,
-                  height: 128,
+                  width: 268,
+                  height: 126,
                   display: "flex",
                   alignItems: "center",
                   borderRadius: 2,
                   px: 2,
-                  backgroundColor: "#fff",
+                  backgroundImage: `url(${smallBox})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
                   transition: "transform 0.12s ease, box-shadow 0.12s ease",
                   cursor: item.clickable ? "pointer" : "default",
                   "&:hover": item.clickable ? { transform: "translateY(-3px)" } : {}
@@ -453,7 +472,7 @@ const filteredUsers = users
             </Grid>
           ))}
         </Grid>
-         
+
 
         {/* Line Chart and Users List Side-by-Side */}
         <Grid container spacing={3} mb={4}>
@@ -463,15 +482,21 @@ const filteredUsers = users
               elevation={2}
               sx={{
                 borderRadius: 2,
+                //border: "8px solid #5b3138",
+                backgroundImage: `url(${MonsterEditUIOuterLight})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
                 p: 2,
                 height: 485,
-                width: "96%",
+                width: "94.55%",
+                padding: 3,
                 display: "flex",
                 flexDirection: "column",
               }}
             >
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography variant="h6" sx={{ fontWeight: 500, color: "#3f51b5" }}>
+                <Typography variant="h5" sx={{ fontWeight: 500, color: "#1f3b58" }}>
                   User Growth Trends
                 </Typography>
                 <TextField
@@ -511,10 +536,10 @@ const filteredUsers = users
                         activeFilter === "users"
                           ? "#f44336"
                           : activeFilter === "students"
-                          ? "#2196f3"
-                          : activeFilter === "teachers"
-                          ? "#4caf50"
-                          : "#f44336"
+                            ? "#2196f3"
+                            : activeFilter === "teachers"
+                              ? "#4caf50"
+                              : "#f44336"
                       }
                       strokeWidth={3}
                       activeDot={{ r: 6 }}
@@ -532,6 +557,7 @@ const filteredUsers = users
               elevation={2}
               sx={{
                 borderRadius: 2,
+                border: "8px solid #5b3138",
                 overflow: "hidden",
                 height: 515,
                 display: "flex",
@@ -542,7 +568,7 @@ const filteredUsers = users
                 sx={{
                   px: 3,
                   py: 2,
-                  backgroundColor: "#f44336",
+                  backgroundColor: "#bb7547",
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
@@ -555,7 +581,7 @@ const filteredUsers = users
                 </Typography>
               </Box>
               <Divider />
-              <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center" }}>
+              <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center", backgroundColor: "#f7cb97" }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -566,7 +592,7 @@ const filteredUsers = users
                 />
               </Box>
 
-              <Box sx={{ px: 2, display: "flex", gap: 1, flexWrap: "wrap", pb: 1 }}>
+              <Box sx={{ px: 2, display: "flex", gap: 1, flexWrap: "wrap", pb: 1, backgroundColor: "#f7cb97" }}>
                 {[
                   { label: "All Roles", value: "ALL", color: "default" },
                   { label: "User", value: "USER", color: "primary" },
@@ -591,7 +617,7 @@ const filteredUsers = users
                   <Typography color="error">{error}</Typography>
                 </Box>
               )}
-              <Box sx={{ flex: 1, overflowY: "auto", px: 2 }}>
+              <Box sx={{ flex: 1, overflowY: "auto", px: 2, backgroundColor: "#f7cb97" }}>
                 <List sx={{ width: "100%" }}>
                   {filteredUsers.length === 0 && (
                     <Box sx={{ py: 6, textAlign: "center" }}>
@@ -607,10 +633,10 @@ const filteredUsers = users
                               user.role === "USER"
                                 ? "#2196f3"
                                 : user.role === "TEACHER"
-                                ? "#4caf50"
-                                : user.role === "ADMIN"
-                                ? "#ff9800"
-                                : "#2196f3",
+                                  ? "#4caf50"
+                                  : user.role === "ADMIN"
+                                    ? "#ff9800"
+                                    : "#2196f3",
                             mr: 2,
                             color: "#fff",
                           }}
@@ -632,18 +658,18 @@ const filteredUsers = users
                                   user.role === "USER"
                                     ? "#e3f2fd"
                                     : user.role === "TEACHER"
-                                    ? "#e8f5e9"
-                                    : user.role === "ADMIN"
-                                    ? "#fff3e0"
-                                    : "#e3f2fd",
+                                      ? "#e8f5e9"
+                                      : user.role === "ADMIN"
+                                        ? "#fff3e0"
+                                        : "#e3f2fd",
                                 color:
                                   user.role === "USER"
                                     ? "#1976d2"
                                     : user.role === "TEACHER"
-                                    ? "#388e3c"
-                                    : user.role === "ADMIN"
-                                    ? "#ff9800"
-                                    : "#1976d2",
+                                      ? "#388e3c"
+                                      : user.role === "ADMIN"
+                                        ? "#ff9800"
+                                        : "#1976d2",
                                 height: 26,
                               }}
                             />
@@ -675,7 +701,7 @@ const filteredUsers = users
 
 
         {/* Main Content */}
-        <Grid container spacing={3}>          {/* Classroom Data */}          
+        <Grid container spacing={3}>          {/* Classroom Data */}
         </Grid>
       </Box>
 
@@ -723,10 +749,10 @@ const filteredUsers = users
                               activity.gameType === "GAME1"
                                 ? "One Pic Four Words"
                                 : activity.gameType === "GAME2"
-                                ? "Phrase Translation"
-                                : activity.gameType === "GAME3"
-                                ? "Word Translation"
-                                : activity.activityName
+                                  ? "Phrase Translation"
+                                  : activity.gameType === "GAME3"
+                                    ? "Word Translation"
+                                    : activity.activityName
                             }
                             sx={{
                               backgroundColor: "#e8eaf6",
@@ -738,11 +764,11 @@ const filteredUsers = users
                         }
                       />
                       <ListItemSecondaryAction>
-                        <IconButton 
-                          edge="end" 
-                          aria-label="delete" 
+                        <IconButton
+                          edge="end"
+                          aria-label="delete"
                           onClick={() => handleDeleteActivity(activity.activityId)}
-                          sx={{ 
+                          sx={{
                             color: "#f44336",
                             "&:hover": {
                               backgroundColor: "#ffebee"

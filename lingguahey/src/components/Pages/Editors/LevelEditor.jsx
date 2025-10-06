@@ -113,16 +113,33 @@ const LevelEditor = () => {
 
   // Open Edit Dialog
   const handleOpenEdit = (level) => {
+    const formattedMonsters = level.monsters.map((m) => {
+      // If it's a boss
+      if (m.monsterType === "BOSS") {
+        // Some APIs return a list of boss form monsters, adjust if needed
+        const bossForms = m.bossFormsMinions || m.bossForms || [];
+
+        return {
+          monsterType: "BOSS",
+          bossForms: bossForms.map((bf) => bf.monsterId || bf), // normalize IDs
+        };
+      }
+
+      // Otherwise it's a regular minion
+      return {
+        monsterId: m.monster?.monsterId || m.monsterId,
+        monsterType: "MINION",
+      };
+    });
+
     setLevelForm({
       id: level.id,
       name: level.name,
       coins: level.coins,
       gems: level.gems,
-      monsters: level.monsters.map((m) => ({
-        monsterId: m.monster?.monsterId,
-        monsterType: m.monsterType,
-      })),
+      monsters: formattedMonsters,
     });
+
     setOpenEditDialog(true);
   };
 
@@ -154,53 +171,58 @@ const LevelEditor = () => {
     setLevelForm({ ...levelForm, monsters: updated });
   };
 
-  const handleSave = async () => {
-    const payload = {
-      levelName: levelForm.name,
-      coinsReward: Number(levelForm.coins),
-      gemsReward: Number(levelForm.gems),
-      monsters: levelForm.monsters.map((m) => ({
-        monsterId: Number(m.monsterId),
-        monsterType: m.monsterType,
-      })),
-    };
 
+
+  // Fetch Levels
+  const fetchLevels = async () => {
     try {
-      if (levelForm.id) {
-        // Edit existing level
-        const response = await API.put(`/${levelForm.id}`, payload);
-        setLevels(
-          levels.map((lvl) =>
-            lvl.id === levelForm.id
-              ? {
-                ...lvl,
-                name: response.data.levelName,
-                coins: response.data.coinsReward,
-                gems: response.data.gemsReward,
-                monsters: response.data.levelMonsters,
-              }
-              : lvl
-          )
-        );
-      } else {
-        // Add new level
-        const response = await API.post("", payload);
-        setLevels([
-          ...levels,
-          {
-            id: response.data.levelId,
-            name: response.data.levelName,
-            coins: response.data.coinsReward,
-            gems: response.data.gemsReward,
-            monsters: response.data.levelMonsters,
-          },
-        ]);
-      }
-      handleCloseDialog();
+      const response = await API.get("");
+      const fetchedLevels = response.data.map((level) => ({
+        id: level.levelId,
+        name: level.levelName,
+        coins: level.coinsReward,
+        gems: level.gemsReward,
+        monsters: level.levelMonsters || [],
+      }));
+      setLevels(fetchedLevels);
     } catch (error) {
-      console.error("Error saving level:", error);
+      console.error("Error fetching levels:", error);
     }
   };
+
+  const handleSave = async () => {
+    try {
+      const payload = {
+        levelName: levelForm.name,
+        coinsReward: levelForm.coins,
+        gemsReward: levelForm.gems,
+        monsters: levelForm.monsters.map(m => {
+          if (m.monsterType === "BOSS") {
+            return {
+              monsterType: "BOSS",
+              bossFormsMinionIds: (m.bossForms || []).filter(id => id)
+            };
+          }
+          return {
+            monsterId: m.monsterId,
+            monsterType: "MINION"
+          };
+        })
+      };
+
+      if (levelForm.id) {
+        await API.put(`/${levelForm.id}`, payload);
+      } else {
+        await API.post("", payload);
+      }
+
+      fetchLevels();
+      handleCloseDialog();
+    } catch (err) {
+      console.error("Save failed:", err.response?.data || err.message);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -263,19 +285,19 @@ const LevelEditor = () => {
         sx={{
           maxHeight: "70vh",
           overflowY: "auto",
-          px: 0, // 👈 reduced padding so scrollbar sits closer to content
+          px: 0,
           "&::-webkit-scrollbar": {
-            width: "10px", // 👈 scrollbar width
+            width: "10px",
           },
           "&::-webkit-scrollbar-track": {
-            background: "transparent", // 👈 transparent track
+            background: "transparent",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "rgba(0,0,0,0.8)", // 👈 60% opacity
+            backgroundColor: "rgba(0,0,0,0.8)",
             borderRadius: "6px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "rgba(0,0,0,0.8)", // 👈 darkens slightly on hover
+            backgroundColor: "rgba(0,0,0,0.8)",
           },
         }}
       >
@@ -285,7 +307,7 @@ const LevelEditor = () => {
               <Box
                 sx={{
                   backgroundImage: `url(${cardBG})`,
-                  backgroundSize: "100% 100%",   // stretches bg properly
+                  backgroundSize: "100% 100%",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center",
                   padding: 4,
@@ -376,7 +398,7 @@ const LevelEditor = () => {
         maxWidth="sm"
         PaperProps={{
           sx: {
-            backgroundImage: `url(${ListContainerBG})`, // ✅ same as MonsterEditor
+            backgroundImage: `url(${ListContainerBG})`,
             backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center",
@@ -456,63 +478,138 @@ const LevelEditor = () => {
           {levelForm.monsters.map((monster, index) => (
             <Box
               key={index}
-              sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
+              sx={{
+                display: "flex", flexDirection: "column", gap: 1, mb: 2, 
+                "& .MuiOutlinedInput-root": {
+                  border: "2px solid #5b3138",
+                  borderRadius: "8px",
+                  minHeight: 40,
+                },
+                "& .MuiInputLabel-root": {
+                  backgroundColor: "#dba463",
+                  padding: "0 4px",
+                  transform: "translate(14px, -6px) scale(0.75)",
+                },
+                "& .MuiInputLabel-shrink": {
+                  transform: "translate(14px, -6px) scale(0.75)",
+                }
+              }}
             >
-              <TextField
-                select
-                label="Monster"
-                value={monster.monsterId}
-                onChange={(e) =>
-                  handleMonsterFieldChange(index, "monsterId", e.target.value)
-                }
-                sx={{
-                  flex: 2,
-                  "& .MuiOutlinedInput-root": {
-                    border: "2px solid #5b3138",
-                    borderRadius: "8px",
-                    minHeight: 40,
-                  },
-                  "& .MuiInputLabel-root": {
-                    backgroundColor: "#dba463",
-                    padding: "0 4px",
-                    transform: "translate(14px, -6px) scale(0.75)",
-                  },
-                  "& .MuiInputLabel-shrink": {
-                    transform: "translate(14px, -6px) scale(0.75)",
-                  },
-                }}
-              >
-                {monsterPool.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label="Type"
-                value={monster.monsterType}
-                onChange={(e) =>
-                  handleMonsterFieldChange(index, "monsterType", e.target.value)
-                }
-                sx={{ flex: 1 }}
-              >
-                <MenuItem value="MINION">Minion</MenuItem>
-                <MenuItem value="BOSS">Boss</MenuItem>
-              </TextField>
+              {/* Identifier Row */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {monster.monsterType === "MINION" && (
+                  <TextField
+                    select
+                    label="Monster"
+                    value={monster.monsterId || ""}
+                    onChange={(e) => handleMonsterFieldChange(index, "monsterId", e.target.value)}
+                    sx={{ flex: 2 }}
+                  >
+                    {monsterPool.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>
+                        {m.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
 
-              <IconButton color="error" onClick={() => handleRemoveMonsterField(index)}>
-                <Delete />
-              </IconButton>
+                <TextField
+                  label="Type"
+                  value={monster.monsterType}
+                  InputProps={{ readOnly: true }}
+                  sx={{ flex: 1 }}
+                />
+
+                <IconButton color="error" onClick={() => handleRemoveMonsterField(index)}>
+                  <Delete />
+                </IconButton>
+              </Box>
+
+              {/* Boss-specific fields */}
+              {monster.monsterType === "BOSS" && (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+                  <TextField
+                    select
+                    label="Boss Form 1"
+                    value={monster.bossForms?.[0] || ""}
+                    onChange={(e) => {
+                      const updatedForms = [...(monster.bossForms || [])];
+                      updatedForms[0] = e.target.value;
+                      handleMonsterFieldChange(index, "bossForms", updatedForms);
+                    }}
+                  >
+                    {/* blank/none option */}
+                    <MenuItem value="">None</MenuItem>
+                    {monsterPool.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>
+                        {m.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    select
+                    label="Boss Form 2"
+                    value={monster.bossForms?.[1] || ""}
+                    onChange={(e) => {
+                      const updatedForms = [...(monster.bossForms || [])];
+                      updatedForms[1] = e.target.value;
+                      handleMonsterFieldChange(index, "bossForms", updatedForms);
+                    }}
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {monsterPool.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>
+                        {m.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    select
+                    label="Boss Form 3"
+                    value={monster.bossForms?.[2] || ""}
+                    onChange={(e) => {
+                      const updatedForms = [...(monster.bossForms || [])];
+                      updatedForms[2] = e.target.value;
+                      handleMonsterFieldChange(index, "bossForms", updatedForms);
+                    }}
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {monsterPool.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>
+                        {m.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
+              )}
             </Box>
           ))}
-          <Button
-            startIcon={<AddCircle />}
-            onClick={handleAddMonsterField}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            Add Monster
-          </Button>
+
+          {/* Add Minion and Add Boss buttons */}
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <Button startIcon={<AddCircle />} onClick={() => {
+              setLevelForm({
+                ...levelForm,
+                monsters: [...levelForm.monsters, { monsterId: "", monsterType: "MINION" }]
+              });
+            }}>
+              Add Minion
+            </Button>
+
+            <Button startIcon={<AddCircle />} disabled={levelForm.monsters.some(m => m.monsterType === "BOSS")}
+              onClick={() => {
+                setLevelForm({
+                  ...levelForm,
+                  monsters: [...levelForm.monsters, { monsterType: "BOSS", bossForms: [] }]
+                });
+              }}
+            >
+              Add Boss
+            </Button>
+          </Box>
+
         </DialogContent>
 
         <DialogActions>
