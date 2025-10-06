@@ -1,6 +1,7 @@
 // src/components/Auth/Login.jsx
 import React, { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+// MODIFICATION 1: Import useLocation
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Grid,
@@ -40,6 +41,8 @@ const API = axios.create({
 
 export default function Login() {
   const navigate = useNavigate();
+  // MODIFICATION 2: Initialize useLocation
+  const location = useLocation();
   const { setToken } = useAuth();
   const { setIntroMode } = useContext(MusicContext);
 
@@ -52,6 +55,18 @@ export default function Login() {
   useEffect(() => {
     setIntroMode(true);
   }, [setIntroMode]);
+  
+  // MODIFICATION 3: New useEffect to handle redirected snack messages
+  useEffect(() => {
+    // Check if location.state contains a message from a redirect
+    if (location.state?.snackMessage) {
+      showSnack(location.state.snackMessage, location.state.snackSeverity || "error");
+      
+      // Clear the state from the location history to prevent the snackbar from reappearing
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
+
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -131,18 +146,19 @@ export default function Login() {
   const primaryBtn = '#5D4037';
   const textColor = "#5D4037";
 
+  // **START OF ORIGINAL JSX LAYOUT - DO NOT CHANGE**
   return (
     <>
       <Grid
         container
         sx={{
           backgroundImage: `url(${LandingBackgroundPic})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    minHeight: '100vh',
-                    minWidth: '100vw',
-                    display: 'flex',
-                    justifyContent: 'center',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          minHeight: '100vh',
+          minWidth: '100vw',
+          display: 'flex',
+          justifyContent: 'center',
         }}
         alignItems="center"
         justifyContent="center"
@@ -189,7 +205,7 @@ export default function Login() {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 width: 500,
-          }}
+            }}
             />
 
             <TextField

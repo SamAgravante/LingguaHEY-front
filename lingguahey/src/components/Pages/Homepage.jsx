@@ -30,7 +30,7 @@ import modalBg from '../../assets/images/backgrounds/activity-modal-bg.png';
 import bunnyWave from '../../assets/images/characters/lingguahey-char1-wave.png';
 import { MusicContext } from '../../contexts/MusicContext';
 import { useScore } from '../../contexts/ScoreContext';
-import { styled } from '@mui/system';
+import { flex, styled } from '@mui/system';
 import DungeonGame from './DungeonGame';
 import { useNavigate } from 'react-router-dom';
 import DungeonSection from '../sections/DungeonSection';
@@ -119,11 +119,9 @@ export default function Homepage() {
   const navigate = useNavigate();
 
   const [makeMessageAppear, setMakeMessageAppear] = useState(false);
-  const [selectedLevel, setSelectedLevel] = useState(0);
   const [levelDetails, setLevelDetails] = useState([]);
   const [dungeonPreperatory, setDungeonPreparatory] = useState(false);
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
-  const [monsterIndex, setMonsterIndex] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [codexOpen, setCodexOpen] = useState(false);
@@ -142,6 +140,13 @@ export default function Homepage() {
 
   const [completedLevels, setCompletedLevels] = useState([]);
   const [dungeonBackground, setDungeonBackground] = useState(DungeonOpen || "linear-gradient(#000, #333)");
+
+  const rarityBackgrounds = {
+    COMMON: "#5D4037",
+    RARE: "#a1ccce",
+    MYTHIC: "#cb7275",
+    LEGENDARY: "#fbf236"
+  };
 
   useEffect(() => {
     const fetchDeployedActivity = async () => {
@@ -271,92 +276,109 @@ export default function Homepage() {
     }
   }
 
-  // Decode token → user
   useEffect(() => {
     if (!token) return;
     const decoded = getUserFromToken(token);
     if (decoded?.userId) setUser(decoded);
   }, [token]);
 
-  // Fetch classroom, user details, progress
   useEffect(() => {
-    if (!user) return;
-    let isMounted = true;
-    (async () => {
-      try {
-        const userResp = await API.get(`/users/${user.userId}`);
-        setUserDetails(userResp.data);
-        setCoins(userResp.data.coins); // Initialize coins state
-        setGems(userResp.data.gems);
+        if (!user) return;
+        let isMounted = true;
+        (async () => {
+            let userResp;
 
-        console.log('User details:', userResp.data);
-        const endpoint = userResp.data.role === 'TEACHER'
-          ? `classrooms/teacher/${user.userId}`
-          : `classrooms/user/${user.userId}`;
-        //console.log('Fetching classroom from endpoint:', endpoint);
-        const classResp = await API.get(endpoint);
-        console.log('Classroom response:', classResp.data);
-        if (!isMounted) return;
+            // 1. FETCH USER DETAILS
+            try {
+                userResp = await API.get(`/users/${user.userId}`);
+                setUserDetails(userResp.data);
+                setCoins(userResp.data.coins);
+                setGems(userResp.data.gems);
+                console.log('User details retrieved successfully:', userResp.data);
+            } catch (err) {
+                setIsLoading(false);
 
-        // Handle teacher vs student response differently
-        if (userResp.data.role === 'TEACHER') {
-          // For teachers, take the first classroom if they have any
-          if (Array.isArray(classResp.data) && classResp.data.length > 0) {
-            setClassroom(classResp.data[0].classroomID);
-          } else {
-            setClassroom(null);
-          }
-        } else {
-          // For students, take the single classroom ID
-          setClassroom(classResp.data.classroomID);
-        }
+                if (err.response && err.response.status === 403) {
+                    console.log('Token Invalid: Failed to retrieve user details. Redirecting to login.');
+                    navigate('/login', { state: { snackMessage: 'Session expired. Please log in again.', snackSeverity: 'error' } });
+                } else {
+                    console.error('Error retrieving user details:', err);
+                }
+                return; // Stop execution if user details failed
+            }
 
-        //const prog = await API.get(`/activities/${user.userId}/progress`);
-        //setProgressVocab(prog.data.gameSet1Progress * 100);
-        //setProgressGrammar(prog.data.gameSet2Progress * 100);
+            // 2. FETCH CLASSROOM DETAILS
+            try {
+                const endpoint = userResp.data.role === 'TEACHER'
+                    ? `classrooms/teacher/${user.userId}`
+                    : `classrooms/user/${user.userId}`;
 
+                const classResp = await API.get(endpoint);
+                console.log('Classroom response:', classResp.data);
+                if (!isMounted) return;
 
+                // Handle teacher vs student response differently (Success logic)
+                if (userResp.data.role === 'TEACHER') {
+                    // For teachers, take the first classroom if they have any
+                    if (Array.isArray(classResp.data) && classResp.data.length > 0) {
+                        setClassroom(classResp.data[0].classroomID);
+                    } else {
+                        setClassroom(null);
+                    }
+                } else {
+                    // For students, take the single classroom ID
+                    setClassroom(classResp.data.classroomID);
+                }
 
+            } catch (err) {
+                // Handle Classroom Fetch Failure (Not Enrolled / 404)
+                console.log('Classroom Not Found: Enroll in a classroom first. Redirecting to login.');
+                // **MODIFICATION 2: Pass snack alert state for missing classroom**
+                navigate('/login', { state: { snackMessage: 'You must be enrolled in a classroom to proceed.', snackSeverity: 'warning' } });
+                return; // Stop execution if classroom details failed
+            }
 
-        //Monster List
-        setIsLoading(true)
+            try {
+                //Monster List
+                setIsLoading(true)
 
-        // Inventory List
-        const inventoryResp = await API.get(`/inventory/${user.userId}`);
-        SetInventory(inventoryResp.data);
-        console.log("Inventory contains:" + inventoryResp.data);
+                // Inventory List
+                const inventoryResp = await API.get(`/inventory/${user.userId}`);
+                SetInventory(inventoryResp.data);
+                console.log("Inventory contains:" + inventoryResp.data);
 
-        // Equipped Item
-        const equipResp = await API.get(`/users/${user.userId}/equipped-cosmetic`);
-        // API shape: { equippedCosmetic: { cosmeticId, name, rarity, cosmeticImage } }
-        setItemEquipped(equipResp.data?.equippedCosmetic || {});
-        console.log("Equipped Item:", equipResp.data);
+                // Equipped Item
+                const equipResp = await API.get(`/users/${user.userId}/equipped-cosmetic`);
+                // API shape: { equippedCosmetic: { cosmeticId, name, rarity, cosmeticImage } }
+                setItemEquipped(equipResp.data?.equippedCosmetic || {});
+                console.log("Equipped Item:", equipResp.data);
 
-        //Level Completed
-        const completedLevelsResp = await API.get(`/levels/completed/users/${user.userId}`);
-        setCompletedLevels(completedLevelsResp.data);
-        console.log("Completed levels" + completedLevelsResp.data);
+                //Level Completed
+                const completedLevelsResp = await API.get(`/levels/completed/users/${user.userId}`);
+                setCompletedLevels(completedLevelsResp.data);
+                console.log("Completed levels" + completedLevelsResp.data);
 
-        const monsterResp = await API.get(`/monsters`);
-        if (isMounted) {
-          setMonsterList(monsterResp.data);
-          setIsLoading(false);
-        }
-        console.log("monster list: " + monsterResp.data);
-        //Level Details
-        const levelResp = await API.get(`/levels`);
-        console.log(levelResp);
-        setLevelDetails(levelResp.data);
-        console.log(levelResp.data);
+                const monsterResp = await API.get(`/monsters`);
+                if (isMounted) {
+                    setMonsterList(monsterResp.data);
+                    setIsLoading(false);
+                }
+                console.log("monster list: " + monsterResp.data);
+                //Level Details
+                const levelResp = await API.get(`/levels`);
+                console.log(levelResp);
+                setLevelDetails(levelResp.data);
+                console.log(levelResp.data);
 
-        await fetchUserActivities();
-      } catch (err) {
-        console.error(err);
-        setIsLoading(false);
-      }
-    })();
-    return () => { isMounted = false; };
-  }, [user]);
+                await fetchUserActivities();
+            } catch (err) {
+                console.error('Error fetching secondary data (Inventory, Monsters, Levels):', err);
+                setIsLoading(false);
+            }
+
+        })();
+        return () => { isMounted = false; };
+    }, [user, navigate]); 
 
   // Load activities whenever section changes
   useEffect(() => {
@@ -1216,7 +1238,7 @@ export default function Homepage() {
                   </Box>
                 </Box>
               </Box>
-              <Stack direction="column">
+              <Stack direction="column" alignItems={'center'}>
                 <Box sx={{
                   //border: "solid", 
                   width: 100,
@@ -1225,7 +1247,11 @@ export default function Homepage() {
                   backgroundSize: 'contain',
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'center',
-                  mt: 10
+                  mt: 10,
+                  display: flex,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+
                 }}>
                   <img
                     src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
@@ -1233,10 +1259,11 @@ export default function Homepage() {
                     style={{ width: "100px", height: "100px" }}
                   />
                 </Box>
-                <Typography color="#5D4037">
+                <Typography variant={'h5'} color={rarityBackgrounds[itemEquipped.rarity]} sx={{ WebkitTextStroke: '.4px #180f0c', textAlign: 'center' }}>
                   {itemEquipped.name}
                 </Typography>
               </Stack>
+
               <Stack direction="column" spacing={2} sx={{ ml: 6, }}>
                 <Stack direction="row" spacing={.5} sx={{ alignItems: 'center', justifyContent: 'center' }}>
 
@@ -1328,8 +1355,8 @@ export default function Homepage() {
             {/*Item List area*/}
             <Box position="relative" sx={{
               //border: "solid", 
-              width: '800px',
-              height: '170px',
+              width: '850px',
+              height: '200px',
               backgroundImage: `url(${InventoryItemArea})`,
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
@@ -1338,13 +1365,13 @@ export default function Homepage() {
               alignItems: "center",
               justifyContent: "center",
               bottom: 40,
-              //right:40,
+              right: 43,
               mt: 1
             }}>
               {/*Items Tiles 11x2*/}
               <Box sx={{
                 //border: "solid", 
-                width: '760px',
+                width: '900px',
                 height: '115px',
                 display: "flex",
                 alignItems: "center",
@@ -1358,9 +1385,9 @@ export default function Homepage() {
                     alignItems: "center",
                   }}>
                   {(() => {
-                    // Always fill to 22 slots
+                    // Always fill to 10 slots
                     const slots = [...inventory];
-                    while (slots.length < 20) {
+                    while (slots.length < 10) {
                       slots.push(null);
                     }
 
@@ -1397,8 +1424,8 @@ export default function Homepage() {
                               alignItems: "center",
                               textTransform: "none",
                               color: isEquipped ? "gold" : "white",
-                              width: 40,
-                              height: 60
+                              width: 70,
+                              height: 75
                             }}
                           >
                             {item ? (
@@ -1407,8 +1434,8 @@ export default function Homepage() {
                                   component="img"
                                   src={item?.cosmeticImage ? `data:image/png;base64,${item.cosmeticImage}` : undefined}
                                   alt={item?.name}
-                                  sx={{ width: 40, height: 60, mb: 0.5 }}
-                                />
+                                  sx={{ width: 60, height: 60, mb: 0.5 }}
+                                />{/*
                                 <Typography
                                   variant="caption"
                                   sx={{
@@ -1417,7 +1444,7 @@ export default function Homepage() {
                                   }}
                                 >
                                   {item.name}
-                                </Typography>
+                                </Typography>*/ }
                               </>
                             ) : null}
                           </Button>
@@ -1440,7 +1467,7 @@ export default function Homepage() {
         }}
         closeAfterTransition
         BackdropProps={{ timeout: 500 }}
-        
+
       >
         <Fade in={multiplayerOpen} >
           <Box
