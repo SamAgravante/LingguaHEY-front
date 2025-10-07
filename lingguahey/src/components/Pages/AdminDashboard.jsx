@@ -38,10 +38,29 @@ import axios from "axios";
 import API from "../../api";
 import { jwtDecode } from "jwt-decode";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { usePeriodicFetch } from '../../hooks/usePeriodicFetch';
 
 // New background asset imports to apply Subscription design
 import MonsterEditUIOuterLight from "../../assets/images/backgrounds/MonsterEditUIOuterLight.png";
 import smallBox from '../../assets/images/backgrounds/DungeonHint.png';
+
+const fetchUsers = async () => {
+  const token = localStorage.getItem("token");
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
+};
+
+const fetchConcurrentUsers = async () => {
+  const response = await API.get(`/users/analytics/active-token-count`);
+  return response.data;
+};
 
 const Dashboard = () => {
   const [open, setOpen] = useState(false);
@@ -88,6 +107,41 @@ const Dashboard = () => {
     { name: 'Nov', users: 0, students: 0, teachers: 0 },
     { name: 'Dec', users: 0, students: 0, teachers: 0 },
   ]);
+
+  // confirm delete user
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    open: false,
+    userId: null,
+    userName: ''
+  });
+
+  const { data: periodicUsers, error: usersError } = usePeriodicFetch(fetchUsers, 5000);
+  const { data: periodicConcurrentUsers, error: concurrentError } = usePeriodicFetch(fetchConcurrentUsers, 5000);
+
+  useEffect(() => {
+    if (periodicUsers) {
+      setUsers(periodicUsers);
+      setRegisteredUsers(periodicUsers.length);
+      
+      let studentCount = 0;
+      let teacherCount = 0;
+      periodicUsers.forEach((user) => {
+        if (user.role === "USER") {
+          studentCount++;
+        } else if (user.role === "TEACHER") {
+          teacherCount++;
+        }
+      });
+      setStudentsRegistered(studentCount);
+      setTeachersRegistered(teacherCount);
+    }
+  }, [periodicUsers]);
+
+  useEffect(() => {
+    if (periodicConcurrentUsers !== null) {
+      setConcurrentUsers(periodicConcurrentUsers);
+    }
+  }, [periodicConcurrentUsers]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -263,17 +317,28 @@ const Dashboard = () => {
 
   const handleCloseModal = () => setOpen(false);
 
-  const handleDelete = async (userId) => {
+  const handleDelete = (user) => {
+    setDeleteConfirmation({
+      open: true,
+      userId: user.userId,
+      userName: `${user.firstName} ${user.lastName}`
+    });
+  };
+
+  const handleConfirmDelete = async () => {
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": `application/json`
-        },
-      });
-      setUsers((prev) => prev.filter((user) => user.userId !== userId));
-      alert("User deleted successfully.");
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/users/${deleteConfirmation.userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": `application/json`
+          },
+        }
+      );
+      // The periodic fetch will update the users list automatically
+      setDeleteConfirmation({ open: false, userId: null, userName: '' });
     } catch (error) {
       console.error("Failed to delete user:", error);
       alert("Failed to delete user. Please try again.");
@@ -684,7 +749,7 @@ const Dashboard = () => {
                                 backgroundColor: "#ffebee",
                               },
                             }}
-                            onClick={() => handleDelete(user.userId)}
+                            onClick={() => handleDelete(user)}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -793,6 +858,34 @@ const Dashboard = () => {
           </Box>
         </Card>
       </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmation.open}
+        onClose={() => setDeleteConfirmation({ open: false, userId: null, userName: '' })}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete user "{deleteConfirmation.userName}"? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteConfirmation({ open: false, userId: null, userName: '' })}
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

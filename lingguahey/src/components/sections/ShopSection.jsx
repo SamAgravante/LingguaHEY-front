@@ -6,7 +6,7 @@ import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMedi
 import GameShopField from '../../assets/images/backgrounds/GameShopField.png';
 import GameShopBoxSmall from '../../assets/images/backgrounds/GameShopBoxSmall.png';
 import GameShopBoxSmallRed from '../../assets/images/backgrounds/GameShopBoxSmallRed.png';
-import ItemBox from '../../assets/images/backgrounds/ItemBox.png';
+import ItemBox from '../../assets/images/backgrounds/Itembox.png';
 import GameTextBox from '../../assets/images/backgrounds/GameTextBox.png';
 import HealthPotion from '../../assets/images/objects/HealthPotion.png';
 import ShieldPotion from '../../assets/images/objects/ShieldPotion.png';

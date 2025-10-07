@@ -55,7 +55,7 @@ import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
 import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
 import NameTab from "../../assets/images/backgrounds/NameTab.png";
-import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
+import ItemBox from "../../assets/images/backgrounds/Itembox.png";
 import HealthPotion from "../../assets/images/objects/HealthPotion.png";
 import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
 import SkipPotion from "../../assets/images/objects/SkipPotion.png";
