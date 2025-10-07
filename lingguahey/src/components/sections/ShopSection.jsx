@@ -35,16 +35,17 @@ export default function ShopSection({
         sx={{
           position: 'absolute',
           bottom: 20,
-          right: 20,
+          left: 20,
           height: 60,
           width: 300,
           backgroundImage: `url(${GameTextField})`,
           backgroundSize: 'cover',
-          fontSize: 19
+          fontSize: 19,
+          pr:3
         }}
         onClick={handleBackClick}
       >
-        Leave Shop
+        ⮘ Leave Shop
       </Button>
 
       <Box sx={{
@@ -107,7 +108,7 @@ export default function ShopSection({
         backgroundImage: `url(${GameShopField})`,
         backgroundSize: 'cover',
         width: 538,
-        height: 738,
+        height: 750,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -70,6 +70,12 @@ export default function SummonSection({
     MYTHIC: MythicalItem,
     LEGENDARY: LegendaryItem
   };
+  const rarityText = {
+    COMMON: "#5D4037",
+    RARE: "#a1ccce",
+    MYTHIC: "#cb7275",
+    LEGENDARY: "#fbf236"
+  };
 
   return (
     <Grid container direction="column" alignItems="center" sx={{ mt: 2 }}>
@@ -77,11 +83,14 @@ export default function SummonSection({
       <Box
         sx={{
           visibility: visibilityGacha,
-          alignContent: 'center',
-          justifyItems: 'center',
           width: '100%',
           height: '100%',
-          textAlign: 'center',
+          // --- New Centering Properties ---
+          display: 'flex', // Enable flexbox
+          flexDirection: 'column', // Stack children vertically
+          alignItems: 'center', // Center children horizontally
+          justifyContent: 'center', // Center children vertically
+          // -------------------------------
           backgroundImage: `url(${SummonAnimation}?t=${animationKey})`,
           backgroundSize: 'cover',
           position: 'absolute',
@@ -90,21 +99,9 @@ export default function SummonSection({
           zIndex: 1
         }}
       >
+        {/*Summon Display*/}
         {showItem && (
           <>
-            <Box sx={{ position: 'absolute', top: 600, left: 550 }}>
-              <Typography
-                sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 40, color: '#5D4037' }}
-              >
-                You got a new weapon!
-              </Typography>
-              <Typography
-                sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 30, color: '#5D4037' }}
-              >
-                {pulledItem.name}
-              </Typography>
-            </Box>
-
             <Box
               sx={{
                 height: 500,
@@ -129,14 +126,26 @@ export default function SummonSection({
                 }}
               />
             </Box>
-
+            <Box sx={{ mb: 2 }}> {/* Add margin bottom for spacing */}
+              <Typography
+                sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 40, color: '#5D4037' }}
+              >
+                You got a new weapon!
+              </Typography>
+              <Typography
+                variant={'h5'} color={rarityText[pulledItem.rarity]} sx={{ WebkitTextStroke: '.4px #180f0c', textAlign: 'center' }}
+              >
+                {pulledItem.name}
+              </Typography>
+            </Box>
+            {/* Button is now centered by the parent's flexbox */}
             <Button
               sx={{
-                width: 200,
-                height: 50,
-                backgroundImage: `url(${GameTextField})`,
+                backgroundImage: `url(${GameShopBoxSmall})`,
                 backgroundSize: 'cover',
-                mt: 10
+                width: '210px',
+                height: '60px',
+                color: '#5D4037'
               }}
               onClick={handleConfirmClick}
             >
@@ -215,13 +224,12 @@ export default function SummonSection({
           width: 300,
           backgroundImage: `url(${GameTextField})`,
           backgroundSize: 'cover',
-          fontSize: 19
+          fontSize: 19,
+          pl: 3
         }}
         onClick={handleBackClick}
       >
-        <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
-          Leave Summoning Altar
-        </Typography>
+        Leave Altar ➣
       </Button>
 
       {/* Summon Button */}
@@ -254,7 +262,7 @@ export default function SummonSection({
           <Typography
             sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}
           >
-             (You only have {gems} gems)
+            (You only have {gems} gems)
           </Typography>
         </Stack>}
         {(gems > 100) && <Stack direction="column" alignItems="center">

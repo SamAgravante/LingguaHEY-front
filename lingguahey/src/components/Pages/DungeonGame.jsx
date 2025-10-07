@@ -18,6 +18,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 // Background image for the game area
 import DungeonRoom from '../../assets/images/backgrounds/DungeonRoom.png';
 import DungeonBar from '../../assets/images/backgrounds/DungeonBar.png';
+import DungeonBarv2 from '../../assets/images/backgrounds/DungeonBarv2.png';
 import DungeonHint from '../../assets/images/backgrounds/DungeonHint.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
 
@@ -26,7 +27,8 @@ import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
 import GameShopBoxSmallRed from "../../assets/images/backgrounds/GameShopBoxSmallRed.png";
 import NameTab from "../../assets/images/backgrounds/NameTab.png";
-import ItemBox from "../../assets/images/backgrounds/Itembox.png";
+import NameTabvar2 from "../../assets/images/backgrounds/NameTabvar2.png";
+import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
 import HealthPotion from "../../assets/images/objects/HealthPotion.png";
 import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
 import SkipPotion from "../../assets/images/objects/SkipPotion.png";
@@ -459,9 +461,9 @@ export default function DungeonGame() {
       {/* Player Tab */}
       <Box sx={{
         position: 'absolute', top: 16, left: 16,
-        backgroundImage: `url(${NameTab})`,
+        backgroundImage: `url(${NameTabvar2})`,
         backgroundSize: 'cover',
-        width: 730,
+        width: 700,
         height: 150,
         display: 'flex',
         alignItems: 'center',
@@ -521,9 +523,9 @@ export default function DungeonGame() {
           position: 'absolute',
           top: 16,
           right: 16,
-          backgroundImage: `url(${NameTab})`,
+          backgroundImage: `url(${NameTabvar2})`,
           backgroundSize: 'cover',
-          width: 730,
+          width: 700,
           height: 150,
           display: 'flex',
           alignItems: 'center',
@@ -922,7 +924,7 @@ export default function DungeonGame() {
       <Box
         sx={{
           position: 'absolute',
-          backgroundImage: `url(${DungeonBar})`,
+          backgroundImage: `url(${DungeonBarv2})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           width: '100%',
@@ -937,7 +939,7 @@ export default function DungeonGame() {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          spacing={4} // adds equal space between sections
+          spacing={1} // adds equal space between sections
         >
           {/* Potions */}
           <Stack direction="row" spacing={1} alignItems="center">
@@ -978,7 +980,7 @@ export default function DungeonGame() {
           </Stack>
 
           {/* Letter Tiles */}
-          <Stack direction="column" spacing={1} alignItems="center" sx={{ px: '200px' }}>
+          <Stack direction="column" spacing={1} alignItems="center" sx={{ width:900,height:140 }}>
             {[0, 1].map((row) => (
               <Stack key={row} direction="row" spacing={1}>
                 {uppercaseLetters &&
@@ -1032,8 +1034,8 @@ export default function DungeonGame() {
               src={PixieFly}
               alt="Pixie"
               style={{
-                width: '100px',
-                height: '100px',
+                width: '70px',
+                height: '70px',
                 position: 'absolute',
                 bottom: 8,
                 right: 8,

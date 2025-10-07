@@ -166,20 +166,21 @@ export default function DungeonSection({
 
       {/* Return button */}
       <Button
-        onClick={closeModal}
         sx={{
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+          height: 60,
+          width: 300,
           backgroundImage: `url(${GameTextField})`,
           backgroundSize: 'cover',
-          width: '200px',
-          height: '60px',
-          position: 'absolute',
-          top: 20,
-          left: 20,
-          color: '#5D4037'
+          fontSize: 19,
+          pr: 3
         }}
+        onClick={closeModal}
       >
         <Typography sx={{ fontFamily: 'RetroGaming' }}>
-          Return to Town
+          ⮘ Return to Town
         </Typography>
       </Button>
 
