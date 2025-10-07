@@ -24,6 +24,7 @@ import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMedi
 import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
 import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
+import GameShopBoxSmallRed from "../../assets/images/backgrounds/GameShopBoxSmallRed.png";
 import NameTab from "../../assets/images/backgrounds/NameTab.png";
 import ItemBox from "../../assets/images/backgrounds/Itembox.png";
 import HealthPotion from "../../assets/images/objects/HealthPotion.png";
@@ -35,10 +36,12 @@ import HeartNotFilled from "../../assets/images/objects/HeartNotFilled.png";
 import HeartShield from "../../assets/images/objects/HeartShield.png";
 import CastButton from '../../assets/images/ui-assets/CastButton.png';
 import MCNoWeapon from '../../assets/images/characters/MCNoWeapon.png';
-import WeaponBasicStaff from '../../assets/images/weapons/WeaponBasicStaff.png';
+import MCNoWeaponAnimated from '../../assets/images/characters/MCNoWeaponAnimated.png';
 import Laser from '../../assets/images/effects/Laser.png';
 import GoldCoins from "../../assets/images/objects/GoldCoins.png";
 import Gems from "../../assets/images/objects/Gems.png";
+import PixieFly from '../../assets/images/characters/PixieFly.png';
+
 
 import BossAura from "../../assets/images/effects/BossAura.gif";
 import LaserFail from "../../assets/images/effects/LaserFail.gif";
@@ -47,15 +50,6 @@ import Shield from "../../assets/images/effects/Shield.png";
 import ShieldEnemy from "../../assets/images/effects/ShieldEnemy.png";
 import MCNoWeaponHit from '../../assets/images/characters/MCNoWeaponHit.png';
 
-// Fisher–Yates shuffle
-function shuffleArray(array) {
-  const arr = array.slice();
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
 
 export default function DungeonGame() {
   const location = useLocation();
@@ -71,6 +65,12 @@ export default function DungeonGame() {
   const [itemEquipped, setItemEquipped] = useState({});
   const [enemyAttacking, setEnemyAttacking] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
+  const [potions, setPotions] = useState([]);
+
+  // --- NEW Potion State ---
+  const [potionUsedThisRound, setPotionUsedThisRound] = useState(false);
+  const [skipPotionUsed, setSkipPotionUsed] = useState(false);
+  // ------------------------
 
   const hints = [
     'Read the Codex to learn about the monsters',
@@ -88,16 +88,49 @@ export default function DungeonGame() {
   const [shieldActive, setShieldActive] = useState(false);
   const [laserEffect, setLaserEffect] = useState(null);
   const [enemyDefeated, setEnemyDefeated] = useState(false);
+  const [isBoss, setIsBoss] = useState(false);
+  const [bossCounter, setBossCounter] = useState(0);
 
 
   const getMonster = async () => {
     try {
       const response = await API.get(`/game/current-monster`);
       setCurrentMonster(response.data);
+
+      const monsterType = levelData.monsterData[roundCounter]?.monsterType;
+      const isBossMonster = monsterType === "BOSS";
+
+      console.log("Next Monster Data:", monsterType);
+      console.log("Is Boss?", isBossMonster);
+      console.log("Current Monster", response.data);
+
+      setIsBoss(isBossMonster);
+
+      if (bossCounter === 0) {
+        if (!isBossMonster) {
+          setRoundCounter((prev) => prev + 1);
+          console.log("Boss Counter:", bossCounter);
+        } else {
+          setRoundCounter((prev) => prev + 1);
+          setBossCounter((prev) => prev + 1);
+          console.log("Boss Counter:", bossCounter);
+        }
+      } else if (bossCounter > 0 && bossCounter < 3) {
+        setBossCounter((prev) => prev + 1);
+        console.log("Boss Counter:", bossCounter);
+        setIsBoss(true);
+        console.log("is boss?", isBoss);
+      } else {
+        setBossCounter(0);
+        setRoundCounter((prev) => prev + 1);
+        console.log("Boss Counter:", bossCounter);
+      }
     } catch (error) {
       console.error("Failed to fetch monster:", error);
     }
   };
+
+
 
   useEffect(() => {
     const {
@@ -117,14 +150,16 @@ export default function DungeonGame() {
         console.log("Completed?: " + isCurrentLevelCompleted);
 
         const lvl = await API.get(`/levels/${levelId}`);
-
+        console.log("LEVEL: ", lvl.data);
         // 2. Use the guaranteed boolean value for calculating rewards
         const coinsReward = isCurrentLevelCompleted ? 0 : lvl.data.coinsReward;
         const gemsReward = isCurrentLevelCompleted ? 0 : lvl.data.gemsReward;
+        const monsterData = lvl.data.levelMonsters;
 
         setLevelData({
           coinsReward,
-          gemsReward
+          gemsReward,
+          monsterData
         });
 
         const equipResp = await API.get(`/users/${userId}/equipped-cosmetic`);
@@ -134,11 +169,30 @@ export default function DungeonGame() {
 
         const userResp = await API.get(`/users/${userId}`);
         setUserDetails(userResp.data);
+        console.log("Potion Info: ", userResp.data.potions);
+        setPotions(userResp.data.potions);
         const gameInfo = await API.post(`/game/start`, { levelId, userId });
         setHp(gameInfo.data.lives);
+        console.log("Game Monsters:", gameInfo.data.monsters);
         const monster = await API.get(`/game/current-monster`);
         setCurrentMonster(monster.data);
+        console.log("Monster Info: ", monster.data);
         setRoundCounter(1);
+
+        // --- INITIAL Potion State Reset ---
+        setPotionUsedThisRound(false);
+        setSkipPotionUsed(false);
+        // ----------------------------------
+
+        //Boss Check
+        if (lvl.data.levelMonsters[0].monsterType === "BOSS") {
+          setIsBoss(true);
+        }
+        else {
+          setIsBoss(false);
+        }
+        console.log("Is Boss?", isBoss);
+
       } catch (error) {
         console.error('Error starting game:', error);
       }
@@ -168,21 +222,18 @@ export default function DungeonGame() {
       console.log('Answer response:', userAnswer.data);
       setSelectedTiles([]);
 
+      // --- Reset skip potion flag after a successful attack/guess ---
+      if (skipPotionUsed) {
+        setSkipPotionUsed(false);
+        setPotionUsedThisRound(true); // Treat guess after skip as a regular round action
+      }
+      // -------------------------------------------------------------
+
       if (!userAnswer.data.correct) {
         // Wrong answer -> play fail laser
         setLaserEffect("fail");
-
-        setHp(userAnswer.data.lives);
-
-        if (userAnswer.data.gameOver) {
-          setIsGameOver(true);
-          setMakeMessageAppear(true);
-          setMessageDetails({
-            mainMessage: 'Level Failed',
-            subMessage: 'Hint:'
-          });
-        }
-
+        // If wrong, potion usage is still valid next round
+        setPotionUsedThisRound(false);
         // Enemy counterattack sequence
         setTimeout(() => {
           setLaserEffect(null);
@@ -194,9 +245,18 @@ export default function DungeonGame() {
               // Shield absorbs this enemy attack, then disappears
               setShieldActive(false);
             } else {
-              // No shield active → take damage animation
+              // No shield active then take damage animation
               setImpactVisible(true);
+              setHp(userAnswer.data.lives);
               setTimeout(() => setImpactVisible(false), 500);
+              if (userAnswer.data.gameOver) {
+                setIsGameOver(true);
+                setMakeMessageAppear(true);
+                setMessageDetails({
+                  mainMessage: 'Level Failed',
+                  subMessage: 'Hint:'
+                });
+              }
             }
           }, 800);
 
@@ -213,6 +273,7 @@ export default function DungeonGame() {
 
         setTimeout(() => {
           if (userAnswer.data.gameOver) {
+            setEnemyDefeated(true);
             setIsGameOver(true);
             setMakeMessageAppear(true);
             setMessageDetails({
@@ -228,7 +289,13 @@ export default function DungeonGame() {
             setTimeout(() => {
               setEnemyDefeated(false);
               getMonster();
-              setRoundCounter(prev => prev + 1);
+
+
+              // --- Reset Potion State on Next Round ---
+              setPotionUsedThisRound(false);
+              setSkipPotionUsed(false);
+              // ----------------------------------------
+
             }, 1200);
 
             setLaserEffect(null);
@@ -242,33 +309,80 @@ export default function DungeonGame() {
   };
 
 
+  // Get potion counts from userDetails for easier access
+  const healthPotions = potions.HEALTH ?? 0;
+  const shieldPotions = potions.SHIELD ?? 0;
+  const skipPotions = potions.SKIP ?? 0;
 
   function confirmPotion(potionType) {
+    let message = {};
+    let isAvailable = true;
+    let potionCount = 0;
+
+    // Determine potion count
+    if (potionType === 'HEALTH') potionCount = healthPotions;
+    else if (potionType === 'SHIELD') potionCount = shieldPotions;
+    else if (potionType === 'SKIP') potionCount = skipPotions;
+
+    // 1. Check potion stock
+    if (potionCount <= 0) {
+      message = {
+        mainMessage: 'Out of Potions!',
+        subMessage: `You do not have any ${potionType} Potions.`
+      };
+      isAvailable = false;
+    }
+
+    // 2. Check one-per-round limit (only if not out of potions)
+    if (isAvailable && potionUsedThisRound) {
+      message = {
+        mainMessage: 'Limit Reached!',
+        subMessage: 'You can only use one potion per round.'
+      };
+      isAvailable = false;
+    }
+
+    // 3. Check Skip Potion rule (must attack after skipping)
+    if (isAvailable && skipPotionUsed && potionType !== 'SKIP') {
+      message = {
+        mainMessage: 'Action Required!',
+        subMessage: 'You must attack before you can drink a potion again.'
+      };
+      isAvailable = false;
+    }
+
     setMakeMessageAppear(true);
+
+    if (!isAvailable) {
+      // Display the error message
+      setMessageDetails({ ...message, showCloseButton: true }); // Use showCloseButton flag
+      setCurrentPotion(null);
+      return; // Stop here if a rule is violated
+    }
+
+    // If all checks pass, set up the confirmation message
     if (potionType === 'HEALTH') {
-      setMessageDetails({
+      message = {
         mainMessage: 'Drink Health Potion?',
         subMessage: 'This will increase your lifepoints by 1'
-      });
-      setCurrentPotion(potionType);
-    }
-    if (potionType === 'SHIELD') {
-      setMessageDetails({
+      };
+    } else if (potionType === 'SHIELD') {
+      message = {
         mainMessage: 'Use Shield Potion?',
         subMessage: 'This will protect you from the next attack'
-      });
-      setCurrentPotion(potionType);
-    }
-    if (potionType === 'SKIP') {
-      setMessageDetails({
+      };
+    } else if (potionType === 'SKIP') {
+      message = {
         mainMessage: 'Use Skip Potion?',
         subMessage: 'This will skip the current monster'
-      });
-      setCurrentPotion(potionType);
+      };
     }
+
+    setMessageDetails(message);
+    setCurrentPotion(potionType);
   }
 
-  //Function to drink potion
+  //Function to use potion
   const usePotion = async (potionType) => {
     try {
       const resp = await API.post(`/game/use-potion`, {
@@ -276,19 +390,49 @@ export default function DungeonGame() {
         potionType
       });
       console.log('Potion used:', resp.data);
+
       setHp(resp.data.updatedLives);
       setMakeMessageAppear(false);
+
+      // --- Set Potion Used Flag ---
+      setPotionUsedThisRound(true);
+
       if (potionType === 'SKIP') {
         getMonster();
         setRoundCounter(prev => prev + 1);
+        setSkipPotionUsed(true); // Set the flag for the Skip Potion rule
+        setPotionUsedThisRound(false); // Skip does not count against a normal potion usage, but sets a different restriction
       }
       if (potionType === 'SHIELD') {
         setShieldActive(true);
-        // setTimeout(() => setShieldActive(false), 5000); 
       }
-      setCurrentPotion(null);
+
+      // Refetch user details to update potion counts displayed in UI
+      const userResp = await API.get(`/users/${userDetails.userId}`);
+      setUserDetails(userResp.data);
+      setTimeout(() => {
+      if (resp.data.levelCleared === true) {
+
+        setEnemyDefeated(true);
+        setBossCounter((prev) => prev + 1);
+        setIsGameOver(true);
+        setMakeMessageAppear(true);
+        setMessageDetails({
+          mainMessage: 'Level Cleared',
+          subMessage: `Rewards: `
+        });
+      }
+      setCurrentPotion(null);},1000);
     } catch (err) {
       console.error("Failed to use potion:", err);
+      // Handle error, maybe show an error message
+      setMakeMessageAppear(true);
+      setMessageDetails({
+        mainMessage: 'Error!',
+        subMessage: 'Failed to use potion. Please try again.',
+        showCloseButton: true
+      });
+      setCurrentPotion(null);
     }
   };
 
@@ -359,11 +503,15 @@ export default function DungeonGame() {
           alignItems: 'center'
         }}
       >
-        <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', WebkitTextStroke: '2px #180f0c', }}>
+        <Typography variant="h2"
+          color={isBoss ? "#d07070" : "#5D4037"}
+          sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', WebkitTextStroke: '2px #180f0c', }}>
           Round
         </Typography>
-        <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', WebkitTextStroke: '2px #180f0c' }}>
-          {roundCounter}
+        <Typography variant="h2"
+          color={isBoss ? "#d07070" : "#5D4037"}
+          sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', WebkitTextStroke: '2px #180f0c' }}>
+          {isBoss ? "Boss" : roundCounter}
         </Typography>
       </Stack>
 
@@ -383,7 +531,29 @@ export default function DungeonGame() {
           pr: 2,
         }}
       >
-        <Stack direction="column" sx={{ alignItems: 'flex-end', mr: 2 }}>
+        {
+          isBoss &&
+          [0, 1, 2].map(i => (
+            <Box
+              key={i}
+              sx={{
+                width: 48, height: 43,
+                //border: '2px solid red',
+                backgroundImage: `url(${(bossCounter <= i + 1 ? HeartFilled : HeartNotFilled)
+                  })`,
+                backgroundSize: 'cover',
+                marginLeft: i === 0 ? 10 : 2
+              }}
+            />
+          ))}
+
+        <Box sx={{
+          //border: 'solid',
+          width: 320,
+          height: 70,
+          justifyItems: 'center',
+          alignContent: 'center'
+        }}>
           <Typography
             variant="h2"
             color="#5D4037"
@@ -394,7 +564,9 @@ export default function DungeonGame() {
           >
             {currentMonster.englishName}
           </Typography>
-        </Stack>
+        </Box>
+
+
 
         <Box
           component="img"
@@ -425,7 +597,7 @@ export default function DungeonGame() {
       {/* Selected Tiles */}
       <Box sx={{
         width: 600, height: 100,
-        //border: '2px solid red', 
+        //border: '2px solid red',  
         top: '30%', position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, zIndex: 1000
       }}>
         {selectedTiles.map((tile) => (
@@ -468,25 +640,39 @@ export default function DungeonGame() {
           <motion.div
             key={`mc-${roundCounter}`}
             initial={{ x: "-200%" }}
+            // --- MODIFIED ANIMATE PROP ---
             animate={
-              impactVisible
+              isGameOver // Check for Game Over first (highest priority)
                 ? {
-                  x: [0, -15, 15, -10, 10, -5, 5, 0] // shake sequence
+                  x: -1500, // Retreat far to the left
+                  opacity: 0,
                 }
-                : {
-                  x: 0
-                }
+                : impactVisible // Otherwise, check for impact shake
+                  ? {
+                    x: [0, -15, 15, -10, 10, -5, 5, 0], // shake sequence
+                  }
+                  : {
+                    x: 0, // Default state (idle)
+                    opacity: 1,
+                  }
             }
             transition={{
-              duration: impactVisible ? 0.6 : 0.8, // quick shake if hit
-              ease: "easeInOut"
+              // Longer duration for the smooth retreat, shorter for the shake
+              duration: isGameOver ? 1.5 : impactVisible ? 0.6 : 0.8,
+              ease: isGameOver ? "easeIn" : "easeInOut", // Use easeIn for a smooth exit
             }}
-            style={{ position: "absolute", bottom: 0, left: 0, width: "220px", height: "215px" }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              width: "220px",
+              height: "215px",
+            }}
           >
 
             <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
               <img
-                src={MCNoWeapon}
+                src={MCNoWeaponAnimated}
                 alt="Player"
                 style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px" }}
               />
@@ -522,25 +708,15 @@ export default function DungeonGame() {
 
           </motion.div>
 
-          {/* Enemy */}
           <motion.div
             key={`enemy-${roundCounter}`}
             initial={{ x: "100%", opacity: 0 }}
             animate={
               enemyDefeated
-                ? {
-                  x: [0, -15, 15, -10, 10, -5, 5, 0], // shake (stagger)
-                  opacity: 0 // fade out
-                }
-                : {
-                  x: enemyAttacking ? "-600px" : 0,
-                  opacity: 1
-                }
+                ? { x: [0, -15, 15, -10, 10, -5, 5, 0], opacity: 0 }
+                : { x: enemyAttacking ? "-600px" : 0, opacity: 1 }
             }
-            transition={{
-              duration: enemyDefeated ? 1.2 : 0.8,
-              ease: "easeInOut"
-            }}
+            transition={{ duration: enemyDefeated ? 1.2 : 0.8, ease: "easeInOut" }}
             style={{
               position: "absolute",
               bottom: 0,
@@ -549,16 +725,42 @@ export default function DungeonGame() {
               height: "215px",
             }}
           >
+            {/* Aura Behind */}
+            {isBoss && (
+              <img
+                src={BossAura}
+                alt="Aura Enemy"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "220px",
+                  height: "215px",
+                  zIndex: 0,
+                }}
+              />
+            )}
+
+            {/* Main Enemy */}
             <img
               src={`data:image/png;base64,${currentMonster.imageData}`}
               alt="Enemy"
-              style={{ width: "220px", height: "215px" }}
+              style={{ width: "220px", height: "215px", position: "relative", zIndex: 1 }}
             />
+
+            {/* Shield overlay */}
             {laserEffect === "fail" && (
               <img
                 src={ShieldEnemy}
                 alt="Shield Enemy"
-                style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px" }}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "220px",
+                  height: "215px",
+                  zIndex: 2,
+                }}
               />
             )}
           </motion.div>
@@ -597,9 +799,12 @@ export default function DungeonGame() {
           position: 'absolute',
           backgroundImage: `url(${GameTextBoxMediumLong})`,
           backgroundSize: 'cover',
-          width: '50%',
-          height: '35.6%',
+          width: '51%',
+          height: '36%',
           top: '30%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           zIndex: 1000
         }}>
           <Grid container direction="column" alignItems="center" sx={{ p: 4 }}>
@@ -635,8 +840,8 @@ export default function DungeonGame() {
             </Stack>
 
 
-            {/* Show potion confirm/cancel */}
-            {currentPotion && (
+            {/* Show potion confirm/cancel OR Close button for error */}
+            {currentPotion ? (
               <Stack direction='row' spacing={2}>
                 <Button
                   sx={{
@@ -653,7 +858,7 @@ export default function DungeonGame() {
                 </Button>
                 <Button
                   sx={{
-                    backgroundImage: `url(${GameShopBoxSmall})`,
+                    backgroundImage: `url(${GameShopBoxSmallRed})`,
                     backgroundSize: 'cover',
                     width: '210px',
                     height: '60px',
@@ -665,10 +870,32 @@ export default function DungeonGame() {
                     setMakeMessageAppear(false);
                   }}
                 >
-                  <Typography sx={{ fontFamily: 'RetroGaming' }}>Cancel</Typography>
+                  <Typography >Cancel</Typography>
                 </Button>
               </Stack>
+            ) : (
+              // Only show Close button for error/limit messages 
+              messageDetails.showCloseButton && (
+                <Button
+                  sx={{
+                    backgroundImage: `url(${GameShopBoxSmall})`,
+                    backgroundSize: 'cover',
+                    width: '210px',
+                    height: '60px',
+                    top: 20,
+                    color: '#5D4037',
+                    mt: 2
+                  }}
+                  onClick={() => {
+                    setMakeMessageAppear(false);
+                    setMessageDetails({}); // Clear message details
+                  }}
+                >
+                  <Typography sx={{ fontFamily: 'RetroGaming' }}>Close</Typography>
+                </Button>
+              )
             )}
+
 
             {/* Show return to town if game over */}
             {(isGameOver) && (
@@ -713,11 +940,11 @@ export default function DungeonGame() {
           spacing={4} // adds equal space between sections
         >
           {/* Potions */}
-          <Stack direction="row" spacing={4} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center">
             {[
-              { img: HealthPotion, label: "Health Potion", potionType: "HEALTH" },
-              { img: ShieldPotion, label: "Shield Potion", potionType: "SHIELD" },
-              { img: SkipPotion, label: "Skip Potion", potionType: "SKIP" }
+              { img: HealthPotion, label: "Health Potion", potionType: "HEALTH", count: healthPotions },
+              { img: ShieldPotion, label: "Shield Potion", potionType: "SHIELD", count: shieldPotions },
+              { img: SkipPotion, label: "Skip Potion", potionType: "SKIP", count: skipPotions }
             ].map((potion, idx) => (
               <Stack key={idx} direction="column" spacing={1} alignItems="center">
                 <Button
@@ -731,8 +958,8 @@ export default function DungeonGame() {
                     color: '#5D4037',
                     fontWeight: 'bold',
                     fontFamily: 'RetroGaming',
-                    disabled: userDetails?.[`${potion.potionType.toLowerCase()}Potions`] <= 0,
-                    opacity: userDetails?.[`${potion.potionType.toLowerCase()}Potions`] > 0 ? 1 : 1,
+                    opacity: potion.count > 0 ? 1 : 0.5, // Visual cue for empty
+                    pointerEvents: isGameOver ? 'none' : 'auto', // Disable clicking if game over
                     '&:hover': { opacity: 0.8, cursor: 'pointer' }
                   }}
                   onClick={() => confirmPotion(potion.potionType)}
@@ -744,7 +971,7 @@ export default function DungeonGame() {
                   align="center"
                   sx={{ color: '#5D4037', fontWeight: 'bold', fontFamily: 'RetroGaming' }}
                 >
-                  {potion.label}
+                  {potion.label} ({potion.count})
                 </Typography>
               </Stack>
             ))}
@@ -793,13 +1020,27 @@ export default function DungeonGame() {
               backgroundSize: 'cover',
               backgroundRepeat: 'no-repeat',
               width: 350,
-              height: 150
+              height: 150,
+              position: 'relative',
             }}
           >
             <Typography sx={{ padding: 2 }}>
               {currentMonster.description}
             </Typography>
+
+            <img
+              src={PixieFly}
+              alt="Pixie"
+              style={{
+                width: '100px',
+                height: '100px',
+                position: 'absolute',
+                bottom: 8,
+                right: 8,
+              }}
+            />
           </Box>
+
         </Stack>
       </Box>
     </Grid>

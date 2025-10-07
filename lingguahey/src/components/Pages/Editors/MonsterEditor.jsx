@@ -49,6 +49,9 @@ const MonsterEditor = () => {
     file: null,
   });
 
+  const [addPreviewUrl, setAddPreviewUrl] = useState(null);
+  const [editPreviewUrl, setEditPreviewUrl] = useState(null);
+
   // Axios instance
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/monsters`,
@@ -153,7 +156,11 @@ const MonsterEditor = () => {
   const handleNewMonsterChange = (e) => {
     const { name, value, files } = e.target;
     if (name === "file") {
-      setNewMonsterForm((prev) => ({ ...prev, file: files[0] }));
+      const file = files[0] || null;
+      // revoke previous URL to avoid leaks
+      if (addPreviewUrl) URL.revokeObjectURL(addPreviewUrl);
+      setNewMonsterForm((prev) => ({ ...prev, file }));
+      setAddPreviewUrl(file ? URL.createObjectURL(file) : null);
     } else {
       setNewMonsterForm((prev) => ({ ...prev, [name]: value }));
     }
@@ -193,6 +200,10 @@ const MonsterEditor = () => {
         description: "",
         file: null,
       });
+      if (addPreviewUrl) {
+        URL.revokeObjectURL(addPreviewUrl);
+        setAddPreviewUrl(null);
+      }
     } catch (error) {
       console.error("Error adding monster:", error);
     }
@@ -201,6 +212,25 @@ const MonsterEditor = () => {
   const handleReturn = () => {
     navigate(-1);
   };
+
+  // When user selects an edit image, set preview URL
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0] || null;
+    if (editPreviewUrl) URL.revokeObjectURL(editPreviewUrl);
+    setEditForm((prev) => ({ ...prev, file }));
+    setEditPreviewUrl(file ? URL.createObjectURL(file) : null);
+  };
+  // cleanup object URLs on unmount / change
+  useEffect(() => {
+    return () => {
+      if (addPreviewUrl) URL.revokeObjectURL(addPreviewUrl);
+    };
+  }, [addPreviewUrl]);
+  useEffect(() => {
+    return () => {
+      if (editPreviewUrl) URL.revokeObjectURL(editPreviewUrl);
+    };
+  }, [editPreviewUrl]);
 
   return (
     <Box
@@ -293,35 +323,43 @@ const MonsterEditor = () => {
                           sx={{
                             border: "2px dashed #5b3138",
                             borderRadius: "8px",
-                            height: "100%",
+                            width: "120px",           // fixed width to prevent resizing
+                            height: "120px",          // fixed height to prevent resizing
                             minHeight: 100,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             cursor: "pointer",
                             backgroundColor: "#f7cb97",
+                            overflow: "hidden",       // hide overflow so img can't expand box
                             "&:hover": { backgroundColor: "#f5b971" },
                           }}
                           onClick={() => document.getElementById("editImageInput").click()}
                         >
-                          <Typography
-                            sx={{
-                              color: "#5b3138",
-                              fontWeight: "bold",
-                              textAlign: "center",
-                              fontSize: "14px", // Slightly smaller font size
-                            }}
-                          >
-                            Change Image
-                          </Typography>
+                          {editPreviewUrl ? (
+                            <img
+                              src={editPreviewUrl}
+                              alt="preview"
+                              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                            />
+                          ) : (
+                            <Typography
+                              sx={{
+                                color: "#5b3138",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                                fontSize: "14px",
+                              }}
+                            >
+                              Change Image
+                            </Typography>
+                          )}
                           <input
                             type="file"
                             id="editImageInput"
                             accept="image/*"
                             style={{ display: "none" }}
-                            onChange={(e) =>
-                              setEditForm((prev) => ({ ...prev, file: e.target.files[0] }))
-                            }
+                            onChange={handleEditImageChange}
                           />
                         </Box>
                       </Grid>
@@ -547,30 +585,40 @@ const MonsterEditor = () => {
                 sx={{
                   border: "2px dashed #5b3138",
                   borderRadius: "8px",
-                  height: "100%",
-                  minHeight: 120,
+                  width: "150px",           // fixed width to prevent resizing
+                  height: "208px",          // fixed height to prevent resizing
+                  minHeight: 208,
                   minWidth: 150,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
                   backgroundColor: "#f7cb97",
+                  overflow: "hidden",       // hide overflow so img can't expand box
                   "&:hover": { backgroundColor: "#f5b971" },
                 }}
                 onClick={() =>
                   document.getElementById("addImageInput").click()
                 }
               >
-                <Typography
-                  sx={{
-                    color: "#5b3138",
-                    fontWeight: "bold",
-                    textAlign: "center",
-                    fontSize: "14px",
-                  }}
-                >
-                  Add Image
-                </Typography>
+                {addPreviewUrl ? (
+                  <img
+                    src={addPreviewUrl}
+                    alt="preview"
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                  />
+                ) : (
+                  <Typography
+                    sx={{
+                      color: "#5b3138",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Add Image
+                  </Typography>
+                )}
                 <input
                   type="file"
                   id="addImageInput"
