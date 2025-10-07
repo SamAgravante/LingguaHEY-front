@@ -9,7 +9,7 @@ import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMedi
 import GameShopBoxSmall from '../../assets/images/backgrounds/GameShopBoxSmall.png';
 import GameShopBoxSmallRed from '../../assets/images/backgrounds/GameShopBoxSmallRed.png';
 import SummonAnimation from '../../assets/images/effects/SummonAnimation.png';
-import SummonAnimationGIF from '../../assets/images/effects/SummonAnimation.gif';
+import SummonAnimationGIF from '../../assets/images/effects/SummonAnimationv2.gif';
 import GameTextBox from '../../assets/images/backgrounds/GameTextBox.png';
 import API from '../../api';
 
@@ -53,7 +53,7 @@ export default function SummonSection({
       // Delay showing the item for 5 seconds
       setTimeout(() => {
         setShowItem(true);
-      }, 1000);
+      }, 2500);
     } catch (err) {
       console.error('Error during gacha pull:', err);
     }
@@ -91,7 +91,7 @@ export default function SummonSection({
           alignItems: 'center', // Center children horizontally
           justifyContent: 'center', // Center children vertically
           // -------------------------------
-          backgroundImage: `url(${SummonAnimation}?t=${animationKey})`,
+          backgroundImage: `url(${SummonAnimationGIF}?t=${animationKey})`,
           backgroundSize: 'cover',
           position: 'absolute',
           top: 0,
