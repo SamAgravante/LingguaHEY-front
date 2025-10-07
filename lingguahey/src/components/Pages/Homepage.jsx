@@ -49,6 +49,7 @@ import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
 import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
 import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
 import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
+import ForestwithShopsAnimated from "../../assets/images/backgrounds/ForestwithShopsAnimated.gif";
 import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
 import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
@@ -727,7 +728,7 @@ export default function Homepage() {
       direction="column"
       alignItems="center"
       sx={{
-        backgroundImage: `url(${ForestwithShops})`,
+        backgroundImage: `url(${ForestwithShopsAnimated})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         width: '100vw',
@@ -933,7 +934,7 @@ export default function Homepage() {
               position: 'relative',
               overflow: 'auto'
             }}
-          >
+          >{/* Modal Content 
             <Stack direction="row" justifyContent="space-between">
               <IconButton onClick={handleBackClick}>
                 <ArrowBackIcon />
@@ -942,7 +943,7 @@ export default function Homepage() {
                 <CloseIcon />
               </IconButton>
             </Stack>
-            {/* Modal Content 
+            
             <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
               {section === 'Activity' ? 'King of the Hill!' : `${section} Activities!`}
             </Typography>*/}

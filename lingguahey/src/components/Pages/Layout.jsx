@@ -32,6 +32,8 @@ import GameTextBoxBig from "../../assets/images/backgrounds/GameTextBoxBig.png";
 import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
 import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMedium.png";
 import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
+import Background from "../../assets/images/backgrounds/Background.png";
+import BackgroundBlue from "../../assets/images/backgrounds/BackgroundBlue.png";
 import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
 import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
@@ -137,7 +139,10 @@ const Layout = () => {
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <Grid container sx={{ width: "100%", height: "100%", backgroundColor: "#00092d" }}>
+      <Grid container sx={{ width: "100%", height: "100%", 
+      backgroundImage: `url(${BackgroundBlue})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',}}>
         {userData.role !== "USER" && (
           <Drawer
             variant="permanent"
