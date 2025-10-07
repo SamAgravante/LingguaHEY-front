@@ -18,7 +18,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 // Background image for the game area
 import DungeonRoom from '../../assets/images/backgrounds/DungeonRoom.png';
 import DungeonBar from '../../assets/images/backgrounds/DungeonBar.png';
-import DungeonBarv2 from '../../assets/images/backgrounds/DungeonBarv2.png';
 import DungeonHint from '../../assets/images/backgrounds/DungeonHint.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
 
@@ -27,8 +26,7 @@ import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
 import GameShopBoxSmallRed from "../../assets/images/backgrounds/GameShopBoxSmallRed.png";
 import NameTab from "../../assets/images/backgrounds/NameTab.png";
-import NameTabvar2 from "../../assets/images/backgrounds/NameTabvar2.png";
-import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
+import ItemBox from "../../assets/images/backgrounds/Itembox.png";
 import HealthPotion from "../../assets/images/objects/HealthPotion.png";
 import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
 import SkipPotion from "../../assets/images/objects/SkipPotion.png";
@@ -401,7 +399,7 @@ export default function DungeonGame() {
 
       if (potionType === 'SKIP') {
         getMonster();
-        setRoundCounter(prev => prev + 1);
+        //setRoundCounter(prev => prev + 1);
         setSkipPotionUsed(true); // Set the flag for the Skip Potion rule
         setPotionUsedThisRound(false); // Skip does not count against a normal potion usage, but sets a different restriction
       }
@@ -411,7 +409,7 @@ export default function DungeonGame() {
 
       // Refetch user details to update potion counts displayed in UI
       const userResp = await API.get(`/users/${userDetails.userId}`);
-      setUserDetails(userResp.data);
+      setPotions(userResp.data.potions);
       setTimeout(() => {
       if (resp.data.levelCleared === true) {
 
@@ -461,9 +459,9 @@ export default function DungeonGame() {
       {/* Player Tab */}
       <Box sx={{
         position: 'absolute', top: 16, left: 16,
-        backgroundImage: `url(${NameTabvar2})`,
+        backgroundImage: `url(${NameTab})`,
         backgroundSize: 'cover',
-        width: 700,
+        width: 730,
         height: 150,
         display: 'flex',
         alignItems: 'center',
@@ -523,9 +521,9 @@ export default function DungeonGame() {
           position: 'absolute',
           top: 16,
           right: 16,
-          backgroundImage: `url(${NameTabvar2})`,
+          backgroundImage: `url(${NameTab})`,
           backgroundSize: 'cover',
-          width: 700,
+          width: 730,
           height: 150,
           display: 'flex',
           alignItems: 'center',
@@ -924,7 +922,7 @@ export default function DungeonGame() {
       <Box
         sx={{
           position: 'absolute',
-          backgroundImage: `url(${DungeonBarv2})`,
+          backgroundImage: `url(${DungeonBar})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           width: '100%',
@@ -939,7 +937,7 @@ export default function DungeonGame() {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          spacing={1} // adds equal space between sections
+          spacing={4} // adds equal space between sections
         >
           {/* Potions */}
           <Stack direction="row" spacing={1} alignItems="center">
@@ -980,7 +978,7 @@ export default function DungeonGame() {
           </Stack>
 
           {/* Letter Tiles */}
-          <Stack direction="column" spacing={1} alignItems="center" sx={{ width:900,height:140 }}>
+          <Stack direction="column" spacing={1} alignItems="center" sx={{ px: '200px' }}>
             {[0, 1].map((row) => (
               <Stack key={row} direction="row" spacing={1}>
                 {uppercaseLetters &&
@@ -1034,8 +1032,8 @@ export default function DungeonGame() {
               src={PixieFly}
               alt="Pixie"
               style={{
-                width: '70px',
-                height: '70px',
+                width: '100px',
+                height: '100px',
                 position: 'absolute',
                 bottom: 8,
                 right: 8,
