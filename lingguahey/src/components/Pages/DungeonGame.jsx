@@ -28,7 +28,7 @@ import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.p
 import GameShopBoxSmallRed from "../../assets/images/backgrounds/GameShopBoxSmallRed.png";
 import NameTab from "../../assets/images/backgrounds/NameTab.png";
 import NameTabvar2 from "../../assets/images/backgrounds/NameTabvar2.png";
-import ItemBox from "../../assets/images/backgrounds/ItemBox.png";
+import ItemBox from "../../assets/images/backgrounds/Itembox.png";
 import HealthPotion from "../../assets/images/objects/HealthPotion.png";
 import ShieldPotion from "../../assets/images/objects/ShieldPotion.png";
 import SkipPotion from "../../assets/images/objects/SkipPotion.png";
