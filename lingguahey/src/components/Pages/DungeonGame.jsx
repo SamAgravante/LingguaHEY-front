@@ -468,13 +468,15 @@ export default function DungeonGame() {
         paddingLeft: 2
       }}>
         <img src={MCHeadshot} alt="Player" style={{ width: 100, height: 100, marginLeft: 10 }} />
-        <Stack direction={'column'}>
+        <Stack direction={'column'} sx={{width: 250}}>
           <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
             {userDetails.firstName || 'Player Name'}
           </Typography>
+          {/* 
           <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
             Rank: Mage
           </Typography>
+          */}
         </Stack>
         {[0, 1, 2, 3].map(i => (
           <Box

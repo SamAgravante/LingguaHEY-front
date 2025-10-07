@@ -755,9 +755,11 @@ export default function Homepage() {
           <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
             {userDetails.firstName || 'Player Name'}
           </Typography>
+          {/* 
           <Typography variant="h6" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
             Rank: Mage
           </Typography>
+          */}
         </Stack>
       </Box>
       {renderGemAndCoinsTab()}
