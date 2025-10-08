@@ -87,6 +87,7 @@ const TeacherDashboard = () => {
     firstName: "",
     lastName: "",
     role: null,
+    subscriptionType: null, // "FREE" or "PREMIUM" expected from backend
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -96,6 +97,9 @@ const TeacherDashboard = () => {
   const [roomToEdit, setRoomToEdit] = useState(null);
   const [editRoomName, setEditRoomName] = useState("");
   const [createRoomDialogOpen, setCreateRoomDialogOpen] = useState(false);
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
+  const [subscriptionDialogMessage, setSubscriptionDialogMessage] = useState("");
+  const [showSubscribeButton, setShowSubscribeButton] = useState(false);
   const navigate = useNavigate();
   const [token, setToken] = useState(localStorage.getItem("token"));
   const getRandomColor = () => {
@@ -128,28 +132,27 @@ const TeacherDashboard = () => {
 
   // Fetch user data
   useEffect(() => {
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        const fetchUser = async () => {
-          if (!API) return;
-          try {
-            const response = await API.get(`/api/lingguahey/users/${decoded.userId}`);
-            setUserData({
-              userId: response.data.userId,
-              firstName: response.data.firstName,
-              lastName: response.data.lastName,
-              role: response.data.role,
-            });
-          } catch (err) {
-            console.error("Failed to fetch user:", err);
-            // Potentially set an error state for user data
-          }
-        };
-        fetchUser();
-      } catch (err) {
-        console.error("Failed to decode token:", err);
-      }
+    if (!token) return;
+    try {
+      const decoded = jwtDecode(token);
+      const fetchUser = async () => {
+        if (!API) return;
+        try {
+          const response = await API.get(`/api/lingguahey/users/${decoded.userId}`);
+          setUserData({
+            userId: response.data.userId,
+            firstName: response.data.firstName,
+            lastName: response.data.lastName,
+            role: response.data.role,
+            subscriptionType: response.data.subscriptionType ?? response.data.subscription_type ?? null,
+          });
+        } catch (err) {
+          console.error("Failed to fetch user:", err);
+        }
+      };
+      fetchUser();
+    } catch (err) {
+      console.error("Failed to decode token:", err);
     }
   }, [token, API]);
 
@@ -229,12 +232,33 @@ const TeacherDashboard = () => {
         id: createdId,
         name: response.data.classroomName,
         activities: response.data.activities || [],
-        color: getColorForId(createdId), // ensure created room gets deterministic color
+        color: getColorForId(createdId),
       }]);
-      handleCreateRoomDialogClose(); // Close the dialog after successful creation
+      handleCreateRoomDialogClose();
     } catch (err) {
       console.error("Failed to create room:", err);
-      // Add user feedback (e.g., toast notification)
+
+      const status = err?.response?.status;
+
+      if (status === 403) {
+        // Show a clear, friendly fixed message depending on subscription type.
+        const sub = (userData?.subscriptionType || "").toString().toUpperCase();
+        if (sub === "PREMIUM") {
+          setSubscriptionDialogMessage("You have exceeded the amount of classrooms for a Premium user.");
+          setShowSubscribeButton(false);
+        } else {
+          // default / FREE / unsubscribed teachers
+          setSubscriptionDialogMessage("You have reached your classroom limit. Upgrade to a paid plan to create more classrooms.");
+          setShowSubscribeButton(true);
+        }
+        setSubscriptionDialogOpen(true);
+        return;
+      }
+
+      // Generic fallback for other errors (do not expose backend message)
+      setSubscriptionDialogMessage("Cannot create classroom. Please try again later.");
+      setShowSubscribeButton(false);
+      setSubscriptionDialogOpen(true);
     }
   };
 
@@ -572,6 +596,41 @@ const TeacherDashboard = () => {
             <Button onClick={handleDeleteRoom} color="error" variant="contained">
               Delete
             </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      {/* Subscription / Limit Dialog */}
+      <Dialog open={subscriptionDialogOpen} onClose={() => setSubscriptionDialogOpen(false)}>
+        <Box
+          sx={{
+            p: 2,
+            border: '5px solid #5D4037',
+            bgcolor: '#F7CB97',
+            width: 350,
+            minHeight: 180,
+          }}
+        >
+          <DialogTitle sx={{ textAlign: "center", color: "#5D4037" }}>
+            Cannot Create Classroom
+          </DialogTitle>
+          <Divider sx={{ mb: 1 }} />
+          <DialogContent>
+            {/* Always show the friendly message from state */}
+            <Typography variant="body1" sx={{ mt: 1, color: "#5D4037", fontWeight: 500 }}>
+              {subscriptionDialogMessage || "You have reached your classroom limit."}
+            </Typography>
+
+            {/* Optional extra hint for non-premium users */}
+            {showSubscribeButton}
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center" }}>
+            <Button onClick={() => setSubscriptionDialogOpen(false)}>OK</Button>
+            {showSubscribeButton && (
+              <Button onClick={() => { setSubscriptionDialogOpen(false); navigate("/subscriptions"); }} variant="contained">
+                Subscribe Now
+              </Button>
+            )}
           </DialogActions>
         </Box>
       </Dialog>
