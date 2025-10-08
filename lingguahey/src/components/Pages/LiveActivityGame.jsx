@@ -86,6 +86,12 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const lastNonEmptyUsersRef = useRef([]); // Always keep the latest non-empty user list
   const isLeavingRef = useRef(false);
 
+  function logs() {
+    console.log("USERS: ", users);
+    console.log("FROZEN USERS: ", frozenInitialUsers);
+
+  }
+
   useEffect(() => {
     onStartedRef.current = onStarted;
   }, [onStarted]);
@@ -108,113 +114,145 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
     } catch { }
   };
 
-  // ---- LOBBY JOIN & WEBSOCKET ----
   useEffect(() => {
     if (!activityId || !user || !hasJoined || didInitRef.current) return;
     didInitRef.current = true;
     setJoining(true);
     setError('');
 
-    // If the user has joined (setHasJoined(true) was called), we only need to fetch users
-    // and establish WebSocket connection, as the REST join part was handled in the
-    // character selection UI, including the character update.
+    // Wrap the API + STOMP logic in an async IIFE so we can use await
+    (async () => {
+      try {
+        // ---- Fetch Lobby Users ----
+        const res = await LOBBY_API.get(`/${activityId}/users`);
+        console.log("📦 Lobby Users Data:", res.data); // ✅ inspect data from backend
+        setFrozenInitialUsers(res.data);
 
-    LOBBY_API.get(`/${activityId}/users`)
-      .then(res => {
         setUsers(res.data);
+
         const me = res.data.find(u => u.userId === user);
         if (!me?.character && selectedChar) {
           setLocalUserChar(selectedChar);
         }
-      })
-      .catch(err => {
-        // This catch is mainly for cases where the user was already joined
-        // but somehow ended up here without a successful join/rejoin flow in the UI.
-        setError('Failed to fetch lobby users');
-      })
-      .finally(() => setJoining(false));
+      } catch (err) {
+        console.error("❌ Failed to fetch lobby users:", err);
+        // You can inspect backend response if available:
+        console.error("Response data:", err.response?.data);
+        console.error("Status:", err.response?.status);
+        console.error("Headers:", err.response?.headers);
 
-    // 2) STOMP via SockJS
-    const socket = new SockJS(`${BASE_URL}/ws`);
-    const client = Stomp.over(socket);
-    client.debug = () => { };
-    client.heartbeat.outgoing = 20000;
-    client.heartbeat.incoming = 20000;
+        setError("Failed to fetch lobby users");
+      } finally {
+        setJoining(false);
+      }
 
-    stompClientRef.current = client;
-    isLeavingRef.current = false;
+      // ---- STOMP via SockJS ----
+      const socket = new SockJS(`${BASE_URL}/ws`);
+      const client = Stomp.over(socket);
+      client.debug = () => { };
+      client.heartbeat.outgoing = 20000;
+      client.heartbeat.incoming = 20000;
 
-    const headers = {
-      Authorization: `Bearer ${token}`,
-    };
+      stompClientRef.current = client;
+      isLeavingRef.current = false;
 
-    const connectStomp = () => {
-      if (!stompClientRef.current || isLeavingRef.current) return;
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      };
 
-      stompClientRef.current.connect(
-        headers,
-        () => {
-          console.log("✅ STOMP connected");
-          setError("");
+      const connectStomp = () => {
+        if (!stompClientRef.current || isLeavingRef.current) return;
 
-          subscriptionRef.current = stompClientRef.current.subscribe(
-            `/topic/lobby/${activityId}`,
-            msg => {
-              let payload;
-              try {
-                payload = JSON.parse(msg.body);
-              } catch {
-                return;
-              }
+        stompClientRef.current.connect(
+          headers,
+          () => {
+            console.log("✅ STOMP connected");
+            setError("");
 
-              if (Array.isArray(payload.users)) {
-                setUsers(payload.users);
-                if (payload.users.length > 0) {
-                  lastNonEmptyUsersRef.current = payload.users;
+            subscriptionRef.current = stompClientRef.current.subscribe(
+              `/topic/lobby/${activityId}`,
+              msg => {
+                let payload;
+                try {
+                  payload = JSON.parse(msg.body);
+                } catch {
+                  console.warn("⚠️ Failed to parse STOMP message:", msg.body);
+                  return;
                 }
-                const me = payload.users.find(u => u.userId === user);
-                if (me?.role && role.current !== me.role.toUpperCase()) {
-                  role.current = me.role.toUpperCase();
-                }
-                if (!me?.character && selectedChar) {
-                  setLocalUserChar(selectedChar);
-                }
-                return;
-              }
 
-              if (payload.type === "JOIN" && payload.user) {
-                setUsers(prev =>
-                  prev.some(u => u.userId === payload.user.userId)
-                    ? prev
-                    : [...prev, payload.user]
-                );
-              }
+                console.log("📩 Received WebSocket message:", payload);
 
-              if (payload.type === "START") {
-                setFrozenInitialUsers(lastNonEmptyUsersRef.current);
-                setGameRoomOpen(true);
-                subscriptionRef.current?.unsubscribe();
-                stompClientRef.current?.disconnect();
+                if (Array.isArray(payload.users)) {
+                  console.log("👥 Full user list update:", payload.users);
+                  setUsers(payload.users);
+
+                  if (payload.users.length > 0) {
+                    lastNonEmptyUsersRef.current = payload.users;
+                  }
+
+                  const me = payload.users.find(u => u.userId === user);
+                  if (me?.role && role.current !== me.role.toUpperCase()) {
+                    role.current = me.role.toUpperCase();
+                  }
+                  if (!me?.character && selectedChar) {
+                    setLocalUserChar(selectedChar);
+                  }
+
+                  // Log after updating state (for debugging)
+                  setTimeout(() => {
+                    console.log("✅ Updated users (full list):", payload.users);
+                    setFrozenInitialUsers(payload.users)
+                  }, 100);
+
+                  return;
+                }
+
+                if (payload.type === "JOIN" && payload.user) {
+                  console.log("👤 User joined:", payload.user);
+                  setUsers(prev => {
+                    const updated = prev.some(u => u.userId === payload.user.userId)
+                      ? prev
+                      : [...prev, payload.user];
+
+                    console.log("✅ Updated users (after JOIN):", updated);
+                    return updated;
+                  });
+                }
+
+                if (payload.type === "START") {
+                  console.log("🚀 Game started payload:", payload);
+                  //setFrozenInitialUsers(lastNonEmptyUsersRef.current);
+                  logs();
+                  setGameRoomOpen(true);
+                  subscriptionRef.current?.unsubscribe();
+                  stompClientRef.current?.disconnect();
+                }
               }
+            );
+
+          },
+          error => {
+            if (isLeavingRef.current) {
+              console.log("❌ STOMP closed intentionally, not reconnecting");
+              return;
             }
-          );
-        },
-        error => {
-          if (isLeavingRef.current) {
-            console.log("❌ STOMP closed intentionally, not reconnecting");
-            return;
+            console.error("❌ STOMP connection error:", error);
+            setError("WebSocket connection failed. Retrying in 5s...");
+            setTimeout(connectStomp, 5000);
           }
-          console.error("❌ STOMP connection error:", error);
-          setError("WebSocket connection failed. Retrying in 5s...");
-          setTimeout(connectStomp, 5000);
-        }
-      );
-    };
+        );
+      };
 
-    connectStomp();
+      console.log("🧩 Current users state before STOMP connect:", users);
+      connectStomp();
+    })();
 
+    // ---- Cleanup ----
     return () => {
       isLeavingRef.current = true;
+      // ✅ MODIFICATION: Remove the user from frozenInitialUsers on unmount/cleanup
+      setFrozenInitialUsers(prev => prev.filter(u => u.userId !== user)); 
+      
       LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } }).finally(() => {
         try {
           subscriptionRef.current?.unsubscribe();
@@ -226,6 +264,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       });
     };
   }, [activityId, user, hasJoined, selectedChar, token]);
+
 
   // ---- HANDLERS ----
   const handleStart = () => {
@@ -241,6 +280,10 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
 
   const handleReturn = () => {
     isLeavingRef.current = true;
+    
+    // ✅ MODIFICATION: Remove the user from frozenInitialUsers when returning
+    setFrozenInitialUsers(prev => prev.filter(u => u.userId !== user)); 
+
     LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } })
       .catch(err => console.error('Error leaving lobby:', err))
       .finally(() => {
