@@ -98,7 +98,7 @@ export default function DungeonSection({
           width: 470,
           height: 350,
           position: "absolute",
-          color: '#3361AB',
+          color: '#4b8efb',
           right: 165,
           bottom: 280,
         }}>
@@ -120,7 +120,7 @@ export default function DungeonSection({
         )}
         {dungeonIsOpen && (
           <Box sx={{ justifyItems: 'center', width: 450, position: "absolute", bottom: 30 }}>
-            <Typography sx={{ fontSize: 22, color: '#3361AB', ml: 8 }}>
+            <Typography sx={{ fontSize: 22, color: '#4b8efb', ml: 8 }}>
               {dungeonMessage}
             </Typography>
           </Box>
@@ -233,7 +233,7 @@ export default function DungeonSection({
           >
             <Grid container direction="column" alignItems="center" sx={{ p: 4 }}>
               <Button
-                sx={{ color: '#3361AB', alignSelf: 'flex-end', mb: 2, fontSize: 30 }}
+                sx={{ color: '#4b8efb', alignSelf: 'flex-end', mb: 2, fontSize: 30 }}
                 onClick={() => setDungeonPreparatory(false)}
               >
                 X
@@ -289,7 +289,7 @@ export default function DungeonSection({
                     {currentPage < monsterList.length && monsterList[currentPage] ? (
                       <>
                         <Typography
-                          color="#3361AB"
+                          color="#4b8efb"
                           variant='h1'
                           sx={{ textAlign: "left", position: "absolute", top: 10, left: -51, width: 500, WebkitTextStroke: '1px #180f0c' }}
                         >
@@ -299,13 +299,13 @@ export default function DungeonSection({
                           <img
                             src={`data:image/png;base64,${monsterList[currentPage].imageData}`}
                             alt="Enemy"
-                            style={{ width: "220px", height: "215px" }}
+                            style={{ width: "220px", height: "215px", mt:2 }}
                           />
                         </Box>
-                        <Typography color="#3361AB" variant={'h3'} sx={{ mt: 3, WebkitTextStroke: '1px #180f0c', width: 500 }}>
+                        <Typography color="#4b8efb" variant={'h3'} sx={{ mt: 2, WebkitTextStroke: '1px #180f0c', width: 500 }}>
                           Tagalog Name: {monsterList[currentPage].tagalogName}
                         </Typography>
-                        <Typography color="#3361AB" variant={'h3'} sx={{ mt: 3, WebkitTextStroke: '1px #180f0c', width: 500 }}>
+                        <Typography color="#4b8efb" variant={'h3'} sx={{ mt: 2, WebkitTextStroke: '1px #180f0c', width: 500 }}>
                           English Name: {monsterList[currentPage].englishName}
                         </Typography>
                       </>
@@ -314,7 +314,7 @@ export default function DungeonSection({
                     {/* Final Page */}
                     {currentPage === monsterList.length && (
                       <>
-                        <Typography color="#3361AB" variant='h1' sx={{ mb: 3, WebkitTextStroke: '1px #180f0c' }}>
+                        <Typography color="#4b8efb" variant='h1' sx={{ mb: 3, WebkitTextStroke: '1px #180f0c' }}>
                           Are you ready?
                         </Typography>
                         <Button sx={{
@@ -322,7 +322,7 @@ export default function DungeonSection({
                           backgroundSize: 'cover',
                           width: '200px',
                           height: '60px',
-                          color: '#3361AB'
+                          color: '#4b8efb'
                         }}
                           onClick={() => {
                             console.log("Navigating with state:",
