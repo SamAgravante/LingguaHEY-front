@@ -51,9 +51,11 @@ import GameTextFieldMedium from "../../assets/images/backgrounds/GameTextFieldMe
 import ForestwithShops from "../../assets/images/backgrounds/ForestwithShops.png";
 import ForestwithShopsAnimated from "../../assets/images/backgrounds/ForestwithShopsAnimated.gif";
 import ShopUI from "../../assets/images/backgrounds/ShopUI.png";
+import ShopUIAnimated from "../../assets/images/backgrounds/ShopUIAnimated.gif";
 import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
 import GameShopBoxSmall from "../../assets/images/backgrounds/GameShopBoxSmall.png";
 import SummonUI from "../../assets/images/backgrounds/SummonUI.png";
+import SummonUIAnimated from "../../assets/images/backgrounds/SummonUIAnimated.gif";
 import NameTab from "../../assets/images/backgrounds/NameTab.png";
 import ItemBox from "../../assets/images/backgrounds/Itembox.png";
 import HealthPotion from "../../assets/images/objects/HealthPotion.png";
@@ -922,9 +924,9 @@ export default function Homepage() {
           <Box
             sx={{
               backgroundImage: `url(${section === 'Shop'
-                ? ShopUI
+                ? ShopUIAnimated
                 : section === 'Summon'
-                  ? SummonUI
+                  ? SummonUIAnimated
                   : dungeonBackground})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
