@@ -265,7 +265,7 @@ export default function SummonSection({
             (You only have {gems} gems)
           </Typography>
         </Stack>}
-        {(gems > 100) && <Stack direction="column" alignItems="center">
+        {(gems >= 100) && <Stack direction="column" alignItems="center">
           <Typography
             sx={{
               fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037',
