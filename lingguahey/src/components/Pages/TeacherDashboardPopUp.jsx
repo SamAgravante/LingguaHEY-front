@@ -59,6 +59,7 @@ import LiveActWordTranslation from "../../components/Pages/Live-Activity-Classro
 
 import LiveActivityGame from './LiveActivityGame';
 import { MusicContext } from '../../contexts/MusicContext';
+import MenuBox1var from '../../assets/images/backgrounds/MenuBox1var.png';
 
 
 
@@ -121,7 +122,7 @@ const TeacherDashboardPopUp = () => {
 
   // Activity deployment states
   const [openActivityDialog, setOpenActivityDialog] = useState(false);
-    const [selectedQuestionType, setSelectedQuestionType] = useState(null);
+  const [selectedQuestionType, setSelectedQuestionType] = useState(null);
   const [activityQuestions, setActivityQuestions] = useState([]);
   const [questionToEdit, setQuestionToEdit] = useState(null);
 
@@ -133,7 +134,7 @@ const TeacherDashboardPopUp = () => {
   const [secVisibility, setSecVisibility] = useState(true);
 
 
-  
+
   const getSortedScores = () => {
     if (scoreSort === "highest") {
       return [...studentScores].sort((a, b) => b.score - a.score);
@@ -204,7 +205,7 @@ const TeacherDashboardPopUp = () => {
       try {
         const enrolledStudentsResponse = await API.get(`/classrooms/${roomId}/students`);
         setSelectedRoomStudents(enrolledStudentsResponse.data || []);
-              } catch (err) {
+      } catch (err) {
         console.error("Failed to fetch enrolled students:", err);
         setSelectedRoomStudents([]);
       }
@@ -268,10 +269,10 @@ const TeacherDashboardPopUp = () => {
       setStudentScores([]);
     }
   };
- 
- 
-   // update fetchActivities to work with selectedActivity as object
-   const fetchActivities = async () => {
+
+
+  // update fetchActivities to work with selectedActivity as object
+  const fetchActivities = async () => {
     if (!API || !roomId) return;
     try {
       const response = await API.get(`/live-activities/${roomId}/live-activities`);
@@ -588,7 +589,7 @@ const TeacherDashboardPopUp = () => {
     if (!API || !activityToDelete) return;
     try {
       await API.delete(`/live-activities/${activityToDelete?.activity_ActivityId}`);
-      setActivities(prevActivities => prevActivities.filter (activity => activity.activity_ActivityId !== activityToDelete.activity_ActivityId));
+      setActivities(prevActivities => prevActivities.filter(activity => activity.activity_ActivityId !== activityToDelete.activity_ActivityId));
       closeDeleteDialog();
     } catch (err) {
       console.error("Failed to delete activity:", err);
@@ -643,7 +644,7 @@ const TeacherDashboardPopUp = () => {
     }
   };
 
-  
+
   const handleDeleteQuestion = async (questionId) => {
     if (!API || !selectedActivity) return;
     try {
@@ -831,14 +832,14 @@ const TeacherDashboardPopUp = () => {
     // buffer/byte-array -> data URL
     const maybeArray =
       (Array.isArray(q?.questionImage?.data?.data) ? q.questionImage.data.data :
-      Array.isArray(q?.questionImage?.data) ? q.questionImage.data :
-      Array.isArray(q?.questionImage) ? q.questionImage :
-      Array.isArray(q?.image?.data?.data) ? q.image.data.data :
-      Array.isArray(q?.image?.data) ? q.image.data :
-      Array.isArray(q?.image) ? q.image :
-      Array.isArray(q?.data?.data) ? q.data.data :
-      Array.isArray(q?.bytes) ? q.bytes :
-      Array.isArray(q?.data) ? q.data : null);
+        Array.isArray(q?.questionImage?.data) ? q.questionImage.data :
+          Array.isArray(q?.questionImage) ? q.questionImage :
+            Array.isArray(q?.image?.data?.data) ? q.image.data.data :
+              Array.isArray(q?.image?.data) ? q.image.data :
+                Array.isArray(q?.image) ? q.image :
+                  Array.isArray(q?.data?.data) ? q.data.data :
+                    Array.isArray(q?.bytes) ? q.bytes :
+                      Array.isArray(q?.data) ? q.data : null);
 
     if (maybeArray) {
       try {
@@ -1202,7 +1203,7 @@ const TeacherDashboardPopUp = () => {
     },
   ];
 
-  
+
   return (
     <Box
       sx={{
@@ -1844,7 +1845,7 @@ const TeacherDashboardPopUp = () => {
                                 <Typography variant="h4" sx={{ fontWeight: 700, color: item.color, textAlign: "center" }}>
                                   {item.count}
                                 </Typography>
-                                                              </CardContent>
+                              </CardContent>
                             </Card>
                           </Grid>
                         ))}
@@ -2017,17 +2018,26 @@ const TeacherDashboardPopUp = () => {
         <Fade in={multiplayerOpen}>
           <Box
             sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '98vw',
-              height: '100vh',
-              backgroundImage: `url(${modalBg})`,
-              p: 3,
-              overflowY: 'auto',
+              position: 'relative',
+                            top: 30,
+                            left: 240,
+                            width: '74%',
+                            height: '90%',
+                            backgroundImage: `url(${MenuBox1var})`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: "cover",
+                            backgroundPosition: 'center',
+                            //padding: 3,
+                            //m:4,
+                            //border: 'solid',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            overflow: 'hidden',
             }}
           >
-            <Stack direction="row" justifyContent="space-between">
+            <Stack direction="row" justifyContent="center" sx={{mt:20}} spacing={'50vw'}>
               <IconButton onClick={() => {
                 if (liveActivityRef.current?.handleReturn) {
                   liveActivityRef.current.handleReturn();
@@ -2045,7 +2055,16 @@ const TeacherDashboardPopUp = () => {
                 <CloseIcon />
               </IconButton>
             </Stack>
-            <Typography variant="h2" sx={{ textAlign: 'center', visibility: secVisibility ? 'visible' : 'hidden' }}>
+            <Typography
+              variant="h1"
+              color="#5D4037"
+              sx={{
+                textAlign: 'center',
+                visibility: secVisibility ? 'visible' : 'hidden',
+                mb: 3,
+                fontWeight: 'bold'
+              }}
+            >
               King of the Hill!
             </Typography>
             <Box

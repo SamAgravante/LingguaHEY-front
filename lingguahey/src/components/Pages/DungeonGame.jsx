@@ -20,6 +20,8 @@ import DungeonRoom from '../../assets/images/backgrounds/DungeonRoom.png';
 import DungeonBar from '../../assets/images/backgrounds/DungeonBar.png';
 import DungeonHint from '../../assets/images/backgrounds/DungeonHint.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
+import DungeonBarv2 from '../../assets/images/backgrounds/DungeonBarv2.png';
+import NameTabvar2 from "../../assets/images/backgrounds/NameTabvar2.png";
 
 import GameTextField from "../../assets/images/backgrounds/GameTextField.png";
 import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
@@ -90,6 +92,14 @@ export default function DungeonGame() {
   const [enemyDefeated, setEnemyDefeated] = useState(false);
   const [isBoss, setIsBoss] = useState(false);
   const [bossCounter, setBossCounter] = useState(0);
+
+  //COUNTER FOR RESETTING LASER
+  const [laserKey, setLaserKey] = useState(0);
+  const [canCastAgain,setCanCastAgain] = useState(true);
+
+  useEffect(() => {
+  if (laserEffect) setLaserKey(prev => prev + 1);
+}, [laserEffect]);
 
 
   const getMonster = async () => {
@@ -228,6 +238,7 @@ export default function DungeonGame() {
         setPotionUsedThisRound(true); // Treat guess after skip as a regular round action
       }
       // -------------------------------------------------------------
+      setCanCastAgain(false);
 
       if (!userAnswer.data.correct) {
         // Wrong answer -> play fail laser
@@ -264,6 +275,9 @@ export default function DungeonGame() {
           setTimeout(() => {
             setEnemyAttacking(false);
           }, 2000);
+          setTimeout(() => {
+            setCanCastAgain(true);
+          }, 3000);
         }, 1000);
       }
 
@@ -289,6 +303,7 @@ export default function DungeonGame() {
             setTimeout(() => {
               setEnemyDefeated(false);
               getMonster();
+              setCanCastAgain(true);
 
 
               // --- Reset Potion State on Next Round ---
@@ -411,18 +426,19 @@ export default function DungeonGame() {
       const userResp = await API.get(`/users/${userDetails.userId}`);
       setPotions(userResp.data.potions);
       setTimeout(() => {
-      if (resp.data.levelCleared === true) {
+        if (resp.data.levelCleared === true) {
 
-        setEnemyDefeated(true);
-        setBossCounter((prev) => prev + 1);
-        setIsGameOver(true);
-        setMakeMessageAppear(true);
-        setMessageDetails({
-          mainMessage: 'Level Cleared',
-          subMessage: `Rewards: `
-        });
-      }
-      setCurrentPotion(null);},1000);
+          setEnemyDefeated(true);
+          setBossCounter((prev) => prev + 1);
+          setIsGameOver(true);
+          setMakeMessageAppear(true);
+          setMessageDetails({
+            mainMessage: 'Level Cleared',
+            subMessage: `Rewards: `
+          });
+        }
+        setCurrentPotion(null);
+      }, 1000);
     } catch (err) {
       console.error("Failed to use potion:", err);
       // Handle error, maybe show an error message
@@ -459,16 +475,16 @@ export default function DungeonGame() {
       {/* Player Tab */}
       <Box sx={{
         position: 'absolute', top: 16, left: 16,
-        backgroundImage: `url(${NameTab})`,
+        backgroundImage: `url(${NameTabvar2})`,
         backgroundSize: 'cover',
-        width: 730,
+        width: 700,
         height: 150,
         display: 'flex',
         alignItems: 'center',
         paddingLeft: 2
       }}>
         <img src={MCHeadshot} alt="Player" style={{ width: 100, height: 100, marginLeft: 10 }} />
-        <Stack direction={'column'} sx={{width: 250}}>
+        <Stack direction={'column'} sx={{ width: 250 }}>
           <Typography variant="h2" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', paddingLeft: 5 }}>
             {userDetails.firstName || 'Player Name'}
           </Typography>
@@ -489,7 +505,7 @@ export default function DungeonGame() {
                 : (hp > i ? HeartFilled : HeartNotFilled)
                 })`,
               backgroundSize: 'cover',
-              marginLeft: i === 0 ? 10 : 2
+              marginLeft: i === 0 ? 7 : 2
             }}
           />
         ))}
@@ -523,9 +539,9 @@ export default function DungeonGame() {
           position: 'absolute',
           top: 16,
           right: 16,
-          backgroundImage: `url(${NameTab})`,
+          backgroundImage: `url(${NameTabvar2})`,
           backgroundSize: 'cover',
-          width: 730,
+          width: 700,
           height: 150,
           display: 'flex',
           alignItems: 'center',
@@ -590,10 +606,10 @@ export default function DungeonGame() {
           top: '20%',
           color: '#5D4037',
           visibility: selectedTiles.length > 0 ? 'visible' : 'hidden',
-          opacity: enemyAttacking ? 0.5 : 1, // fade when disabled
+          opacity: canCastAgain ? 1 : 0.5, // fade when disabled
         }}
         onClick={handleSubmitAnswer}
-        disabled={enemyAttacking} // disable during enemy attack
+        disabled={!canCastAgain} // disable during enemy attack
       />
 
       {/* Selected Tiles */}
@@ -785,12 +801,23 @@ export default function DungeonGame() {
             }}
           >
             {laserEffect === "success" && (
-              <img src={LaserSuccess} alt="Laser Success" style={{ width: "100%", height: "100%" }} />
+              <img
+                key={laserKey}
+                src={LaserSuccess}
+                alt="Laser Success"
+                style={{ width: "100%", height: "100%" }}
+              />
             )}
             {laserEffect === "fail" && (
-              <img src={LaserFail} alt="Laser Fail" style={{ width: "100%", height: "100%" }} />
+              <img
+                key={laserKey}
+                src={LaserFail}
+                alt="Laser Fail"
+                style={{ width: "100%", height: "100%" }}
+              />
             )}
           </Box>
+
         </Stack>
       </Box>
 
@@ -924,7 +951,7 @@ export default function DungeonGame() {
       <Box
         sx={{
           position: 'absolute',
-          backgroundImage: `url(${DungeonBar})`,
+          backgroundImage: `url(${DungeonBarv2})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           width: '100%',
@@ -939,7 +966,8 @@ export default function DungeonGame() {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          spacing={4} // adds equal space between sections
+          spacing={1} // adds equal space between sections
+          sx={{ mr: 1.5 }}
         >
           {/* Potions */}
           <Stack direction="row" spacing={1} alignItems="center">
@@ -980,7 +1008,7 @@ export default function DungeonGame() {
           </Stack>
 
           {/* Letter Tiles */}
-          <Stack direction="column" spacing={1} alignItems="center" sx={{ px: '200px' }}>
+          <Stack direction="column" spacing={1} alignItems="center" sx={{ width: 900, height: 140 }}>
             {[0, 1].map((row) => (
               <Stack key={row} direction="row" spacing={1}>
                 {uppercaseLetters &&
@@ -1024,6 +1052,7 @@ export default function DungeonGame() {
               width: 350,
               height: 150,
               position: 'relative',
+
             }}
           >
             <Typography sx={{ padding: 2 }}>
@@ -1034,8 +1063,8 @@ export default function DungeonGame() {
               src={PixieFly}
               alt="Pixie"
               style={{
-                width: '100px',
-                height: '100px',
+                width: '70px',
+                height: '70px',
                 position: 'absolute',
                 bottom: 8,
                 right: 8,

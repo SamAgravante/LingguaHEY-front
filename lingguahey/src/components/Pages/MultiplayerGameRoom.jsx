@@ -131,6 +131,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
   const [shuffledOptions, setShuffledOptions] = useState([]);
   const [pendingAnswer, setPendingAnswer] = useState(null);
   const [waitingForTeacher, setWaitingForTeacher] = useState(false);
+  const questionStartTimeRef = useRef(null);
 
   // 2. Ref Hooks
   const stompClientRef = useRef(null);
@@ -177,6 +178,13 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       new Audio(url).play();
     } catch { }
   }, [APItts]);
+
+  useEffect(() => {
+    // Set start time when question index changes (i.e., new question is loaded)
+    // This is the earliest moment a student can see the question.
+    questionStartTimeRef.current = Date.now();
+    // This hook should run whenever the question index changes.
+  }, [index, questions]);
 
   // Leaderboard Update Logic (Extracted for use by both REST and WebSocket)
   const updateLeaderboardState = useCallback((scoresArr, initialUsers, initialized, setLeaderboard, setLeaderboardInitialized) => {
@@ -287,21 +295,34 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
 
     if (!userId || !currentQuestion || answerToSubmit === null) return;
 
+    // --- NEW LOGIC: Calculate Elapsed Time ---
+    const startTime = questionStartTimeRef.current;
+    if (!startTime) {
+      console.error("Question start time not set.");
+      return;
+    }
+
+    const elapsedTimeMs = Date.now() - startTime;
+    // Send time in seconds, rounded to two decimal places
+    const timeTakenSeconds = (elapsedTimeMs / 1000).toFixed(2);
+    // -----------------------------------------
+
     try {
       if (currentQuestion.gameType === 'GAME1' || currentQuestion.gameType === 'GAME3') {
+        // API call now includes the timeTakenSeconds parameter
         await API.post(
-          `/scores/award/questions/${currentQuestion.questionId}/users/${userId}?selectedChoiceId=${answerToSubmit}`
+          `/scores/award/questions/${currentQuestion.questionId}/users/${userId}?selectedChoiceId=${answerToSubmit}&timeTakenSeconds=${timeTakenSeconds}`
         );
       } else if (currentQuestion.gameType === 'GAME2') {
+        // API call now includes the timeTakenSeconds parameter
         await API.post(
-          `/scores/award/translation/questions/${currentQuestion.questionId}/users/${userId}`,
+          `/scores/award/translation/questions/${currentQuestion.questionId}/users/${userId}?timeTakenSeconds=${timeTakenSeconds}`,
           Array.isArray(answerToSubmit) ? answerToSubmit : []
         );
       }
 
       // ----------------------------------------------------------------------
-      // REAL-TIME PUSH: Tell the server an answer was submitted. The server 
-      // should calculate the leaderboard and PUSH the update via WebSocket.
+      // REAL-TIME PUSH: Tell the server an answer was submitted. 
       // ----------------------------------------------------------------------
       if (stompClientRef.current?.connected) {
         stompClientRef.current.send(`/app/leaderboard/trigger/${activityId}`, {}, '');
@@ -373,9 +394,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
                   }
 
                   if (payload.status === "NEXT_QUESTION" && payload.payload?.questionIndex !== undefined) {
-                    if (pendingAnswerRef.current !== null) {
-                      await submitPendingAnswer();
-                    }
+                    // Answer is now submitted instantly upon selection, no need to wait for teacher click.
                     setPendingAnswerAndRef(null);
                     setWaitingForTeacher(false);
 
@@ -465,11 +484,15 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
 
   // Choice Handler
   const handleChoice = useCallback(choice => {
-    if (userRole !== 'TEACHER') {
+    // Check if user is a student AND they haven't answered yet (!waitingForTeacher)
+    if (userRole !== 'TEACHER' && !waitingForTeacher) {
       setPendingAnswerAndRef(choice.choiceId);
       setWaitingForTeacher(true);
+
+      // Submit the answer immediately upon choice
+      setTimeout(submitPendingAnswer, 50);
     }
-  }, [userRole, setPendingAnswerAndRef]);
+  }, [userRole, setPendingAnswerAndRef, submitPendingAnswer, waitingForTeacher]);
 
   // Select Handler (for multi-select/ordering games)
   const handleSelect = useCallback(choice => {
@@ -499,7 +522,12 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
     if (waitingForTeacher || !selected.length) return;
     setPendingAnswerAndRef([...selected]);
     setWaitingForTeacher(userRole !== 'TEACHER');
-  }, [waitingForTeacher, selected, userRole, setPendingAnswerAndRef]);
+
+    if (userRole !== 'TEACHER') { // Only students submit this way
+      // Submit the answer immediately upon clicking Submit
+      setTimeout(submitPendingAnswer, 50);
+    }
+  }, [waitingForTeacher, selected, userRole, setPendingAnswerAndRef, submitPendingAnswer]);
 
   // --- END: ALL HOOKS MUST BE AT THE TOP LEVEL ---
 
@@ -507,31 +535,31 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
   // --- START: NON-HOOK LOGIC AND EARLY RETURNS ---
 
   // Define function handlers that don't need to be memoized or are not hooks
- // Inside MultiplayerGameRoom.jsx, modify handleNext:
+  // Inside MultiplayerGameRoom.jsx, modify handleNext:
 
-const handleNext = () => {
+  const handleNext = () => {
     if (index < questions.length - 1) {
-        const currentIndex = index;
-        const nextIndex = currentIndex + 1;
+      const currentIndex = index;
+      const nextIndex = currentIndex + 1;
 
-        if (stompClientRef.current?.connected) {
-            stompClientRef.current.send(`/app/leaderboard/trigger/${activityId}`, {}, '');
-        }
+      if (stompClientRef.current?.connected) {
+        stompClientRef.current.send(`/app/leaderboard/trigger/${activityId}`, {}, '');
+      }
 
-        setTimeout(() => {
-            API.post(
-                `/lobby/${activityId}/next-question`,
-                null,
-                { params: { questionIndex: nextIndex, teacherId: userId } }
-            ).catch(() => { /* handle error */ });
-        }, 100); // Added 100ms delay
+      setTimeout(() => {
+        API.post(
+          `/lobby/${activityId}/next-question`,
+          null,
+          { params: { questionIndex: nextIndex, teacherId: userId } }
+        ).catch(() => { /* handle error */ });
+      }, 100); // Added 100ms delay
 
-        lastConfirmedRef.current = currentIndex;
-        setLastConfirmedIndex(currentIndex);
-        setProgress(((currentIndex + 1) / questions.length) * 100);
-        setIndex(nextIndex); // Teacher advances index
+      lastConfirmedRef.current = currentIndex;
+      setLastConfirmedIndex(currentIndex);
+      setProgress(((currentIndex + 1) / questions.length) * 100);
+      setIndex(nextIndex); // Teacher advances index
     }
-};
+  };
 
   const handleLeave = async () => {
     if (!activityId || !userId) return;
@@ -623,7 +651,7 @@ const handleNext = () => {
           .filter(entry => entry.role?.toUpperCase() !== 'TEACHER')
           .sort((a, b) => b.score - a.score)
           .map((entry, idx, arr) => {
-            const maxPossiblePoints = questions.length;
+            const maxPossiblePoints = questions.length * 3;
             const heightPercent = maxPossiblePoints > 0 ? Math.min(1, entry.score / maxPossiblePoints) : 0;
             const maxHeight = '70%';
             const y = `calc(${maxHeight} * ${heightPercent})`;
@@ -632,7 +660,8 @@ const handleNext = () => {
             const horizontalOffset = `calc(${Math.sin(angle)} * ${radius})`;
             const baseX = `calc(50% + ${horizontalOffset} + ${idx * 2}%)`;
 
-            const isLeader = idx === 0 && entry.score > 0;
+            const topScore = arr.length > 0 ? arr[0].score : 0;
+            const isLeader = entry.score === topScore && topScore > 0;
 
             return (
               <Box

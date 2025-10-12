@@ -125,7 +125,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       try {
         // ---- Fetch Lobby Users ----
         const res = await LOBBY_API.get(`/${activityId}/users`);
-        console.log("📦 Lobby Users Data:", res.data); // ✅ inspect data from backend
+        console.log("Lobby Users Data:", res.data); // ✅ inspect data from backend
         setFrozenInitialUsers(res.data);
 
         setUsers(res.data);
@@ -166,7 +166,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
         stompClientRef.current.connect(
           headers,
           () => {
-            console.log("✅ STOMP connected");
+            console.log("STOMP connected");
             setError("");
 
             subscriptionRef.current = stompClientRef.current.subscribe(
@@ -200,7 +200,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
 
                   // Log after updating state (for debugging)
                   setTimeout(() => {
-                    console.log("✅ Updated users (full list):", payload.users);
+                    console.log("Updated users (full list):", payload.users);
                     setFrozenInitialUsers(payload.users)
                   }, 100);
 
@@ -214,13 +214,13 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                       ? prev
                       : [...prev, payload.user];
 
-                    console.log("✅ Updated users (after JOIN):", updated);
+                    console.log("Updated users (after JOIN):", updated);
                     return updated;
                   });
                 }
 
                 if (payload.type === "START") {
-                  console.log("🚀 Game started payload:", payload);
+                  console.log("Game started payload:", payload);
                   //setFrozenInitialUsers(lastNonEmptyUsersRef.current);
                   logs();
                   setGameRoomOpen(true);
@@ -233,24 +233,24 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           },
           error => {
             if (isLeavingRef.current) {
-              console.log("❌ STOMP closed intentionally, not reconnecting");
+              console.log("STOMP closed intentionally, not reconnecting");
               return;
             }
-            console.error("❌ STOMP connection error:", error);
+            console.error("STOMP connection error:", error);
             setError("WebSocket connection failed. Retrying in 5s...");
             setTimeout(connectStomp, 5000);
           }
         );
       };
 
-      console.log("🧩 Current users state before STOMP connect:", users);
+      console.log("Current users state before STOMP connect:", users);
       connectStomp();
     })();
 
     // ---- Cleanup ----
     return () => {
       isLeavingRef.current = true;
-      // ✅ MODIFICATION: Remove the user from frozenInitialUsers on unmount/cleanup
+      // MODIFICATION: Remove the user from frozenInitialUsers on unmount/cleanup
       setFrozenInitialUsers(prev => prev.filter(u => u.userId !== user)); 
       
       LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } }).finally(() => {
@@ -281,7 +281,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const handleReturn = () => {
     isLeavingRef.current = true;
     
-    // ✅ MODIFICATION: Remove the user from frozenInitialUsers when returning
+    // MODIFICATION: Remove the user from frozenInitialUsers when returning
     setFrozenInitialUsers(prev => prev.filter(u => u.userId !== user)); 
 
     LOBBY_API.delete(`/${activityId}/leave`, { params: { userId: user } })
@@ -318,8 +318,8 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 boxShadow: selectedChar === char.value ? '0 0 8px #90caf9' : 'none',
                 backgroundImage: `url(${GameShopField})`,
                 backgroundSize: 'cover',
-                width: '6vw',
-                height: '13vh',
+                width: '130px',
+                height: '148px',
                 justifyContent: 'center',
                 alignItems: 'center', pt: 4
               }}
