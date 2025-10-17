@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Grid, Typography, Button, Stack, Box } from '@mui/material';
 import CommonItem from '../../assets/images/ui-assets/CommonItem.png';
 import RareItem from '../../assets/images/ui-assets/RareItem.png';
@@ -12,6 +12,8 @@ import SummonAnimation from '../../assets/images/effects/SummonAnimation.png';
 import SummonAnimationGIF from '../../assets/images/effects/SummonAnimationv2.gif';
 import GameTextBox from '../../assets/images/backgrounds/GameTextBox.png';
 import API from '../../api';
+import { MusicContext } from '../../contexts/MusicContext';
+import BGM_MainMenu from "../../assets/music/BGM_MainMenu.mp3";
 
 export default function SummonSection({
   handleBackClick,
@@ -26,7 +28,26 @@ export default function SummonSection({
   const [makeMessageAppear, setMakeMessageAppear] = useState(false);
   const [pulledItem, setPulledItem] = useState({});
   const [showItem, setShowItem] = useState(false);
-  const [animationKey, setAnimationKey] = useState(Date.now()); // force replay
+  const [animationKey, setAnimationKey] = useState(Date.now());
+    const { 
+        setSrc, 
+        setActivityMode, 
+        setLevelClearMode, 
+        playLaserSuccess, 
+        playLaserFail, 
+        playHeal, 
+        playShield, 
+        playSkip,
+        playHit,
+        playEnemyAttack, 
+        playEnemyDead, 
+        playConfirm, 
+        playDenied, 
+        playCancel,
+        playEquip,
+        playSummon
+      } = useContext(MusicContext);
+  
 
   function handleMakeMessageAppear() {
     setMakeMessageAppear(true);
@@ -34,6 +55,8 @@ export default function SummonSection({
 
   async function handleSummonClick() {
     try {
+      playSummon();
+      setSrc();
       setMakeMessageAppear(false);
       setVisibilityGacha('visible');
       setShowItem(false);
@@ -147,7 +170,7 @@ export default function SummonSection({
                 height: '60px',
                 color: '#5D4037'
               }}
-              onClick={handleConfirmClick}
+              onClick={()=>{playConfirm();handleConfirmClick();setSrc(BGM_MainMenu);}}
             >
               <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
                 Confirm
@@ -188,7 +211,7 @@ export default function SummonSection({
                 height: '60px',
                 color: '#5D4037'
               }}
-              onClick={handleSummonClick}
+              onClick={()=> {playConfirm();handleSummonClick();}}
             >
               <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
                 Confirm
@@ -202,7 +225,7 @@ export default function SummonSection({
                 height: '60px',
                 color: '#5D4037'
               }}
-              onClick={() => setMakeMessageAppear(false)}
+              onClick={() => {playCancel();setMakeMessageAppear(false)}}
             >
               <Typography sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 20, color: '#5D4037' }}>
                 Cancel
@@ -227,7 +250,7 @@ export default function SummonSection({
           fontSize: 19,
           pl: 3
         }}
-        onClick={handleBackClick}
+        onClick={()=>{playCancel();handleBackClick();}}
       >
         Leave Altar ➣
       </Button>
@@ -247,7 +270,7 @@ export default function SummonSection({
           height: 80
         }}
         disabled={gems < 100}
-        onClick={handleMakeMessageAppear}
+        onClick={()=>{playCancel(),handleMakeMessageAppear();}}
         variant="contained"
       >
         {(gems < 100) && <Stack direction="column" alignItems="center">

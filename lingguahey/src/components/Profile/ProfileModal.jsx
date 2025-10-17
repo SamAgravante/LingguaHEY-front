@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
     Box,
     Modal,
@@ -19,6 +19,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import { getUserFromToken } from '../../utils/auth';
+import { MusicContext } from '../../contexts/MusicContext';
 
 // Background assets
 import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
@@ -26,7 +27,7 @@ import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong
 import GameTextBoxLong from "../../assets/images/backgrounds/GameTextBoxLong.png";
 import GameTextBox from "../../assets/images/backgrounds/GameTextBox.png";
 
-const ProfileModal = ({ open, onClose }) => {
+const ProfileModal = ({ open, onClose, onUpdate }) => {
     const [editMode, setEditMode] = useState(false);
     const userID = getUserFromToken()?.userId;
     const [profile, setProfile] = useState({});
@@ -50,6 +51,23 @@ const ProfileModal = ({ open, onClose }) => {
         },
     });
 
+    const { 
+        setSrc, 
+        setActivityMode, 
+        setLevelClearMode, 
+        playLaserSuccess, 
+        playLaserFail, 
+        playHeal, 
+        playShield, 
+        playSkip,
+        playHit,
+        playEnemyAttack, 
+        playEnemyDead, 
+        playConfirm, 
+        playDenied, 
+        playCancel
+      } = useContext(MusicContext);
+      
     useEffect(() => {
         const loadProfile = async () => {
             if (!userID) return;
@@ -103,9 +121,13 @@ const ProfileModal = ({ open, onClose }) => {
             const response = await API.put(`/${userID}`, payload);
             setProfile(response.data);
             setFormData(response.data);
+            // notify parent that profile was updated so they can refresh displayed data
+            if (typeof onUpdate === 'function') onUpdate(response.data);
             showSnack('Profile updated successfully', 'success');
             setTimeout(() => onClose(), 1500);
+            playCancel();
         } catch (err) {
+            playDenied();
             console.error('Failed to update profile:', err);
             showSnack('Update failed', 'error');
         }
@@ -117,20 +139,24 @@ const ProfileModal = ({ open, onClose }) => {
         setNewPassword("");
         setConfirmNewPassword("");
         setPwdDialogOpen(true);
+        playCancel();
     };
 
     const handlePwdDialogClose = () => {
         setPwdDialogOpen(false);
+        playCancel();
     };
 
     const handlePwdConfirm = async () => {
         if (newPassword.length < 8) {
             showSnack("New password must be at least 8 characters long.", "warning");
+            playDenied();
             return;
         }
 
         if (newPassword !== confirmNewPassword) {
             showSnack("New passwords do not match.", "warning");
+            playDenied();
             return;
         }
 
@@ -140,8 +166,10 @@ const ProfileModal = ({ open, onClose }) => {
             await API.put(`/${userID}/reset-password`, payload);
             setPwdDialogOpen(false);
             showSnack("Password updated successfully.", "success");
+            playConfirm();
         } catch (error) {
             showSnack("Failed to update password. Please check your current password.", "error");
+            playDenied();
         }
     };
 
@@ -159,6 +187,7 @@ const ProfileModal = ({ open, onClose }) => {
     const handleCancel = () => {
         setFormData(profile);
         setEditMode(false);
+        playCancel();
     };
 
     // custom input style shared across fields
@@ -203,7 +232,7 @@ const ProfileModal = ({ open, onClose }) => {
                         }}
                     >
                         <IconButton
-                            onClick={onClose}
+                            onClick={()=>{onClose();playCancel();}}
                             sx={{ position: 'absolute', right: 8, top: 8 }}
                         >
                             <CloseIcon />
@@ -382,7 +411,7 @@ const ProfileModal = ({ open, onClose }) => {
 
                                     <Button
                                         variant="contained"
-                                        onClick={() => setEditMode(true)}
+                                        onClick={() => {setEditMode(true);playCancel();}}
                                         sx={{
                                             mt: 2,
                                             backgroundColor: '#AED581',

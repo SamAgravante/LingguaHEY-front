@@ -1,5 +1,5 @@
 // src/components/Pages/sections/ShopSection.jsx
-import React from 'react';
+import React, { useContext } from 'react';
 import { Grid, Stack, Box, Typography, Button, Divider } from '@mui/material';
 import GameTextField from '../../assets/images/backgrounds/GameTextField.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png';
@@ -12,6 +12,7 @@ import HealthPotion from '../../assets/images/objects/HealthPotion.png';
 import ShieldPotion from '../../assets/images/objects/ShieldPotion.png';
 import SkipPotion from '../../assets/images/objects/SkipPotion.png';
 import GoldCoins from '../../assets/images/objects/GoldCoins.png';
+import { MusicContext } from '../../contexts/MusicContext';
 
 export default function ShopSection({
   shopHealthPotion,
@@ -29,6 +30,25 @@ export default function ShopSection({
   renderGemAndCoinsTab,
   coins
 }) {
+  const { playConfirm, playCancel, playBuySuccess, playDenied } = useContext(MusicContext);
+
+  const handleAddPotion = (setPot, potCount, cost) => {
+    if (shopTotal + cost > coins) {
+      playDenied();
+      return;
+    }
+    playCancel(); 
+    setPot(potCount + 1);
+    setShopTotal(shopTotal + cost);
+  }
+
+  const handleSubtractPotion = (setPot, potCount, cost) => {
+    if (potCount > 0) {
+      playCancel(); // SFX: Cancel sound for removing
+      setPot(potCount - 1);
+      setShopTotal(shopTotal - cost);
+    }
+  }
   return (
     <Grid container direction="column" alignItems="center" >
       <Button
@@ -41,9 +61,11 @@ export default function ShopSection({
           backgroundImage: `url(${GameTextField})`,
           backgroundSize: 'cover',
           fontSize: 19,
-          pr:3
+          pr: 3
         }}
-        onClick={handleBackClick}
+        onClick={()=>{
+          playCancel(); // SFX: Cancel sound for leaving
+          handleBackClick();}}
       >
         ⮘ Leave Shop
       </Button>
@@ -84,7 +106,10 @@ export default function ShopSection({
                 top: 20,
                 color: '#5D4037'
               }}
-              onClick={() => buyPotion()}>Confirm</Button>
+              onClick={() => {
+                playBuySuccess();
+                buyPotion();
+              }}>Confirm</Button>
             <Button
               sx={{
                 backgroundImage: `url(${GameShopBoxSmallRed})`,
@@ -94,7 +119,10 @@ export default function ShopSection({
                 top: 20,
                 color: '#5D4037'
               }}
-              onClick={() => setMakeMessageAppear(false)}>Cancel</Button>
+              onClick={() => {
+                playCancel(); // SFX: Cancel sound for closing modal
+                setMakeMessageAppear(false);
+              }}>Cancel</Button>
           </Stack>
         </Stack>
       </Box>
@@ -162,7 +190,7 @@ export default function ShopSection({
               color: '#5D4037',
             }}
               disabled={shopHealthPotion <= 0}
-              onClick={() => { setShopHealthPotion(shopHealthPotion - 1); setShopTotal(shopTotal - 100); }}>
+              onClick={() => { handleSubtractPotion(setShopHealthPotion, shopHealthPotion, 100); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 -
               </Typography>
@@ -189,7 +217,7 @@ export default function ShopSection({
               height: 60,
               color: '#5D4037',
             }}
-              onClick={() => { setShopHealthPotion(shopHealthPotion + 1); setShopTotal(shopTotal + 100); }}>
+              onClick={() => { handleAddPotion(setShopHealthPotion, shopHealthPotion, 100); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 +
               </Typography>
@@ -233,7 +261,7 @@ export default function ShopSection({
               color: '#5D4037',
             }}
               disabled={shopShieldPotion <= 0}
-              onClick={() => { setShopShieldPotion(shopShieldPotion - 1); setShopTotal(shopTotal - 200); }}>
+              onClick={() => { handleSubtractPotion(setShopShieldPotion, shopShieldPotion, 200); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 -
               </Typography>
@@ -260,7 +288,7 @@ export default function ShopSection({
               height: 60,
               color: '#5D4037',
             }}
-              onClick={() => { setShopShieldPotion(shopShieldPotion + 1); setShopTotal(shopTotal + 200); }}>
+              onClick={() => { handleAddPotion(setShopShieldPotion, shopShieldPotion, 200); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 +
               </Typography>
@@ -303,7 +331,7 @@ export default function ShopSection({
               color: '#5D4037',
             }}
               disabled={shopSkipPotion <= 0}
-              onClick={() => { setShopSkipPotion(shopSkipPotion - 1); setShopTotal(shopTotal - 300); }}>
+              onClick={() => { handleSubtractPotion(setShopSkipPotion, shopSkipPotion, 300); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 -
               </Typography>
@@ -330,7 +358,7 @@ export default function ShopSection({
               height: 60,
               color: '#5D4037',
             }}
-              onClick={() => { setShopSkipPotion(shopSkipPotion + 1); setShopTotal(shopTotal + 300); }}>
+              onClick={() => { handleAddPotion(setShopSkipPotion, shopSkipPotion, 300); }}>
               <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
                 +
               </Typography>
@@ -354,7 +382,7 @@ export default function ShopSection({
               backgroundSize: 'cover',
             }}
             disabled={shopTotal === 0 || shopTotal > coins}
-            onClick={() => setMakeMessageAppear(true)}
+            onClick={() => { setMakeMessageAppear(true); playCancel(); }}
           >
             <Typography variant="h1" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming' }}>
               Buy

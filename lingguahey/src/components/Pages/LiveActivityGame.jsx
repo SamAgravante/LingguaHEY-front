@@ -4,7 +4,8 @@ import React, {
   useState,
   useRef,
   forwardRef,
-  useImperativeHandle
+  useImperativeHandle,
+  useContext
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SockJS from 'sockjs-client';
@@ -21,12 +22,14 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
-import Snackbar from '@mui/material/Snackbar'; // ✅ new
-import MuiAlert from '@mui/material/Alert';  // ✅ for snackbar style
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
 import char_1 from '../../assets/images/characters/lingguahey-char1-wave.png';
 import char_2 from '../../assets/images/characters/lingguahey-char1-stand.png';
 import MultiplayerGameRoom from './MultiplayerGameRoom';
 import GameShopField from "../../assets/images/backgrounds/GameShopField.png";
+import { MusicContext } from '../../contexts/MusicContext';
+import BGM_MainMenu from "../../assets/music/BGM_MainMenu.mp3";
 
 const CHARACTERS = [
   { key: 'char_1', img: char_1, label: 'Char 1', value: 1 },
@@ -85,6 +88,25 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   const onStartedRef = useRef(onStarted);
   const lastNonEmptyUsersRef = useRef([]); // Always keep the latest non-empty user list
   const isLeavingRef = useRef(false);
+
+  const {
+      setSrc,
+      setActivityMode,
+      setLevelClearMode,
+      playLaserSuccess,
+      playLaserFail,
+      playHeal,
+      playShield,
+      playSkip,
+      playHit,
+      playEnemyAttack,
+      playEnemyDead,
+      playConfirm,
+      playDenied,
+      playCancel,
+      playEquip,
+      playFlip,
+    } = useContext(MusicContext);
 
   function logs() {
     console.log("USERS: ", users);
@@ -323,7 +345,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 justifyContent: 'center',
                 alignItems: 'center', pt: 4
               }}
-              onClick={() => setSelectedChar(char.value)}
+              onClick={() => {setSelectedChar(char.value);playCancel();}}
             >
               <img src={char.img} alt={char.label} style={{ width: 80, height: 80, marginBottom: 8 }} />
               <Typography variant="subtitle1">{char.label}</Typography>
@@ -351,7 +373,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 role: userDetails.role,
               };
               await USER_API.put(`/${user}`, payload);
-
+              playCancel();
               // Update local user details with the new profilePic
               setUserDetails(prev => ({ ...prev, profilePic: selectedChar }));
 
@@ -366,6 +388,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
               setHasJoined(true);
 
             } catch (err) {
+              playDenied();
               if (err.response?.status === 409) {
                 // User was already joined. Re-fetch and proceed to lobby.
                 try {
@@ -400,8 +423,10 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
   }
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h5" sx={{ mb: 2 }}>Lobby</Typography>
+    <Box sx={{ p: 4,display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'column', }}>
       <Typography variant="subtitle1" gutterBottom>Users in Lobby:</Typography>
 
       <Box
@@ -462,7 +487,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
       )}
 
       {role.current === 'TEACHER' ? (
-        <Button variant="contained" fullWidth size="large" onClick={handleStart} disabled={starting}>
+        <Button variant="contained" fullWidth size="large" onClick={()=>{handleStart();playCancel();}} disabled={starting}>
           {starting ? 'Starting…' : 'Start Activity'}
         </Button>
       ) : (
@@ -471,7 +496,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
         </Typography>
       )}
 
-      <Button variant="outlined" fullWidth size="large" sx={{ mt: 2 }} onClick={handleReturn}>
+      <Button variant="outlined" fullWidth size="large" sx={{ mt: 2 }} onClick={()=>{handleReturn(); setSrc(BGM_MainMenu);playCancel();}}>
         Return
       </Button>
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
@@ -487,7 +512,7 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
           Multiplayer Game Room
           <IconButton
             aria-label="close"
-            onClick={() => { disconnectWebsocket(); setGameRoomOpen(false); }}
+            onClick={() => { disconnectWebsocket(); setGameRoomOpen(false); setSrc(BGM_MainMenu); playCancel();}}
             sx={{ position: 'absolute', right: 8, top: 8, color: (theme) => theme.palette.grey[500] }}
           >
             <CloseIcon />

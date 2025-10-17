@@ -13,6 +13,26 @@ export default function LandingPage() {
   const textColor = "#5D4037";
 
   const { musicOn, toggleMusic, setIntroMode } = useContext(MusicContext);
+  const {
+      setSrc,
+      setActivityMode,
+      setLevelClearMode,
+      playLaserSuccess,
+      playLaserFail,
+      playHeal,
+      playShield,
+      playSkip,
+      playHit,
+      playEnemyAttack,
+      playEnemyDead,
+      playConfirm,
+      playDenied,
+      playCancel,
+      playEquip,
+      playFlip,
+      playDoorOpen,
+      playDungeonClick,
+    } = useContext(MusicContext);
 
   useEffect(() => {
     setIntroMode(true);
@@ -78,7 +98,7 @@ export default function LandingPage() {
               mb: 2,
               mt:20
             }}
-            onClick={() => navigate('/login')}
+            onClick={() => {playCancel();navigate('/login')}}
           >
             Get Started
           </Button>
@@ -86,7 +106,7 @@ export default function LandingPage() {
           <Typography
             align="center"
             sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', fontSize: 15, color: '#5D4037', cursor: 'pointer' }}
-            onClick={() => navigate('/roleselect')}
+            onClick={() => {playCancel();navigate('/roleselect')}}
           >
             No Account? Register Now!
           </Typography>
@@ -108,7 +128,7 @@ export default function LandingPage() {
           fontWeight: 500,
           cursor: 'pointer',
         }}
-        onClick={toggleMusic}
+        onClick={()=>{playCancel();toggleMusic();}}
       >
         {musicOn ? '🎵 Mute Music' : '🔇 Play Music'}
     

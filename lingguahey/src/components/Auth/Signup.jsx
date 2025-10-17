@@ -68,6 +68,27 @@ export default function Signup() {
   );
   const [dialogLoading, setDialogLoading] = useState(true);
 
+  const {
+        setSrc,
+        setActivityMode,
+        setLevelClearMode,
+        playLaserSuccess,
+        playLaserFail,
+        playHeal,
+        playShield,
+        playSkip,
+        playHit,
+        playEnemyAttack,
+        playEnemyDead,
+        playConfirm,
+        playDenied,
+        playCancel,
+        playEquip,
+        playFlip,
+        playDoorOpen,
+        playDungeonClick,
+      } = useContext(MusicContext);
+
   useEffect(() => {
     setIntroMode(true);
     if (!role) navigate("/roleselect");
@@ -197,11 +218,11 @@ export default function Signup() {
           }}
         >
           <Stack direction={"row"} alignItems="center" spacing={70}>
-            <IconButton onClick={() => navigate("/roleselect")}>
+            <IconButton onClick={() => {playCancel();navigate("/roleselect");}}>
             <ArrowBackIcon sx={{ color: textColor }} />
             <Typography
               sx={{ cursor: "pointer", color: textColor }}
-              onClick={() => navigate("/roleselect")}
+              onClick={() => {playCancel();navigate("/roleselect")}}
             >
               Back
             </Typography>
@@ -263,7 +284,7 @@ export default function Signup() {
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton onClick={toggleShow} edge="end">
+                      <IconButton onClick={()=>{playCancel();toggleShow();}} edge="end">
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
                     </InputAdornment>
@@ -289,7 +310,7 @@ export default function Signup() {
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton onClick={toggleShowConfirm} edge="end">
+                      <IconButton onClick={()=>{playCancel();toggleShowConfirm();}} edge="end">
                         {showConfirm ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
                     </InputAdornment>
@@ -430,6 +451,7 @@ export default function Signup() {
           <DialogActions>
             <Button
               onClick={() => {
+                playCancel();
                 setDialogOpen(false);
                 navigate("/login");
               }}

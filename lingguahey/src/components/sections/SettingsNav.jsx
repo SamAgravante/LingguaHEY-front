@@ -19,6 +19,7 @@ import { MusicContext } from '../../contexts/MusicContext';
 
 import MenuBoxVert from '../../assets/images/backgrounds/MenuBox1varVert.png';
 import ProfileModal from '../Profile/ProfileModal';
+import ContactModal from './ContactModal';
 
 const allRoutes = [
   { label: "Home", path: "/homepage", roles: ["USER", "ADMIN", "TEACHER"] },
@@ -29,7 +30,7 @@ const allRoutes = [
   { label: "Logout", path: "/landingpage", roles: ["USER", "TEACHER", "ADMIN"] },
 ];
 
-const SettingsNav = ({ onClose }) => {
+const SettingsNav = ({ onClose, onProfileUpdated }) => {
   const navigate = useNavigate();
   const { musicOn, toggleMusic } = useContext(MusicContext);
   const { token, logout } = useAuth();
@@ -41,24 +42,46 @@ const SettingsNav = ({ onClose }) => {
     role: null,
   });
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
-  useEffect(() => {
+  
+ //SFX
+  const { 
+    setSrc, 
+    setActivityMode, 
+    setLevelClearMode, 
+    playLaserSuccess, 
+    playLaserFail, 
+    playHeal, 
+    playShield, 
+    playSkip,
+    playHit,
+    playEnemyAttack, 
+    playEnemyDead, 
+    playConfirm, 
+    playDenied, 
+    playCancel
+  } = useContext(MusicContext);
+
+
+  // fetch user data (available to component and to onUpdate handlers)
+  const fetchUser = async () => {
     if (!token) return;
-
     const userObj = getUserFromToken();
     const userId = userObj?.userId || userObj?.id;
     if (!userId) return;
+    try {
+      const userRes = await API.get(`/users/${userId}`);
+      setUserData(userRes.data);
+      return userRes.data;
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+      return null;
+    }
+  };
 
-    const loadUser = async () => {
-      try {
-        const userRes = await API.get(`/users/${userId}`);
-        setUserData(userRes.data);
-      } catch (err) {
-        console.error("Failed to fetch user:", err);
-      }
-    };
-
-    loadUser();
+  useEffect(() => {
+    fetchUser();
   }, [token]);
 
   const handleRoute = async (route) => {
@@ -70,6 +93,11 @@ const SettingsNav = ({ onClose }) => {
       }
       logout();
       navigate("/");
+    } else if (route.label === "Contact Us") {
+      // open contact modal instead of navigating to a contact page
+      setContactModalOpen(true);
+
+      return;
     } else {
       navigate(route.path);
     }
@@ -81,7 +109,7 @@ const SettingsNav = ({ onClose }) => {
   return (
     <Box sx={{ position: 'relative'}}>
       <IconButton 
-        onClick={onClose}
+        onClick={()=>{playCancel();onClose();}}
         sx={{ position: 'absolute', right: -16, top: -16 }}
       >
         <CloseIcon />
@@ -99,7 +127,7 @@ const SettingsNav = ({ onClose }) => {
         <Button
           fullWidth
           variant="contained"
-          onClick={() => setProfileModalOpen(true)}
+          onClick={() => {playCancel();setProfileModalOpen(true)}}
           sx={{
             backgroundColor: "#AED581",
             color: '#5D4037',
@@ -115,7 +143,7 @@ const SettingsNav = ({ onClose }) => {
         {filteredRoutes.map((route) => (
           <ListItem key={route.label} disablePadding>
             <ListItemButton
-              onClick={() => handleRoute(route)}
+              onClick={() => {playCancel();handleRoute(route)}}
               sx={{
                 color: '#5D4037',
                 "&:hover": { backgroundColor: 'rgba(255, 204, 128, 0.4)' },
@@ -130,7 +158,7 @@ const SettingsNav = ({ onClose }) => {
         {/* Add Music Toggle Button as a ListItem */}
         <ListItem disablePadding>
           <ListItemButton
-            onClick={toggleMusic}
+            onClick={()=>{playCancel();toggleMusic();}}
             sx={{
               color: '#5D4037',
               "&:hover": { backgroundColor: 'rgba(255, 204, 128, 0.4)' },
@@ -147,6 +175,23 @@ const SettingsNav = ({ onClose }) => {
       <ProfileModal 
         open={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
+        onUpdate={(updated) => {
+          // update local user data when profile modal reports a change
+          if (updated && updated.userId) {
+            setUserData(updated);
+            if (typeof onProfileUpdated === 'function') onProfileUpdated(updated);
+          } else {
+            // fallback: re-fetch and notify parent
+            fetchUser().then((fresh) => {
+              if (fresh && typeof onProfileUpdated === 'function') onProfileUpdated(fresh);
+            });
+          }
+        }}
+      />
+
+      <ContactModal
+        open={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
       />
     </Box>
   );

@@ -2037,24 +2037,12 @@ const TeacherDashboardPopUp = () => {
                             overflow: 'hidden',
             }}
           >
-            <Stack direction="row" justifyContent="center" sx={{mt:20}} spacing={'50vw'}>
-              <IconButton onClick={() => {
-                if (liveActivityRef.current?.handleReturn) {
-                  liveActivityRef.current.handleReturn();
-                } else {
-                  setMultiplayerOpen(false);
-                  setActivityMode(false);
-                }
-              }}>
-                <ArrowBackIcon />
-              </IconButton>
-              <IconButton onClick={() => {
-                setMultiplayerOpen(false);
-                setActivityMode(false);
-              }}>
-                <CloseIcon />
-              </IconButton>
-            </Stack>
+            <IconButton
+              onClick={() => setMultiplayerOpen(false)}
+              sx={{ position: 'absolute', right: 140, top: 100 }}
+            >
+              <CloseIcon />
+            </IconButton>
             <Typography
               variant="h1"
               color="#5D4037"
@@ -2062,7 +2050,8 @@ const TeacherDashboardPopUp = () => {
                 textAlign: 'center',
                 visibility: secVisibility ? 'visible' : 'hidden',
                 mb: 3,
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                mt:20
               }}
             >
               King of the Hill!

@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Grid, Typography, Button, Box, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import GameTextField from '../../assets/images/backgrounds/GameTextField.png';
@@ -10,6 +9,10 @@ import DungeonOpen from "../../assets/images/backgrounds/DungeonOpen.png";
 import DungeonClosed from "../../assets/images/backgrounds/DungeonClosed.png";
 import API from '../../api';
 import EnterDungeonBox from "../../assets/images/backgrounds/EnterDungeonBox.png";
+import { MusicContext } from '../../contexts/MusicContext';
+
+import MCNoWeaponArm from '../../assets/images/characters/MCNoWeaponArm.png';
+import MCNoWeaponAnimated from '../../assets/images/characters/MCNoWeaponAnimated.png';
 
 export default function DungeonSection({
   closeModal,
@@ -22,6 +25,7 @@ export default function DungeonSection({
   user,
   completedLevels,
   setDungeonBackground,
+  itemEquipped,
 }) {
   const navigate = useNavigate();
   const [dungeonIsOpen, setDungeonIsOpen] = useState(false);
@@ -35,6 +39,27 @@ export default function DungeonSection({
   const isCurrentLevelCompleted = completedLevels?.some(
     (level) => level.levelId === currentLevelId
   ) || false;
+
+  const {
+    setSrc,
+    setActivityMode,
+    setLevelClearMode,
+    playLaserSuccess,
+    playLaserFail,
+    playHeal,
+    playShield,
+    playSkip,
+    playHit,
+    playEnemyAttack,
+    playEnemyDead,
+    playConfirm,
+    playDenied,
+    playCancel,
+    playEquip,
+    playFlip,
+    playDoorOpen,
+    playDungeonClick,
+  } = useContext(MusicContext);
 
   useEffect(() => {
     (async () => {
@@ -92,6 +117,67 @@ export default function DungeonSection({
 
   return (
     <Grid container direction="column" alignItems="center" sx={{ width: '100%', height: 700 }}>
+      <Box sx={{
+        position: 'absolute',
+        bottom: '23%', // Changed from top/right positioning
+        left: '10%', // Changed from right positioning
+        width: '220px',
+        height: '215px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Stack direction='row'>
+          <Box sx={{
+            width: '220px',
+            height: '215px',
+            position: 'relative', // Changed from absolute
+            ml: 80,
+            mb: 10
+          }}>
+            <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+              <img
+                src={MCNoWeaponArm}
+                alt="Player"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '220px',
+                  height: '215px',
+                  zIndex: 3
+                }}
+              />
+              <img
+                src={MCNoWeaponAnimated}
+                alt="Player"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '220px',
+                  height: '215px',
+                  zIndex: 1
+                }}
+              />
+              {itemEquipped?.cosmeticImage ? (
+                <img
+                  src={`data:image/png;base64,${itemEquipped.cosmeticImage}`}
+                  alt="Weapon"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '220px',
+                    height: '215px',
+                    zIndex: 2
+                  }}
+                />
+              ) : null}
+            </Box>
+          </Box>
+        </Stack>
+      </Box>
       {/* Level Title */}
       <Box
         sx={{
@@ -130,9 +216,10 @@ export default function DungeonSection({
       {/* Arrows */}
       {currentLevelIndex < levelDetails.length - 1 && (
         <Button
-          onClick={() =>
+          onClick={() => {
+            playDungeonClick(); // Play sound for navigation
             setCurrentLevelIndex(prev => Math.min(levelDetails.length - 1, prev + 1))
-          }
+          }}
           sx={{
             backgroundImage: `url(${DungeonArrowRight})`,
             backgroundRepeat: 'no-repeat',
@@ -149,7 +236,10 @@ export default function DungeonSection({
 
       {currentLevelIndex > 0 && (
         <Button
-          onClick={() => setCurrentLevelIndex(prev => Math.max(0, prev - 1))}
+          onClick={() => {
+            playDungeonClick(); // Play sound for navigation
+            setCurrentLevelIndex(prev => Math.max(0, prev - 1))
+          }}
           sx={{
             backgroundImage: `url(${DungeonArrowLeft})`,
             backgroundRepeat: 'no-repeat',
@@ -177,7 +267,7 @@ export default function DungeonSection({
           fontSize: 19,
           pr: 3
         }}
-        onClick={closeModal}
+        onClick={() => { playCancel(); closeModal(); }} // Added playCancel
       >
         <Typography sx={{ fontFamily: 'RetroGaming' }}>
           ⮘ Return to Town
@@ -186,10 +276,14 @@ export default function DungeonSection({
 
       {/* Door click button */}
       <Button
-        disabled={!dungeonIsOpen}
-        onClick={() => {
+        //disabled={!dungeonIsOpen}
+        onClick={() => {if(dungeonIsOpen){
+          playDoorOpen();
           setDungeonPreparatory(true);
-          setCurrentPage(0);
+          setCurrentPage(0);}
+          else{
+            playDenied();
+          }
         }}
         sx={{
           width: '250px',
@@ -234,7 +328,10 @@ export default function DungeonSection({
             <Grid container direction="column" alignItems="center" sx={{ p: 4 }}>
               <Button
                 sx={{ color: '#4b8efb', alignSelf: 'flex-end', mb: 2, fontSize: 30 }}
-                onClick={() => setDungeonPreparatory(false)}
+                onClick={() => {
+                  playCancel(); // Play cancel when closing the tablet
+                  setDungeonPreparatory(false);
+                }}
               >
                 X
               </Button>
@@ -260,7 +357,10 @@ export default function DungeonSection({
                   <Box sx={{ width: 80, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {currentPage > 0 && (
                       <Button
-                        onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
+                        onClick={() => {
+                          playDungeonClick(); // Play sound for flipping pages
+                          setCurrentPage((prev) => Math.max(0, prev - 1));
+                        }}
                         sx={{
                           width: "100%",
                           height: "100%",
@@ -299,7 +399,7 @@ export default function DungeonSection({
                           <img
                             src={`data:image/png;base64,${monsterList[currentPage].imageData}`}
                             alt="Enemy"
-                            style={{ width: "220px", height: "215px", mt:2 }}
+                            style={{ width: "220px", height: "215px", mt: 2 }}
                           />
                         </Box>
                         <Typography color="#4b8efb" variant={'h3'} sx={{ mt: 2, WebkitTextStroke: '1px #180f0c', width: 500 }}>
@@ -325,6 +425,7 @@ export default function DungeonSection({
                           color: '#4b8efb'
                         }}
                           onClick={() => {
+                            playConfirm(); // Play confirm before navigating to dungeon
                             console.log("Navigating with state:",
                               {
                                 levelId: currentLevel?.levelId,
@@ -348,9 +449,10 @@ export default function DungeonSection({
                   <Box sx={{ width: 80, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {currentPage < monsterList.length && (
                       <Button
-                        onClick={() =>
+                        onClick={() => {
+                          playDungeonClick(); // Play sound for flipping pages
                           setCurrentPage((prev) => Math.min(monsterList.length, prev + 1))
-                        }
+                        }}
                         sx={{
                           width: "100%",
                           height: "100%",
@@ -371,4 +473,3 @@ export default function DungeonSection({
     </Grid>
   );
 }
-

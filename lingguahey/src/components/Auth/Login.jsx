@@ -51,17 +51,37 @@ export default function Login() {
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackSeverity, setSnackSeverity] = useState("error");
+  const {
+    setSrc,
+    setActivityMode,
+    setLevelClearMode,
+    playLaserSuccess,
+    playLaserFail,
+    playHeal,
+    playShield,
+    playSkip,
+    playHit,
+    playEnemyAttack,
+    playEnemyDead,
+    playConfirm,
+    playDenied,
+    playCancel,
+    playEquip,
+    playFlip,
+    playDoorOpen,
+    playDungeonClick,
+  } = useContext(MusicContext);
 
   useEffect(() => {
     setIntroMode(true);
   }, [setIntroMode]);
-  
+
   // MODIFICATION 3: New useEffect to handle redirected snack messages
   useEffect(() => {
     // Check if location.state contains a message from a redirect
     if (location.state?.snackMessage) {
       showSnack(location.state.snackMessage, location.state.snackSeverity || "error");
-      
+
       // Clear the state from the location history to prevent the snackbar from reappearing
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -94,21 +114,21 @@ export default function Login() {
       const res = await API.post("/login", form);
       // Set token first
       await setToken(res.data.token);
-      
+
       // Wait a moment for token to be stored
       setTimeout(async () => {
         const userObj = getUserFromToken();
         console.log("Decoded user from token:", userObj);
-        
+
         if (!userObj) {
           showSnack("Error getting user details. Please try again.", "error");
           return;
         }
-
+        playCancel();
         showSnack("Logged in successfully!", "success");
 
         // Navigate based on current token decode
-        switch(userObj.role) {
+        switch (userObj.role) {
           case "ADMIN":
             navigate("/admindashboard");
             break;
@@ -122,7 +142,7 @@ export default function Login() {
 
     } catch (err) {
       const status = err.response?.status;
-
+      playDenied();
       if (status === 401) {
         // invalid credentials
         showSnack("Incorrect email or password.", "error");
@@ -133,7 +153,7 @@ export default function Login() {
         // other errors
         showSnack(
           err.response?.data?.message ||
-            "An unexpected error occurred. Please try again.",
+          "An unexpected error occurred. Please try again.",
           "error"
         );
       }
@@ -163,24 +183,24 @@ export default function Login() {
         alignItems="center"
         justifyContent="center"
       >
-        <Box component="form" onSubmit={handleLogin} 
-          sx={{ 
-            minWidth: 700, 
+        <Box component="form" onSubmit={handleLogin}
+          sx={{
+            minWidth: 700,
             Height: 600,
             backgroundImage: `url(${MenuBoxHor})`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
-            color: textColor, 
+            color: textColor,
             borderRadius: 2,
-            padding:20,
+            padding: 20,
             //border: '4px solid #FFF3E0',
             alignContent: 'center',
-            }}>
-          <IconButton onClick={()=>navigate('/')}><ArrowBackIcon sx={{ color:textColor }}/>
-          <Typography sx={{ cursor:'pointer', color: textColor }} onClick={()=>navigate('/')}>Back</Typography>
+          }}>
+          <IconButton onClick={() => {playCancel();navigate('/');}}><ArrowBackIcon sx={{ color: textColor }} />
+            <Typography sx={{ cursor: 'pointer', color: textColor }} onClick={() => navigate('/')}>Back</Typography>
           </IconButton>
-          
+
 
 
           <Stack spacing={3} sx={{ mt: 2 }} alignItems="center">
@@ -199,13 +219,13 @@ export default function Login() {
               onChange={handleChange}
               fullWidth
               variant="outlined"
-              sx={{ 
+              sx={{
                 backgroundImage: `url(${GameTextFieldLong})`,
                 backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 width: 500,
-            }}
+              }}
             />
 
             <TextField
@@ -215,7 +235,7 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
 
-              sx={{ 
+              sx={{
                 backgroundImage: `url(${GameTextFieldLong})`,
                 backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
