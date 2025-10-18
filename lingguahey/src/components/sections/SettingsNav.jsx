@@ -110,12 +110,12 @@ const SettingsNav = ({ onClose, onProfileUpdated }) => {
     <Box sx={{ position: 'relative'}}>
       <IconButton 
         onClick={()=>{playCancel();onClose();}}
-        sx={{ position: 'absolute', right: -16, top: -16 }}
+        sx={{ position: 'absolute', right: -16, top: -80 }}
       >
         <CloseIcon />
       </IconButton>
 
-      <Typography variant="h6" align="center" sx={{ color: '#5D4037', mb: 2 }}>
+      <Typography variant="h6" align="center" sx={{ color: '#5D4037', mb: 2,mt:5 }}>
         {userData.firstName} {userData.middleName ? userData.middleName.charAt(0) + "." : ""}{" "}
         {userData.lastName}
       </Typography>

@@ -54,7 +54,6 @@ const ProfileModal = ({ open, onClose, onUpdate }) => {
     const { 
         setSrc, 
         setActivityMode, 
-        setLevelClearMode, 
         playLaserSuccess, 
         playLaserFail, 
         playHeal, 
@@ -190,30 +189,9 @@ const ProfileModal = ({ open, onClose, onUpdate }) => {
         playCancel();
     };
 
-    // custom input style shared across fields
-    const customTextFieldProps = {
-        fullWidth: true,
-        variant: "outlined",
-        InputProps: {
-            sx: {
-                backgroundImage: `url(${GameTextFieldLong})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-                height: 40,
-                pl: 1,
-            },
-        },
-        InputLabelProps: {
-            sx: {
-                transform: "translate(14px, -10px) scale(0.85)", // lifted label
-            },
-        },
-    };
-
     return (
         <>
-            <Modal open={open} onClose={onClose} closeAfterTransition>
+            <Modal open={open} onClose={onClose} closeAfterTransition BackdropProps={{ invisible: true }}>
                 <Fade in={open}>
                     <Box
                         sx={{
@@ -222,11 +200,11 @@ const ProfileModal = ({ open, onClose, onUpdate }) => {
                             left: '50%',
                             transform: 'translate(-50%, -50%)',
                             width: 400,
+                            height: 500,
                             backgroundImage: `url(${GameTextFieldBig})`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
-                            height: 500,
                             borderRadius: 2,
                             p: 4,
                         }}
@@ -428,21 +406,21 @@ const ProfileModal = ({ open, onClose, onUpdate }) => {
                 </Fade>
             </Modal>
 
-            <Dialog open={pwdDialogOpen} onClose={handlePwdDialogClose}>
+            <Dialog open={pwdDialogOpen} onClose={handlePwdDialogClose} BackdropProps={{ invisible: true }}>
                 <Box sx={{
                     p: 2,
                     backgroundImage: `url(${GameTextFieldBig})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat',
-                    width: 350,
-                    height: 425,
+                    width: 445,
+                    height: 540,
                 }}>
                     <DialogTitle sx={{ textAlign: 'center', color: '#5D4037' }}>Confirm Password Change</DialogTitle>
                     <Divider sx={{ mb: 1 }} />
 
                     <DialogContent>
-                        <Stack spacing={2} sx={{ mt: 1 }}>
+                        <Stack spacing={2} sx={{ mt: 6 }}>
                             <TextField
                                 sx={{
                                     backgroundImage: `url(${GameTextBox})`,
@@ -528,8 +506,8 @@ const ProfileModal = ({ open, onClose, onUpdate }) => {
                         </Stack>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handlePwdDialogClose}>Cancel</Button>
                         <Button onClick={handlePwdConfirm}>Confirm</Button>
+                        <Button onClick={handlePwdDialogClose}>Cancel</Button>
                     </DialogActions>
                 </Box>
             </Dialog>

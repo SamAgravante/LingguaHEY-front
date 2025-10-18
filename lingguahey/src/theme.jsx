@@ -3,19 +3,21 @@ import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
 // Create a theme instance.
 let theme = createTheme({
+  zIndex: {
+    snackbar: 20000,
+  },
   palette: {
     primary: {
-      main: '#6D4C41', // example brown
+      main: '#6D4C41',
     },
     secondary: {
-      main: '#1E88E5', // example blue
+      main: '#1E88E5',
     },
     background: {
-      default: '#E1F5FE', // light background
+      default: '#E1F5FE',
     },
   },
   typography: {
-    // ✅ Global font for EVERYTHING
     fontFamily: "'RetroGaming', system-ui, Avenir, Helvetica, Arial, sans-serif",
 
     // Optional: you can still tweak sizes/weights if you like
@@ -53,6 +55,18 @@ let theme = createTheme({
             }
           }
         }
+      }
+    }
+    ,
+    MuiSnackbar: {
+      styleOverrides: {
+        root: {
+          position: 'fixed',
+          zIndex: '20000 !important',
+        }
+      },
+      defaultProps: {
+        anchorOrigin: { vertical: 'bottom', horizontal: 'center' },
       }
     }
   }
