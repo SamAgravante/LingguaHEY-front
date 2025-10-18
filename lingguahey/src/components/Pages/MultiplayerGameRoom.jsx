@@ -1,5 +1,5 @@
 // MultiplayerGameRoom.jsx
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getUserFromToken } from '../../utils/auth';
 import API from '../../api.jsx';
@@ -22,6 +22,8 @@ import modalBg from '../../assets/images/backgrounds/activity-select-bg.png';
 import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
 import { mockQuestions } from './mockQuestions';
 import MultiplayerGameRoomGameContent from './MultiplayerGameRoomGameContent';
+import { MusicContext } from '../../contexts/MusicContext';
+import BGM_MainMenu from "../../assets/music/BGM_MainMenu.mp3";
 
 import char_1 from '../../assets/images/characters/lingguahey-char1-wave.png';
 import char_2 from '../../assets/images/characters/lingguahey-char1-stand.png';
@@ -155,6 +157,27 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       Authorization: `Bearer ${token}`,
     },
   });
+
+  //Music Functions
+  const {
+    setSrc,
+    setActivityMode,
+    playLaserSuccess,
+    playLaserFail,
+    playHeal,
+    playShield,
+    playSkip,
+    playHit,
+    playEnemyAttack,
+    playEnemyDead,
+    playConfirm,
+    playDenied,
+    playCancel,
+    playPotionClick,
+    playDungeonClick,
+    playLevelClear,
+    playDungeonFailed,
+  } = useContext(MusicContext);
 
 
   // 5. useEffect and useCallback Definitions
@@ -416,6 +439,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
                     setLastConfirmedIndex(questions.length - 1);
                     setProgress(100);
                     setShowDialog(true);
+                    playLevelClear();
                     fetchLeaderboard(); // Final fetch for the end screen
                   }
                 }
@@ -574,7 +598,9 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
 
   const handleDialogClose = async () => {
     setShowDialog(false);
-
+    if(userRole !== 'TEACHER'){
+      setSrc(BGM_MainMenu);
+    }
     try {
       await API.delete(`/lobby/${activityId}/leave`, { params: { userId } });
 
@@ -740,7 +766,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       }}
     >
       <Button
-        onClick={handleLeave}
+        onClick={()=>{handleLeave();playCancel();}}
         sx={{
           position: 'absolute',
           top: 24,
@@ -790,7 +816,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
           <Button
             variant="contained"
             color="primary"
-            onClick={handleNext}
+            onClick={()=>{handleNext();playCancel();}}
             sx={{ position: 'fixed', bottom: 40, right: 60, zIndex: 1500, fontSize: 22, px: 4, py: 2, borderRadius: 3 }}
           >
             Next
@@ -803,6 +829,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
               if (userRole === 'TEACHER') {
                 setLastConfirmedIndex(questions.length - 1);
                 setProgress(100);
+                playCancel();
                 await API.post(`/lobby/${activityId}/finish-quiz`, null, { params: { teacherId: userId } }).catch(() => { });
               }
             }}

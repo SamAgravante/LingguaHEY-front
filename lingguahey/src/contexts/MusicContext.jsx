@@ -2,7 +2,9 @@ import React, { createContext, useState, useRef, useEffect, useCallback } from "
 import defaultBgm from "../assets/music/LingguaHEY-Live.mp3";
 import activityBgm from "../assets/music/LingguaHEY-Mini.mp3";
 import introBgm from "../assets/music/LingguaHEY-Intro.mp3";
-import lvlClearBgm from "../assets/music/LingguaHEY-LevelClear.mp3";
+
+// MOVED TO SFX IMPORT: lvlClearBgm
+import SFX_LevelClear from "../assets/music/LingguaHEY-LevelClear.mp3"; // Renamed and moved to SFX
 
 // New BGM
 import BGM_DungeonBattle from "../assets/music/BGM_DungeonBattle.wav";
@@ -20,7 +22,7 @@ import SFX_Equip from "../assets/music/SFX_Equip.wav";
 import SFX_Heal from "../assets/music/SFX_Heal.wav";
 import SFX_Shield from "../assets/music/SFX_Shield.wav";
 import SFX_Skip from "../assets/music/SFX_Skip.wav";
-import SFX_Hit from "../assets/music/SFX_Hit.wav"; 
+import SFX_Hit from "../assets/music/SFX_Hit.wav";
 import SFX_EnemyAttack from "../assets/music/SFX_EnemyAttack.wav";
 import SFX_EnemyDead from "../assets/music/SFX_EnemyDead.wav";
 import SFX_Flip from "../assets/music/SFX_Flip.mp3";
@@ -28,35 +30,37 @@ import SFX_PotionClick from "../assets/music/SFX_PotionClick.wav";
 import SFX_Summon from "../assets/music/SFX_Summon.mp3";
 import SFX_DoorOpen from "../assets/music/SFX_DoorOpen.mp3";
 import SFX_DungeonClick from "../assets/music/SFX_DungeonClick.mp3";
+import SFX_DungeonFailed from "../assets/music/SFX_DungeonFailed.mp3";
 
 
 export const MusicContext = createContext({
   musicOn: false,
-  toggleMusic: () => {},
-  setActivityMode: () => {},
-  setIntroMode: () => {},
-  setLevelClearMode: () => {},
-  setSrc: () => {}, // <--- CORRECTED: setSrc is now explicitly in the context definition
-  
+  toggleMusic: () => { },
+  setActivityMode: () => { },
+  setIntroMode: () => { },
+  setSrc: () => { },
+
   // SFX Functions
-  playLaserSuccess: () => {},
-  playLaserFail: () => {},
-  playBuySuccess: () => {},
-  playCancel: () => {},
-  playConfirm: () => {},
-  playDenied: () => {},
-  playEquip: () => {},
-  playHeal: () => {},
-  playShield: () => {},
-  playSkip: () => {},
-  playHit: () => {},
-  playEnemyAttack: () => {},
-  playEnemyDead: () => {},
-  playFlip: () => {},
-  playPotionClick: () =>{},
-  playSummon: () =>{},
-  playDoorOpen: () =>{},
-  playDungeonClick: () =>{},
+  playLaserSuccess: () => { },
+  playLaserFail: () => { },
+  playBuySuccess: () => { },
+  playCancel: () => { },
+  playConfirm: () => { },
+  playDenied: () => { },
+  playEquip: () => { },
+  playHeal: () => { },
+  playShield: () => { },
+  playSkip: () => { },
+  playHit: () => { },
+  playEnemyAttack: () => { },
+  playEnemyDead: () => { },
+  playFlip: () => { },
+  playPotionClick: () => { },
+  playSummon: () => { },
+  playDoorOpen: () => { },
+  playDungeonClick: () => { },
+  playLevelClear: () => { },
+  playDungeonFailed: () => {},
 });
 
 export function MusicProvider({ children }) {
@@ -64,7 +68,7 @@ export function MusicProvider({ children }) {
   const [musicOn, setMusicOn] = useState(true);
   const [src, setSrc] = useState(introBgm);
 
-  // --- BGM Management (using useCallback) ---
+
   const setIntroMode = useCallback((isIntro) => {
     setSrc(isIntro ? introBgm : BGM_MainMenu);
   }, []);
@@ -73,20 +77,15 @@ export function MusicProvider({ children }) {
     setSrc(isActivity ? activityBgm : BGM_MainMenu);
   }, []);
 
-  const setLevelClearMode = useCallback((isLevelClear) => {
-    setSrc(isLevelClear ? lvlClearBgm : BGM_MainMenu);
-  }, []);
-  
-  // Expose setSrc functionality under a clearer name for external use
   const setMusicSource = useCallback((newSrc) => {
-      setSrc(newSrc);
+    setSrc(newSrc);
   }, []);
 
   useEffect(() => {
     if (!audioRef.current) return;
     audioRef.current.src = src;
     audioRef.current.volume = 0.3; // Set volume for BGM
-    if (musicOn) audioRef.current.play().catch(() => {});
+    if (musicOn) audioRef.current.play().catch(() => { });
     else audioRef.current.pause();
   }, [src, musicOn]);
 
@@ -94,21 +93,18 @@ export function MusicProvider({ children }) {
 
   // --- SFX Core Logic ---
   const playSfx = useCallback((sfxSrc, volume = 1.0) => {
-    // Check if music is globally enabled
-    if (!musicOn) return; 
+    if (!musicOn) return;
 
-    // Create a new Audio object instance for the SFX (allows for simultaneous playback)
     const audio = new Audio(sfxSrc);
     audio.volume = volume;
 
-    // Use a small timeout to ensure proper handling of new Audio() in some browsers
     setTimeout(() => {
-        audio.play().catch(e => console.warn("SFX Play failed (often due to user interaction required):", e));
-    }, 1); 
+      audio.play().catch(e => console.warn("SFX Play failed (often due to user interaction required):", e));
+    }, 1);
 
   }, [musicOn]);
 
-  // --- Exported SFX Functions with specific sound files ---
+  // -Two variables needed in playSFX 1. Source then 2. Volume 0-1 --
   const playLaserSuccess = useCallback(() => playSfx(SFX_LaserSuccess, 0.3), [playSfx]);
   const playLaserFail = useCallback(() => playSfx(SFX_LaserFail, 0.3), [playSfx]);
   const playBuySuccess = useCallback(() => playSfx(SFX_BuySuccess, 0.8), [playSfx]);
@@ -126,18 +122,19 @@ export function MusicProvider({ children }) {
   const playPotionClick = useCallback(() => playSfx(SFX_PotionClick, 0.3), [playSfx]);
   const playSummon = useCallback(() => playSfx(SFX_Summon, 0.5), [playSfx]);
   const playDoorOpen = useCallback(() => playSfx(SFX_DoorOpen, 0.3), [playSfx]);
-  const playDungeonClick = useCallback(()=> playSfx(SFX_DungeonClick, 0.3), [playSfx]);
+  const playDungeonClick = useCallback(() => playSfx(SFX_DungeonClick, 0.3), [playSfx]);
+  const playLevelClear = useCallback(() => playSfx(SFX_LevelClear, 0.5), [playSfx]);
+  const playDungeonFailed = useCallback(() => playSfx(SFX_DungeonFailed, 0.5), [playSfx]);
 
 
   return (
-    <MusicContext.Provider 
-      value={{ 
-        musicOn, 
-        toggleMusic, 
-        setActivityMode, 
-        setIntroMode, 
-        setLevelClearMode,
-        setSrc: setMusicSource, // <--- CORRECTED: setMusicSource is exposed as setSrc
+    <MusicContext.Provider
+      value={{
+        musicOn,
+        toggleMusic,
+        setActivityMode,
+        setIntroMode,
+        setSrc: setMusicSource,
 
         // SFX functions
         playLaserSuccess,
@@ -158,6 +155,8 @@ export function MusicProvider({ children }) {
         playSummon,
         playDoorOpen,
         playDungeonClick,
+        playLevelClear,
+        playDungeonFailed,
       }}
     >
       {/* Dedicated BGM Audio Element */}

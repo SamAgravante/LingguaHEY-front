@@ -17,6 +17,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 // Background image for the game area
 import DungeonRoom from '../../assets/images/backgrounds/DungeonRoom.png';
+import DungeonRoomAnimation from '../../assets/images/backgrounds/DungeonRoomAnimation.gif';
 import DungeonBar from '../../assets/images/backgrounds/DungeonBar.png';
 import DungeonHint from '../../assets/images/backgrounds/DungeonHint.png';
 import GameTextBoxMediumLong from '../../assets/images/ui-assets/GameTextBoxMediumLong.png'
@@ -213,23 +214,24 @@ export default function DungeonGame() {
 
 
   // --- SFX and BGM Hook Integration ---
-  const { 
-    setSrc, 
-    setActivityMode, 
-    setLevelClearMode, 
-    playLaserSuccess, 
-    playLaserFail, 
-    playHeal, 
-    playShield, 
+  const {
+    setSrc,
+    setActivityMode,
+    playLaserSuccess,
+    playLaserFail,
+    playHeal,
+    playShield,
     playSkip,
     playHit,
-    playEnemyAttack, 
-    playEnemyDead, 
-    playConfirm, 
-    playDenied, 
+    playEnemyAttack,
+    playEnemyDead,
+    playConfirm,
+    playDenied,
     playCancel,
     playPotionClick,
     playDungeonClick,
+    playLevelClear,
+    playDungeonFailed,
   } = useContext(MusicContext);
 
 
@@ -269,9 +271,9 @@ export default function DungeonGame() {
         // Wrong answer -> play fail laser
         setLaserEffect("fail");
         playLaserFail(); // <-- SFX: Laser Fail
-        
+
         setPotionUsedThisRound(false);
-        
+
         // Enemy counterattack sequence
         setTimeout(() => {
           setLaserEffect(null);
@@ -291,7 +293,8 @@ export default function DungeonGame() {
               setTimeout(() => setImpactVisible(false), 500);
               if (userAnswer.data.gameOver) {
                 setIsGameOver(true);
-                setLevelClearMode(true); // <-- BGM: Game Over/Level Failed music
+                playDungeonFailed();
+                setSrc();
                 setMakeMessageAppear(true);
                 setMessageDetails({
                   mainMessage: 'Level Failed',
@@ -319,9 +322,10 @@ export default function DungeonGame() {
         setTimeout(() => {
           if (userAnswer.data.gameOver) {
             setEnemyDefeated(true);
-            playEnemyDead(); // <-- SFX: Enemy Defeated
+            playEnemyDead();
             setIsGameOver(true);
-            setLevelClearMode(true); // <-- BGM: Level Cleared music
+            playLevelClear();
+            setSrc();
             setMakeMessageAppear(true);
             setMessageDetails({
               mainMessage: 'Level Cleared',
@@ -331,7 +335,7 @@ export default function DungeonGame() {
           } else {
             // Trigger enemy stagger and fade sequence
             setEnemyDefeated(true);
-            playEnemyDead(); // <-- SFX: Enemy Defeated (before next monster loads)
+            playEnemyDead();
 
             // load next monster
             setTimeout(() => {
@@ -401,14 +405,14 @@ export default function DungeonGame() {
     setMakeMessageAppear(true);
 
     if (!isAvailable) {
-      setMessageDetails({ ...message, showCloseButton: true }); 
+      setMessageDetails({ ...message, showCloseButton: true });
       setCurrentPotion(null);
       return;
     }
 
     // If all checks pass, set up the confirmation message
     playPotionClick();
-    
+
     if (potionType === 'HEALTH') {
       message = {
         mainMessage: 'Drink Health Potion?',
@@ -422,7 +426,7 @@ export default function DungeonGame() {
     } else if (potionType === 'SKIP') {
       message = {
         mainMessage: 'Use Skip Potion?',
-        subMessage: 'This will skip the current monster'
+        subMessage: 'This will skip the current monster.\nCan only be used once'
       };
     }
 
@@ -454,8 +458,8 @@ export default function DungeonGame() {
       if (potionType === 'SKIP') {
         playSkip(); // <-- SFX: Skip
         getMonster();
-        setSkipPotionUsed(true); 
-        setPotionUsedThisRound(false); 
+        setSkipPotionUsed(true);
+        setPotionUsedThisRound(false);
       }
 
       const userResp = await API.get(`/users/${userDetails.userId}`);
@@ -466,7 +470,8 @@ export default function DungeonGame() {
           setEnemyDefeated(true);
           setBossCounter((prev) => prev + 1);
           setIsGameOver(true);
-          setLevelClearMode(true); // <-- BGM: Level Clear music
+          playLevelClear();
+          setSrc(); // <-- BGM: Level Clear music
           setMakeMessageAppear(true);
           setMessageDetails({
             mainMessage: 'Level Cleared',
@@ -477,11 +482,11 @@ export default function DungeonGame() {
       }, 1000);
     } catch (err) {
       console.error("Failed to use potion:", err);
-      playDenied(); // <-- SFX: Denied on API error
+      playDenied();
       setMakeMessageAppear(true);
       setMessageDetails({
         mainMessage: 'Error!',
-        subMessage: 'Failed to use potion. Please try again.',
+        subMessage: (skipPotionUsed && potionType == 'SKIP')?'You can only use 1 Skip Potion per Round':'Failed to use potion. Please try again.',
         showCloseButton: true
       });
       setCurrentPotion(null);
@@ -494,7 +499,8 @@ export default function DungeonGame() {
       direction="row"
       alignItems="center"
       sx={{
-        backgroundImage: `url(${DungeonRoom})`,
+        backgroundImage: isBoss?`linear-gradient(to left, rgba(255, 0, 0, 0.10), rgba(255, 0, 0, 0)),url(${DungeonRoomAnimation})`
+        :`url(${DungeonRoomAnimation})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         width: '100vw',
@@ -743,8 +749,10 @@ export default function DungeonGame() {
               <img
                 src={MCNoWeaponAnimated}
                 alt="Player"
-                style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px",
-                  zIndex: 1 }}
+                style={{
+                  position: "absolute", top: 0, left: 0, width: "220px", height: "215px",
+                  zIndex: 1
+                }}
               />
               {itemEquipped?.cosmeticImage ? (
                 <img
@@ -756,7 +764,7 @@ export default function DungeonGame() {
                     left: 0,
                     width: '220px',
                     height: '215px',
-                  zIndex: 2
+                    zIndex: 2
                   }}
                 />
               ) : null}
@@ -764,7 +772,7 @@ export default function DungeonGame() {
                 <img
                   src={Shield}
                   alt="Shield"
-                  style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px" }}
+                  style={{ position: "absolute", top: 0, left: 0, width: "220px", height: "215px",zIndex: 4 }}
                 />
               )}
 
@@ -895,7 +903,7 @@ export default function DungeonGame() {
                 {messageDetails.mainMessage}
               </Typography>
 
-              <Typography variant="h5" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', mt: 2 }}>
+              <Typography variant="h5" color="#5D4037" sx={{ fontWeight: 'bold', fontFamily: 'RetroGaming', mt: 2,textAlign:'center',whiteSpace: 'pre-line', }}>
                 {messageDetails.subMessage}
               </Typography>
 
@@ -1113,8 +1121,8 @@ export default function DungeonGame() {
 
             }}
           >
-            <Typography sx={{ padding: 2 }}>
-              {currentMonster.description}
+            <Typography sx={{ padding: 2, textAlign:'center',mt:1 }}>
+              I think that's {currentMonster.description} ...
             </Typography>
 
             <img

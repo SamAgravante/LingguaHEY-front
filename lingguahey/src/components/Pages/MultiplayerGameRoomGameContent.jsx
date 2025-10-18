@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Box, Typography, Grid, IconButton, Chip, Stack as MuiStack } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import CloseIcon from '@mui/icons-material/Close';
 import bunnyStand from '../../assets/images/characters/lingguahey-char1-stand.png';
 import speechBubble from '../../assets/images/objects/speech-bubble.png';
 import { PastelContainer, PastelProgress, ChoiceButton } from './MultiplayerGameRoom';
+import { MusicContext } from '../../contexts/MusicContext';
 
 // This component renders the game content for the live multiplayer room
 export default function MultiplayerGameRoomGameContent({
@@ -24,6 +25,12 @@ export default function MultiplayerGameRoomGameContent({
   pastels,
   synthesizeSpeech,
 }) {
+  //Music functions
+  const {
+    playCancel,
+  } = useContext(MusicContext);
+
+
   if (!q) return null;
   if (q.gameType === 'GAME1') {
     // One Pic Four Words
@@ -64,14 +71,14 @@ export default function MultiplayerGameRoomGameContent({
             {shuffledOptions.map((choice, i) => (
               <Grid item xs={6} key={choice.choiceId} sx={{ minHeight: 60, minWidth: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0 }}>
                 <ChoiceButton
-                  onClick={() => userRole !== 'TEACHER' && handleChoice(choice)}
-                  sx={{ 
+                  onClick={() => { userRole !== 'TEACHER' && handleChoice(choice); playCancel(); }}
+                  sx={{
                     backgroundColor: pastels[i % pastels.length],
-                    border: (userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' : 
-                           (pendingAnswer === choice.choiceId ? '3px solid #4CAF50' : 'none'),
+                    border: (userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' :
+                      (pendingAnswer === choice.choiceId ? '3px solid #4CAF50' : 'none'),
                     '&:hover': {
-                      opacity: userRole === 'TEACHER' ? 1 : 
-                              (pendingAnswer !== null && pendingAnswer !== choice.choiceId ? 0.7 : 1)
+                      opacity: userRole === 'TEACHER' ? 1 :
+                        (pendingAnswer !== null && pendingAnswer !== choice.choiceId ? 0.7 : 1)
                     },
                     cursor: userRole === 'TEACHER' ? 'default' : 'pointer'
                   }}
@@ -136,10 +143,10 @@ export default function MultiplayerGameRoomGameContent({
                 <Chip
                   key={id}
                   label={choice.choiceText}
-                  onDelete={() => handleRemove(id)}
-                  onClick={() => handleRemove(id)}
+                  onDelete={() => { handleRemove(id); playCancel(); }}
+                  onClick={() => { handleRemove(id); playCancel(); }}
                   deleteIcon={<CloseIcon sx={{ color: '#bb998f', fontSize: 18, '&:hover': { color: '#E6bbad' } }} />}
-                  sx={{ m: 0.5, backgroundColor: '#FFECB3', color: '#2E2E34', fontSize: '1.2rem', minHeight: 36, minWidth: 30, p: 0.5, '& .MuiChip-label': { fontSize: '1.2rem', pr: 1 } }}                  disabled={userRole === 'TEACHER'}
+                  sx={{ m: 0.5, backgroundColor: '#FFECB3', color: '#2E2E34', fontSize: '1.2rem', minHeight: 36, minWidth: 30, p: 0.5, '& .MuiChip-label': { fontSize: '1.2rem', pr: 1 } }} disabled={userRole === 'TEACHER'}
                 />
               );
             })}
@@ -152,13 +159,13 @@ export default function MultiplayerGameRoomGameContent({
           <Grid container spacing={2} sx={{ justifyContent: 'center', width: '100%', flexGrow: 1, overflow: 'auto', mt: 0 }}>
             {shuffledChoices.map((c, i) => (
               <Grid item xs={6} key={c.choiceId} sx={{ minHeight: 60, minWidth: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0 }}>                <ChoiceButton
-                  onClick={() => userRole !== 'TEACHER' && handleSelect(c)}
-                  variant={selected.includes(c.choiceId)}
-                  disabled={userRole === 'TEACHER'}
-                  sx={{ backgroundColor: pastels[i % pastels.length] }}
-                >
-                  {c.choiceText}
-                </ChoiceButton>
+                onClick={() => { userRole !== 'TEACHER' && handleSelect(c); playCancel(); }}
+                variant={selected.includes(c.choiceId)}
+                disabled={userRole === 'TEACHER'}
+                sx={{ backgroundColor: pastels[i % pastels.length] }}
+              >
+                {c.choiceText}
+              </ChoiceButton>
               </Grid>
             ))}
           </Grid>
@@ -210,14 +217,14 @@ export default function MultiplayerGameRoomGameContent({
             {shuffledOptions.map((choice, i) => (
               <Grid item xs={6} key={choice.choiceId} sx={{ minHeight: 60, minWidth: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0 }}>
                 <ChoiceButton
-                  onClick={() => userRole !== 'TEACHER' && handleChoice(choice)}
-                  sx={{ 
+                  onClick={() => { userRole !== 'TEACHER' && handleChoice(choice); playCancel(); }}
+                  sx={{
                     backgroundColor: pastels[i % pastels.length],
-                    border: (userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' : 
-                           (pendingAnswer === choice.choiceId ? '3px solid #4CAF50' : 'none'),
+                    border: (userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' :
+                      (pendingAnswer === choice.choiceId ? '3px solid #4CAF50' : 'none'),
                     '&:hover': {
-                      opacity: userRole === 'TEACHER' ? 1 : 
-                              (pendingAnswer !== null && pendingAnswer !== choice.choiceId ? 0.7 : 1)
+                      opacity: userRole === 'TEACHER' ? 1 :
+                        (pendingAnswer !== null && pendingAnswer !== choice.choiceId ? 0.7 : 1)
                     },
                     cursor: userRole === 'TEACHER' ? 'default' : 'pointer'
                   }}
