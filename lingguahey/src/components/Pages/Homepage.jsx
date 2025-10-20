@@ -754,24 +754,23 @@ export default function Homepage() {
       <Box
         sx={{
           position: 'absolute',
-          top: 200,
-          right: 16,
+          top: 450,
+          left: 24,
           backgroundImage: `url(${MultiplayerIcon})`,
           backgroundSize: 'cover',
-          width: 50,
+          width: 65,
           height: 65,
           display: 'flex',
           alignItems: 'center',
-          paddingLeft: 2,
-          cursor: 'pointer'  // Add this to show it's clickable
+          cursor: 'pointer',
+          zIndex: 10,
         }}
         onClick={() => {
           playCancel();
           setMultiplayerOpen(true);
           setActivityMode(true);
         }}
-      >
-      </Box>
+      />
 
       {/* Settings */}
       <Box
@@ -1265,7 +1264,7 @@ export default function Homepage() {
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexDirection: 'column',
-                    mt:10
+                    mt: 10
                   }}
                 >
                   <Box

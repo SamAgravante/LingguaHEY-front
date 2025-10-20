@@ -192,6 +192,7 @@ const SettingsNav = ({ onClose, onProfileUpdated }) => {
       <ContactModal
         open={contactModalOpen}
         onClose={() => setContactModalOpen(false)}
+        userData={userData}
       />
     </Box>
   );

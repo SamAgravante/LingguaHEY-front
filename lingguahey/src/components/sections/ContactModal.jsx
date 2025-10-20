@@ -15,6 +15,9 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import { MusicContext } from '../../contexts/MusicContext';
+import emailjs from "emailjs-com";
+import API from '../../api';
+import { getUserFromToken } from '../../utils/auth';
 
 // Game assets (reuse same theme)
 import GameTextFieldBig from "../../assets/images/backgrounds/GameTextFieldBig.png";
@@ -22,7 +25,7 @@ import GameTextFieldLong from "../../assets/images/backgrounds/GameTextFieldLong
 import GameTextBox from "../../assets/images/backgrounds/MonsterEditUIOuter.png";
 
 
-const ContactModal = ({ open, onClose }) => {
+const ContactModal = ({ open, onClose, userData }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -40,14 +43,6 @@ const ContactModal = ({ open, onClose }) => {
     playCancel,
   } = useContext(MusicContext);
 
-  const API = axios.create({
-    baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/contact`,
-    timeout: 1000,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-  });
 
   const showSnack = (message, severity = "info") => {
     setSnackMessage(message);
@@ -66,8 +61,9 @@ const ContactModal = ({ open, onClose }) => {
   };
 
   const handleSubmit = async () => {
-    const { name, email, subject, message } = formData;
-
+    const {subject, message } = formData;
+    const name= userData.firstName + " " + userData.lastName;
+    const email = userData.email;
     if (!name || !email || !subject || !message) {
       showSnack("All fields are required.", "warning");
       playDenied();
@@ -75,13 +71,26 @@ const ContactModal = ({ open, onClose }) => {
     }
 
     setLoading(true);
+
     try {
-      await API.post("/", formData);
+      await emailjs.send(
+        "service_lingguahey",    // e.g., "service_xxxxxx"
+        "template_p86tk14",
+        {
+          user_name: name,
+          user_email: email,
+          subject,
+          message,
+        },
+        "tb9CHdh8SaLlIK5RB"
+      );
+
       showSnack("Message sent successfully!", "success");
       playConfirm();
+
       setTimeout(() => {
         onClose();
-        setFormData({ name: '', email: '', subject: '', message: '' });
+        setFormData({ name: "", email: "", subject: "", message: "" });
       }, 1500);
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -92,6 +101,7 @@ const ContactModal = ({ open, onClose }) => {
     }
   };
 
+
   const handleCancel = () => {
     setFormData({ name: '', email: '', subject: '', message: '' });
     playCancel();
@@ -100,7 +110,7 @@ const ContactModal = ({ open, onClose }) => {
 
   return (
     <>
-      <Modal open={open} onClose={onClose} closeAfterTransition>
+      <Modal open={open} onClose={onClose} closeAfterTransition BackdropProps={{ invisible: true }}>
         <Fade in={open}>
           <Box
             sx={{
@@ -120,7 +130,7 @@ const ContactModal = ({ open, onClose }) => {
           >
             <IconButton
               onClick={() => { playCancel(); onClose(); }}
-              sx={{ position: 'absolute', right: 8, top: 8 }}
+              sx={{ position: 'absolute', right: 8, top: 20 }}
             >
               <CloseIcon />
             </IconButton>
@@ -135,8 +145,9 @@ const ContactModal = ({ open, onClose }) => {
               <TextField
                 name="name"
                 label="Your Name"
-                value={formData.name}
-                onChange={handleChange}
+                value={userData.firstName + " " + userData.lastName}
+                //onChange={handleChange}
+                disabled
                 fullWidth
                 variant="outlined"
                 InputProps={{
@@ -149,14 +160,22 @@ const ContactModal = ({ open, onClose }) => {
                     pl: 1,
                   },
                 }}
+                InputLabelProps={{
+                  sx: {
+                    top: -6,
+                    '&.MuiInputLabel-shrink': {
+                      top: -8,
+                    },
+                  },
+                }}
               />
 
               <TextField
                 name="email"
                 label="Email"
                 type="email"
-                value={formData.email}
-                onChange={handleChange}
+                value={userData.email}
+                disabled
                 fullWidth
                 variant="outlined"
                 InputProps={{
@@ -167,6 +186,14 @@ const ContactModal = ({ open, onClose }) => {
                     backgroundRepeat: "no-repeat",
                     height: 40,
                     pl: 1,
+                  },
+                }}
+                InputLabelProps={{
+                  sx: {
+                    top: -6,
+                    '&.MuiInputLabel-shrink': {
+                      top: -8,
+                    },
                   },
                 }}
               />
@@ -177,6 +204,7 @@ const ContactModal = ({ open, onClose }) => {
                 value={formData.subject}
                 onChange={handleChange}
                 fullWidth
+                required
                 variant="outlined"
                 InputProps={{
                   sx: {
@@ -186,6 +214,14 @@ const ContactModal = ({ open, onClose }) => {
                     backgroundRepeat: "no-repeat",
                     height: 40,
                     pl: 1,
+                  },
+                }}
+                InputLabelProps={{
+                  sx: {
+                    top: -6,
+                    '&.MuiInputLabel-shrink': {
+                      top: -8,
+                    },
                   },
                 }}
               />
@@ -205,9 +241,17 @@ const ContactModal = ({ open, onClose }) => {
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
-                    width:400,
-                    height:200,
+                    width: 400,
+                    height: 200,
                     p: 1,
+                  },
+                }}
+                InputLabelProps={{
+                  sx: {
+                    top: -6,
+                    '&.MuiInputLabel-shrink': {
+                      top: -8,
+                    },
                   },
                 }}
               />
