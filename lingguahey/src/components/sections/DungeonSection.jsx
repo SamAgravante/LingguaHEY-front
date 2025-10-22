@@ -390,23 +390,26 @@ export default function DungeonSection({
                       <>
                         <Typography
                           color="#4b8efb"
-                          variant='h1'
-                          sx={{ textAlign: "left", position: "absolute", top: 10, left: -51, width: 500, WebkitTextStroke: '1px #180f0c' }}
+                          variant='h2'
+                          sx={{ textAlign: "left", position: "absolute", top: 10, left: -51, width: 500, WebkitTextStroke: '.7px #180f0c' }}
                         >
                           In this room you will encounter:
                         </Typography>
-                        <Box sx={{ width: "220px", height: "215px", mt: 4 }}>
+                        <Box sx={{ width: "220px", height: "215px", mt: 10 }}>
                           <img
                             src={`data:image/png;base64,${monsterList[currentPage].imageData}`}
                             alt="Enemy"
-                            style={{ width: "220px", height: "215px", mt: 2 }}
+                            style={{ width: "220px", height: "215px", mt: 4}}
                           />
                         </Box>
-                        <Typography color="#4b8efb" variant={'h3'} sx={{ mt: 2, WebkitTextStroke: '1px #180f0c', width: 500 }}>
-                          Tagalog Name: {monsterList[currentPage].tagalogName}
+                        <Typography color="#4b8efb" variant={'h4'} sx={{ mt: 1, WebkitTextStroke: '.7px #180f0c', width: 800 }}>
+                          Tagalog: {monsterList[currentPage].tagalogName}
                         </Typography>
-                        <Typography color="#4b8efb" variant={'h3'} sx={{ mt: 2, WebkitTextStroke: '1px #180f0c', width: 500 }}>
-                          English Name: {monsterList[currentPage].englishName}
+                        <Typography color="#4b8efb" variant={'h4'} sx={{ mt: 1, WebkitTextStroke: '.7px #180f0c', width: 800 }}>
+                          English: {monsterList[currentPage].englishName}
+                        </Typography>
+                        <Typography color="#4b8efb" variant={'h4'} sx={{ mt: 2, WebkitTextStroke: '.7px #180f0c', width: 800 }}>
+                          "{monsterList[currentPage].description}"
                         </Typography>
                       </>
                     ) : null}

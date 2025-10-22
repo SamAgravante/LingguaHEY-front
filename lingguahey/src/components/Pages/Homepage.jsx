@@ -1068,7 +1068,8 @@ export default function Homepage() {
                     <Stack direction="column" sx={{
                       alignItems: "center",
                       justifyContent: "center",
-                      textAlign: "center"
+                      textAlign: "center",
+                      mt:2
                     }}>
                       {monsterList[leftPageCounter] ? (
                         <>
@@ -1079,11 +1080,14 @@ export default function Homepage() {
                               style={{ width: "220px", height: "215px" }}
                             />
                           </Box>
-                          <Typography color="#5D4037" sx={{ mt: 3 }}>
-                            Tagalog Name: {monsterList[leftPageCounter].tagalogName}
+                          <Typography color="#5D4037" sx={{ mt: 3,width:250 }}>
+                            Tagalog: {monsterList[leftPageCounter].tagalogName}
                           </Typography>
-                          <Typography color="#5D4037">
-                            English Name: {monsterList[leftPageCounter].englishName}
+                          <Typography color="#5D4037" sx={{width:250}}>
+                            English: {monsterList[leftPageCounter].englishName}
+                          </Typography>
+                          <Typography color="#5D4037" sx={{mt:1,width:250}}>
+                            "{monsterList[leftPageCounter].description}"
                           </Typography>
                         </>
                       ) : (
@@ -1105,7 +1109,8 @@ export default function Homepage() {
                     <Stack direction="column" sx={{
                       alignItems: "center",
                       justifyContent: "center",
-                      textAlign: "center"
+                      textAlign: "center",
+                      mt:2
                     }}>
                       {monsterList[rightPageCounter] ? (
                         <>
@@ -1116,11 +1121,14 @@ export default function Homepage() {
                               style={{ width: "220px", height: "215px" }}
                             />
                           </Box>
-                          <Typography color="#5D4037" sx={{ mt: 3 }}>
-                            Tagalog Name: {monsterList[rightPageCounter].tagalogName}
+                          <Typography color="#5D4037" sx={{ mt: 3,width:250 }}>
+                            Tagalog: {monsterList[rightPageCounter].tagalogName}
                           </Typography>
-                          <Typography color="#5D4037">
-                            English Name: {monsterList[rightPageCounter].englishName}
+                          <Typography color="#5D4037" sx={{width:250}}>
+                            English: {monsterList[rightPageCounter].englishName}
+                          </Typography>
+                          <Typography color="#5D4037" sx={{mt:1,width:250}}>
+                            "{monsterList[rightPageCounter].description}"
                           </Typography>
                         </>
                       ) : (
