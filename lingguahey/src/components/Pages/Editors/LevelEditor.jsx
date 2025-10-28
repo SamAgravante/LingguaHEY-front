@@ -12,6 +12,9 @@ import {
   TextField,
   MenuItem,
   IconButton,
+  // MODIFICATION 1: Import Snackbar and Alert
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { AddCircle, Delete } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -40,6 +43,11 @@ const LevelEditor = () => {
     monsters: [],
   });
 
+  // MODIFICATION 2: Add state for snackbar
+  const [snackOpen, setSnackOpen] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
+  const [snackSeverity, setSnackSeverity] = useState("error");
+
   const token = localStorage.getItem("token");
 
   const API = axios.create({
@@ -60,6 +68,17 @@ const LevelEditor = () => {
 
   // Available monsters to pick from
   const [monsterPool, setMonsterPool] = useState([]);
+
+  // MODIFICATION 3: Add snackbar helper functions
+  const showSnack = (message, severity = "error") => {
+    setSnackMessage(message);
+    setSnackSeverity(severity);
+    setSnackOpen(true);
+  };
+  const handleSnackClose = (_, reason) => {
+    if (reason === "clickaway") return;
+    setSnackOpen(false);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -84,6 +103,7 @@ const LevelEditor = () => {
         setMonsterPool(fetchedMonsters);
       } catch (error) {
         console.error("Error fetching data:", error);
+        showSnack("Error fetching initial data.", "error");
       } finally {
         setLoading(false);
       }
@@ -100,8 +120,11 @@ const LevelEditor = () => {
     try {
       await API.delete(`/${id}`);
       setLevels(levels.filter((level) => level.id !== id));
+      // MODIFICATION 4: Show success on delete
+      showSnack("Level deleted successfully.", "info");
     } catch (error) {
       console.error("Error deleting level:", error);
+      showSnack("Error deleting level.", "error");
     }
   };
 
@@ -171,8 +194,6 @@ const LevelEditor = () => {
     setLevelForm({ ...levelForm, monsters: updated });
   };
 
-
-
   // Fetch Levels
   const fetchLevels = async () => {
     try {
@@ -187,6 +208,7 @@ const LevelEditor = () => {
       setLevels(fetchedLevels);
     } catch (error) {
       console.error("Error fetching levels:", error);
+      showSnack("Error refreshing levels list.", "error");
     }
   };
 
@@ -210,19 +232,27 @@ const LevelEditor = () => {
         })
       };
 
+      let successMessage = "";
       if (levelForm.id) {
         await API.put(`/${levelForm.id}`, payload);
+        successMessage = "Level edited successfully!";
       } else {
         await API.post("", payload);
+        successMessage = "Level added successfully!";
       }
 
       fetchLevels();
       handleCloseDialog();
+      // Show success on save/edit
+      showSnack(successMessage, "success");
+
     } catch (err) {
       console.error("Save failed:", err.response?.data || err.message);
+
+      // MODIFICATION: Show the specific error message for *any* save failure, as requested.
+      showSnack("A boss monster must first be added as a minion in the level.", "error");
     }
   };
-
 
   if (loading) {
     return (
@@ -301,7 +331,7 @@ const LevelEditor = () => {
           },
         }}
       >
-        <Grid container direction="column" spacing={3} alignItems="center" >
+        <Grid container direction="column" spacing={3} alignItems="center">
           {levels.map((level) => (
             <Grid item key={level.id} sx={{ width: "100%", maxWidth: 1000 }}>
               <Box
@@ -388,8 +418,6 @@ const LevelEditor = () => {
         </Grid>
       </Box>
 
-
-
       {/* Add/Edit Dialog */}
       <Dialog
         open={openAddDialog || openEditDialog}
@@ -468,7 +496,7 @@ const LevelEditor = () => {
                 padding: "0 4px",
                 transform: "translate(14px, -6px) scale(0.75)",
               },
-              "& .MuiInputLabel-shrink": {
+              "& .MMuiInputLabel-shrink": {
                 transform: "translate(14px, -6px) scale(0.75)",
               },
             }}
@@ -479,7 +507,7 @@ const LevelEditor = () => {
             <Box
               key={index}
               sx={{
-                display: "flex", flexDirection: "column", gap: 1, mb: 2, 
+                display: "flex", flexDirection: "column", gap: 1, mb: 2,
                 "& .MuiOutlinedInput-root": {
                   border: "2px solid #5b3138",
                   borderRadius: "8px",
@@ -602,7 +630,8 @@ const LevelEditor = () => {
               onClick={() => {
                 setLevelForm({
                   ...levelForm,
-                  monsters: [...levelForm.monsters, { monsterType: "BOSS", bossForms: [] }]
+                  // Initialize with 3 empty slots
+                  monsters: [...levelForm.monsters, { monsterType: "BOSS", bossForms: ["", "", ""] }]
                 });
               }}
             >
@@ -623,6 +652,22 @@ const LevelEditor = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* MODIFICATION 7: Add Snackbar component to render */}
+      <Snackbar
+        open={snackOpen}
+        autoHideDuration={4000}
+        onClose={handleSnackClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackClose}
+          severity={snackSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

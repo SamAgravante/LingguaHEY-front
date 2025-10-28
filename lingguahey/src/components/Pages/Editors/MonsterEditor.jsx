@@ -12,6 +12,9 @@ import {
   DialogActions,
   IconButton,
   Grid,
+  // MODIFICATION 1: Import Snackbar and Alert
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -52,6 +55,11 @@ const MonsterEditor = () => {
   const [addPreviewUrl, setAddPreviewUrl] = useState(null);
   const [editPreviewUrl, setEditPreviewUrl] = useState(null);
 
+  // MODIFICATION 2: Add state for snackbar
+  const [snackOpen, setSnackOpen] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
+  const [snackSeverity, setSnackSeverity] = useState("success"); // Default to success
+
   // Axios instance
   const API = axios.create({
     baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/lingguahey/monsters`,
@@ -60,6 +68,17 @@ const MonsterEditor = () => {
       Authorization: `Bearer ${token}`,
     },
   });
+
+  // MODIFICATION 3: Add snackbar helper functions
+  const showSnack = (message, severity = "success") => {
+    setSnackMessage(message);
+    setSnackSeverity(severity);
+    setSnackOpen(true);
+  };
+  const handleSnackClose = (_, reason) => {
+    if (reason === "clickaway") return;
+    setSnackOpen(false);
+  };
 
   useEffect(() => {
     const fetchMonsters = async () => {
@@ -77,6 +96,8 @@ const MonsterEditor = () => {
         setMonsters(fetchedMonsters);
       } catch (error) {
         console.error("Error fetching monsters:", error);
+        // You could show an error snack here if you want
+        // showSnack("Error fetching monsters.", "error");
       } finally {
         setLoading(false);
       }
@@ -124,21 +145,25 @@ const MonsterEditor = () => {
         prev.map((m) =>
           m.id === editMonster
             ? {
-              ...m,
-              english: response.data.englishName,
-              tagalog: response.data.tagalogName,
-              description: response.data.description,
-              image: response.data.imageData
-                ? `data:image/png;base64,${response.data.imageData}`
-                : m.image,
-            }
+                ...m,
+                english: response.data.englishName,
+                tagalog: response.data.tagalogName,
+                description: response.data.description,
+                image: response.data.imageData
+                  ? `data:image/png;base64,${response.data.imageData}`
+                  : m.image,
+              }
             : m
         )
       );
 
       setEditMonster(null);
+      // MODIFICATION 4: Show success snackbar on edit
+      showSnack("Monster Edited Successfully", "success");
     } catch (error) {
       console.error("Error updating monster:", error);
+      // You could show an error snack here
+      // showSnack("Error editing monster.", "error");
     }
   };
 
@@ -147,8 +172,11 @@ const MonsterEditor = () => {
     try {
       await API.delete(`/${id}`);
       setMonsters((prev) => prev.filter((m) => m.id !== id));
+      // You could show a success snack for delete too
+      // showSnack("Monster deleted.", "info");
     } catch (error) {
       console.error("Error deleting monster:", error);
+      // showSnack("Error deleting monster.", "error");
     }
   };
 
@@ -204,8 +232,11 @@ const MonsterEditor = () => {
         URL.revokeObjectURL(addPreviewUrl);
         setAddPreviewUrl(null);
       }
+      // MODIFICATION 5: Show success snackbar on add
+      showSnack("Monster Added Successfully", "success");
     } catch (error) {
       console.error("Error adding monster:", error);
+      // showSnack("Error adding monster.", "error");
     }
   };
 
@@ -323,24 +354,31 @@ const MonsterEditor = () => {
                           sx={{
                             border: "2px dashed #5b3138",
                             borderRadius: "8px",
-                            width: "120px",           // fixed width to prevent resizing
-                            height: "120px",          // fixed height to prevent resizing
+                            width: "120px", // fixed width to prevent resizing
+                            height: "120px", // fixed height to prevent resizing
                             minHeight: 100,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             cursor: "pointer",
                             backgroundColor: "#f7cb97",
-                            overflow: "hidden",       // hide overflow so img can't expand box
+                            overflow: "hidden", // hide overflow so img can't expand box
                             "&:hover": { backgroundColor: "#f5b971" },
                           }}
-                          onClick={() => document.getElementById("editImageInput").click()}
+                          onClick={() =>
+                            document.getElementById("editImageInput").click()
+                          }
                         >
                           {editPreviewUrl ? (
                             <img
                               src={editPreviewUrl}
                               alt="preview"
-                              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "contain",
+                                display: "block",
+                              }}
                             />
                           ) : (
                             <Typography
@@ -383,10 +421,12 @@ const MonsterEditor = () => {
                                 "& .MuiInputLabel-root": {
                                   backgroundColor: "#f7cb97", // Add background to prevent overlap
                                   padding: "0 4px", // Add padding to the label
-                                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                                  transform:
+                                    "translate(14px, -6px) scale(0.75)", // Adjust label position
                                 },
                                 "& .MuiInputLabel-shrink": {
-                                  transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                                  transform:
+                                    "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
                                 },
                               }}
                             />
@@ -407,10 +447,12 @@ const MonsterEditor = () => {
                                 "& .MuiInputLabel-root": {
                                   backgroundColor: "#f7cb97", // Add background to prevent overlap
                                   padding: "0 4px", // Add padding to the label
-                                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                                  transform:
+                                    "translate(14px, -6px) scale(0.75)", // Adjust label position
                                 },
                                 "& .MuiInputLabel-shrink": {
-                                  transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                                  transform:
+                                    "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
                                 },
                               }}
                             />
@@ -432,10 +474,12 @@ const MonsterEditor = () => {
                                 "& .MuiInputLabel-root": {
                                   backgroundColor: "#f7cb97", // Add background to prevent overlap
                                   padding: "0 4px", // Add padding to the label
-                                  transform: "translate(14px, -6px) scale(0.75)", // Adjust label position
+                                  transform:
+                                    "translate(14px, -6px) scale(0.75)", // Adjust label position
                                 },
                                 "& .MuiInputLabel-shrink": {
-                                  transform: "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
+                                  transform:
+                                    "translate(14px, -6px) scale(0.75)", // Ensure proper position when focused
                                 },
                               }}
                             />
@@ -444,7 +488,15 @@ const MonsterEditor = () => {
                       </Grid>
 
                       {/* Save and Cancel Buttons */}
-                      <Grid item xs={12} sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+                      <Grid
+                        item
+                        xs={12}
+                        sx={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          gap: 2,
+                        }}
+                      >
                         <Button
                           variant="contained"
                           sx={{ backgroundColor: "#4caf50" }}
@@ -464,7 +516,15 @@ const MonsterEditor = () => {
                   </Box>
                 ) : (
                   <>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, marginLeft: "15px", paddingBottom: "18px" }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        marginLeft: "15px",
+                        paddingBottom: "18px",
+                      }}
+                    >
                       {monster.image.startsWith("data:") ? (
                         <img
                           src={monster.image}
@@ -585,8 +645,8 @@ const MonsterEditor = () => {
                 sx={{
                   border: "2px dashed #5b3138",
                   borderRadius: "8px",
-                  width: "150px",           // fixed width to prevent resizing
-                  height: "208px",          // fixed height to prevent resizing
+                  width: "150px", // fixed width to prevent resizing
+                  height: "208px", // fixed height to prevent resizing
                   minHeight: 208,
                   minWidth: 150,
                   display: "flex",
@@ -594,7 +654,7 @@ const MonsterEditor = () => {
                   justifyContent: "center",
                   cursor: "pointer",
                   backgroundColor: "#f7cb97",
-                  overflow: "hidden",       // hide overflow so img can't expand box
+                  overflow: "hidden", // hide overflow so img can't expand box
                   "&:hover": { backgroundColor: "#f5b971" },
                 }}
                 onClick={() =>
@@ -605,7 +665,12 @@ const MonsterEditor = () => {
                   <img
                     src={addPreviewUrl}
                     alt="preview"
-                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      display: "block",
+                    }}
                   />
                 ) : (
                   <Typography
@@ -695,7 +760,7 @@ const MonsterEditor = () => {
                       padding: "0 4px",
                       transform: "translate(14px, -6px) scale(0.75)",
                     },
-                    "& .MuiInputLabel-shrink": {
+                    "& .MMuiInputLabel-shrink": {
                       transform: "translate(14px, -6px) scale(0.75)",
                     },
                   }}
@@ -722,6 +787,22 @@ const MonsterEditor = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* MODIFICATION 6: Add Snackbar component to render */}
+      <Snackbar
+        open={snackOpen}
+        autoHideDuration={4000}
+        onClose={handleSnackClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackClose}
+          severity={snackSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
