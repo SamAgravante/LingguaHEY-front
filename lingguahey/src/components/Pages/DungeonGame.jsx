@@ -70,11 +70,30 @@ export default function DungeonGame() {
   const [enemyAttacking, setEnemyAttacking] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
   const [potions, setPotions] = useState([]);
-
+  const [mistakeCounter, setMistakeCounter] = useState(0);
+  // displayedMistakeCounter controls when the hint updates (only after the round finishes)
+  const [displayedMistakeCounter, setDisplayedMistakeCounter] = useState(0);
+  
   // --- NEW Potion State ---
   const [potionUsedThisRound, setPotionUsedThisRound] = useState(false);
   const [skipPotionUsed, setSkipPotionUsed] = useState(false);
   // ------------------------
+
+  // helper: reveal tagalog name progressively based on mistakes
+  function getPartialTagalogName() {
+    const name = currentMonster?.tagalogName || '';
+    // Use displayedMistakeCounter so the hint only changes after a round finishes
+    if (!name || displayedMistakeCounter <= 0) return { revealed: null, fully: false };
+
+    const parts = 3; // divide the string into 3 reveal segments
+    const progress = Math.min(displayedMistakeCounter, 4); // cap at 4 mistakes
+    const revealSegments = Math.min(progress, parts); // 1->1/3, 2->2/3, 3/->full
+    const revealLen = Math.ceil((name.length / parts) * revealSegments);
+
+    const revealed = name.slice(0, revealLen);
+    const fully = revealLen >= name.length;
+    return { revealed, fully, fullName: name };
+  }
 
   const hints = [
     'Read the Codex to learn about the monsters',
@@ -264,6 +283,8 @@ export default function DungeonGame() {
       if (skipPotionUsed) {
         setSkipPotionUsed(false);
         setPotionUsedThisRound(true);
+        setMistakeCounter(0);
+        // displayedMistakeCounter remains until round finishes
       }
       setCanCastAgain(false);
 
@@ -271,7 +292,7 @@ export default function DungeonGame() {
         // Wrong answer -> play fail laser
         setLaserEffect("fail");
         playLaserFail(); // <-- SFX: Laser Fail
-
+        setMistakeCounter((prev) => prev + 1);
         setPotionUsedThisRound(false);
 
         // Enemy counterattack sequence
@@ -308,8 +329,10 @@ export default function DungeonGame() {
           setTimeout(() => {
             setEnemyAttacking(false);
           }, 2000);
+          // End of round: enable casting again AND update displayed hint counter
           setTimeout(() => {
             setCanCastAgain(true);
+            setDisplayedMistakeCounter(prev => prev + 1); // update hint now that round finished
           }, 3000);
         }, 2500);
       }
@@ -318,7 +341,7 @@ export default function DungeonGame() {
         // Correct answer -> play success laser
         setLaserEffect("success");
         playLaserSuccess(); // <-- SFX: Laser Success
-
+        setMistakeCounter(0);
         setTimeout(() => {
           if (userAnswer.data.gameOver) {
             setEnemyDefeated(true);
@@ -342,7 +365,8 @@ export default function DungeonGame() {
               setEnemyDefeated(false);
               getMonster();
               setCanCastAgain(true);
-
+              // reset displayed hint because round fully finished successfully
+              setDisplayedMistakeCounter(0);
               setPotionUsedThisRound(false);
               setSkipPotionUsed(false);
             }, 1200);
@@ -1107,7 +1131,7 @@ export default function DungeonGame() {
                     );
                   })}
               </Stack>
-            ))}
+            ))} 
           </Stack>
           {/* Hint Box */}
           <Box
@@ -1121,10 +1145,25 @@ export default function DungeonGame() {
 
             }}
           >
-            <Typography sx={{ padding: 2, textAlign:'center',mt:1 }}>
-              I think that's {currentMonster.description} ...
-            </Typography>
-
+            {displayedMistakeCounter === 0 ? (
+              <Typography sx={{ padding: 2, textAlign:'center', mt: 1 }}>
+                I think that's {currentMonster.description} ...
+              </Typography>
+            ) : (() => {
+              const { revealed, fully, fullName } = getPartialTagalogName();
+              if (fully) {
+                return (
+                  <Typography sx={{ padding: 2, textAlign:'center', mt: 1 }}>
+                    Oh I remember now! that's {fullName}.
+                  </Typography>
+                );
+              }
+              return (
+                <Typography sx={{ padding: 2, textAlign:'center', mt: 1 }}>
+                  I think that monster's name is {revealed || '???'}...
+                </Typography>
+              );
+            })()}
             <img
               src={PixieFly}
               alt="Pixie"

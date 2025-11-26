@@ -20,6 +20,7 @@ import OnePicFourWords from "./components/Pages/Games/GameCreation/OnePicFourWor
 import PhraseTranslation from "./components/Pages/Games/GameCreation/PhraseTranslation";
 import WordTranslation from "./components/Pages/Games/GameCreation/WordTranslation";
 import DungeonGame from './components/Pages/DungeonGame';
+import Tutorial from './components/Pages/Tutorial';
 
 import LiveActClassroom from "./components/Pages/Live-Activity-Classroom/LiveActClassroom";
 import LiveActOnePicFourWords from "./components/Pages/Live-Activity-Classroom/LiveActOnePicFourWords";
@@ -73,7 +74,8 @@ function App() {
         <Route path="/teacherdashboard/classroom/:roomId" element={<TeacherDashboardPopUp />} />
         <Route path="/teacher/live-activities/:roomId" element={<LiveActClassroom />} />
         <Route path="/classroom/:classroomId" element={<Classroom />} />
-
+        <Route path="/tutorial" element={<Tutorial />} />
+        
         {/* Game Editors */}
         {/* Change Name Later */}
         <Route path="/activities" element={<Activities />} />
