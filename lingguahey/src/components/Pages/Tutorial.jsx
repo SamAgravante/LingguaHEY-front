@@ -127,6 +127,11 @@ export default function TutorialDungeonGame() {
     const [upperRowVisible, setUpperRowVisible] = useState(false);
     const [lowerRowVisible, setLowerRowVisible] = useState(false);
     const [makeTutorialBoxAppear, setMakeTutorialBoxAppear] = useState(false);
+    const [damageCounter, setDamageCounter] = useState(1);
+
+    const [healthPotionVisible, setHealthPotionVisible] = useState(false);
+    const [shieldPotionVisible, setShieldPotionVisible] = useState(false);
+    const [skipPotionVisible, setSkipPotionVisible] = useState(false);
     
 
     // SFX Hooks
@@ -315,10 +320,60 @@ export default function TutorialDungeonGame() {
             isContinueVisible(false);
         }
         else if (tutorialProgressCounter === 5) {
-            setDialogText("Let me unlock your ability to cast runes");
+            setDialogText("You are hurt drink this Health Potion");
+            setHealthPotionVisible(true);
             setDialogTextOverride(true);
             isContinueVisible(true);
         }
+        else if (tutorialProgressCounter === 6) {
+            setDialogText("Now it's time to attack again!");
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+        else if (tutorialProgressCounter === 7) {
+            setDialogText("Let me unlock your full power to cast all runes");
+            setLowerRowVisible(true);
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+        else if (tutorialProgressCounter === 8) {
+            setDialogText("I remember now! Snake means Ahas!");
+            setLowerRowVisible(true);
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+        else if (tutorialProgressCounter === 9) {
+            setDialogText("Select the letters A-H-A-S to ready your spell");
+            setLowerRowVisible(true);
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+        else if (tutorialProgressCounter === 10) {
+            setDialogText("Click CAST to defeat the monster!");
+            setLowerRowVisible(true);
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+        else if (tutorialProgressCounter === 11) {
+            setDialogText("Easy! Now we need to defeat this next monster");
+            setLowerRowVisible(true);
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+        else if (tutorialProgressCounter === 11) {
+            setDialogText("I have trouble remembering its name.");
+            setLowerRowVisible(true);
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+        else if (tutorialProgressCounter === 12) {
+            setDialogText("Drink this shield potion, it will protect you from the monsters attack");
+            setShieldPotionVisible(true);
+            setLowerRowVisible(true);
+            setDialogTextOverride(true);
+            isContinueVisible(true);
+        }
+
         console.log("Tutorial Progress:", tutorialProgressCounter);
     }, [tutorialProgressCounter]);
 
@@ -363,7 +418,13 @@ export default function TutorialDungeonGame() {
                         playHit();
                         const newHp = hp - 1;
                         setHp(newHp);
-
+                        const newDamageCount = damageCounter + 1; 
+                        setDamageCounter(newDamageCount);
+                        console.log("Damage Counter:", newDamageCount);
+                        if (newDamageCount === 2){
+                            setTutorialProgressCounter((prev) => prev + 1);
+                        }
+                        console.log(damageCounter);
                         setTimeout(() => setImpactVisible(false), 500);
 
                         if (newHp <= 0) {
@@ -467,6 +528,7 @@ export default function TutorialDungeonGame() {
         if (potionType === 'HEALTH') {
             playHeal();
             setHp(prev => Math.min(prev + 1, 4)); // Max 3 HP
+            setTutorialProgressCounter((prev) => prev + 1);
         }
         if (potionType === 'SHIELD') {
             playShield();
@@ -1061,44 +1123,54 @@ export default function TutorialDungeonGame() {
                     spacing={1}
                     sx={{ mr: 1.5 }}
                 >
+                    <Box sx={{ width:350 }}>
                     {/* Potions */}
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    {(
+                      // Build config per potion so each has its own visibility flag
+                      [
+                        { key: 'HEALTH', visible: healthPotionVisible, img: HealthPotion, label: "Health Potion", potionType: "HEALTH", count: healthPotions },
+                        { key: 'SHIELD', visible: shieldPotionVisible, img: ShieldPotion, label: "Shield Potion", potionType: "SHIELD", count: shieldPotions },
+                        { key: 'SKIP', visible: skipPotionVisible, img: SkipPotion, label: "Skip Potion", potionType: "SKIP", count: skipPotions }
+                      ].filter(p => p.visible).length > 0
+                    ) && (
+                      <Stack direction="row" spacing={1} alignItems="center">
                         {[
-                            { img: HealthPotion, label: "Health Potion", potionType: "HEALTH", count: healthPotions },
-                            { img: ShieldPotion, label: "Shield Potion", potionType: "SHIELD", count: shieldPotions },
-                            { img: SkipPotion, label: "Skip Potion", potionType: "SKIP", count: skipPotions }
-                        ].map((potion, idx) => (
-                            <Stack key={idx} direction="column" spacing={1} alignItems="center">
-                                <Button
-                                    sx={{
-                                        backgroundImage: `url(${ItemBox})`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        width: 100,
-                                        height: 100,
-                                        textTransform: 'none',
-                                        color: '#5D4037',
-                                        fontWeight: 'bold',
-                                        fontFamily: 'RetroGaming',
-                                        opacity: potion.count > 0 ? 1 : 0.5,
-                                        pointerEvents: isGameOver ? 'none' : 'auto',
-                                        '&:hover': { opacity: 0.8, cursor: 'pointer' }
-                                    }}
-                                    onClick={() => confirmPotion(potion.potionType)}
-                                >
-                                    <img src={potion.img} alt={potion.label} style={{ width: '40px', height: '50px' }} />
-                                </Button>
-                                <Typography
-                                    variant="caption"
-                                    align="center"
-                                    sx={{ color: '#5D4037', fontWeight: 'bold', fontFamily: 'RetroGaming' }}
-                                >
-                                    {potion.label} ({potion.count})
-                                </Typography>
-                            </Stack>
+                          { key: 'HEALTH', visible: healthPotionVisible, img: HealthPotion, label: "Health Potion", potionType: "HEALTH", count: healthPotions },
+                          { key: 'SHIELD', visible: shieldPotionVisible, img: ShieldPotion, label: "Shield Potion", potionType: "SHIELD", count: shieldPotions },
+                          { key: 'SKIP', visible: skipPotionVisible, img: SkipPotion, label: "Skip Potion", potionType: "SKIP", count: skipPotions }
+                        ].filter(p => p.visible).map((potion) => (
+                          <Stack key={potion.key} direction="column" spacing={1} alignItems="center">
+                            <Button
+                              sx={{
+                                backgroundImage: `url(${ItemBox})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                width: 100,
+                                height: 100,
+                                textTransform: 'none',
+                                color: '#5D4037',
+                                fontWeight: 'bold',
+                                fontFamily: 'RetroGaming',
+                                opacity: potion.count > 0 ? 1 : 0.5,
+                                pointerEvents: isGameOver ? 'none' : 'auto',
+                                '&:hover': { opacity: 0.8, cursor: 'pointer' }
+                              }}
+                              onClick={() => confirmPotion(potion.potionType)}
+                            >
+                              <img src={potion.img} alt={potion.label} style={{ width: '40px', height: '50px' }} />
+                            </Button>
+                            <Typography
+                              variant="caption"
+                              align="center"
+                              sx={{ color: '#5D4037', fontWeight: 'bold', fontFamily: 'RetroGaming' }}
+                            >
+                              {potion.label} ({potion.count})
+                            </Typography>
+                          </Stack>
                         ))}
-                    </Stack>
-
+                      </Stack>
+                    )}
+                    </Box>
                     {/* Letter Tiles */}
                     <Stack direction="column" spacing={1} alignItems="center" sx={{ width: 900, height: 140 }}>
                         {[0, 1].map((row) => {
