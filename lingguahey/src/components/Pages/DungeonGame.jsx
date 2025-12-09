@@ -95,6 +95,40 @@ export default function DungeonGame() {
     return { revealed, fully, fullName: name };
   }
 
+  useEffect(() => {
+    // 1. Get the current hint string (e.g., "AHA" from "AHAS")
+    const { revealed } = getPartialTagalogName();
+
+    // 2. Ensure we have a revealed string and a monster with letters
+    if (!revealed || !currentMonster.jumbledLetters) return;
+
+    const availableLetters = currentMonster.jumbledLetters.map(l => l.toUpperCase());
+    const newSelectedTiles = [];
+    const usedIndices = new Set();
+
+    // 3. Loop through every character in the revealed hint
+    for (const rawChar of revealed) {
+      const char = rawChar.toUpperCase();
+      // skip whitespace / non-printable
+      if (!char || char.trim() === '') continue;
+
+      // Find the index of this character in the available jumbled letters
+      // Ensure we don't pick the same tile index twice using !usedIndices.has(idx)
+      const foundIndex = availableLetters.findIndex((l, idx) =>
+        l === char && !usedIndices.has(idx)
+      );
+
+      if (foundIndex !== -1) {
+        usedIndices.add(foundIndex);
+        // mark as preselected so we can style it with a glow
+        newSelectedTiles.push({ label: char, index: foundIndex, preselected: true });
+      }
+    }
+
+    // 4. Update the selected tiles state to reflect the hint
+    setSelectedTiles(newSelectedTiles);
+  }, [displayedMistakeCounter, currentMonster]);
+
   const hints = [
     'Read the Codex to learn about the monsters',
     'Use your potions wisely',
@@ -260,12 +294,18 @@ export default function DungeonGame() {
   const handleTileClick = (letter, index) => {
     playDungeonClick();
     if (!selectedTiles.find((t) => t.index === index)) {
-      setSelectedTiles((prev) => [...prev, { label: letter, index }]);
+      // user-picked tiles are not preselected
+      setSelectedTiles((prev) => [...prev, { label: letter, index, preselected: false }]);
     }
   };
 
   // Handle removal from selected area
   const handleSelectedTileClick = (tileToRemove) => {
+    // Prevent removing preselected (hint) tiles
+    if (tileToRemove.preselected) {
+      playDenied?.(); // optional feedback if you want a denied sound
+      return;
+    }
     playDungeonClick(); // <-- SFX: Tile deselection sound
     setSelectedTiles((prev) => prev.filter((tile) => tile.index !== tileToRemove.index));
   };
@@ -691,6 +731,8 @@ export default function DungeonGame() {
           <Button
             key={tile.index}
             onClick={() => handleSelectedTileClick(tile)}
+            // make hint-driven tiles unclickable
+            disabled={tile.preselected}
             sx={{
               backgroundImage: `url(${ItemBox})`,
               backgroundSize: 'cover',
@@ -701,7 +743,10 @@ export default function DungeonGame() {
               fontWeight: 'bold',
               fontFamily: 'RetroGaming',
               fontSize: 24,
-              '&:hover': { opacity: 0.8, cursor: 'pointer' }
+              '&:hover': { cursor: tile.preselected ? 'default' : 'pointer' },
+              // yellow glow for preselected (hint) tiles
+              boxShadow: tile.preselected ? '0 0 16px 6px rgba(255,235,59,0.85)' : undefined,
+              border: tile.preselected ? '1px solid rgba(255,215,64,0.6)' : undefined,
             }}
           >
             {tile.label}
@@ -1125,6 +1170,7 @@ export default function DungeonGame() {
                           opacity: 1, '&:hover': { opacity: 0.8, cursor: 'pointer' }
                         }}
                       >
+
                         {letter}
                       </Button>
 
