@@ -480,17 +480,6 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       .catch(() => setQuestions(mockQuestions));
   }, [activityId]);
 
-  // -----------------------------------------------------
-  // REMOVED: Leaderboard Polling useEffect
-  // The previous code block:
-  // useEffect(() => {
-  //      fetchLeaderboard();
-  //      const interval = setInterval(fetchLeaderboard, 1000);
-  //      return () => clearInterval(interval);
-  // }, [activityId, index, fetchLeaderboard]);
-  // is now GONE. Real-time updates are handled by the WebSocket useEffect above.
-  // -----------------------------------------------------
-
   // Reset State on Question Change
   useEffect(() => {
     if (!questions.length) return;
@@ -557,9 +546,6 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
 
 
   // --- START: NON-HOOK LOGIC AND EARLY RETURNS ---
-
-  // Define function handlers that don't need to be memoized or are not hooks
-  // Inside MultiplayerGameRoom.jsx, modify handleNext:
 
   const handleNext = () => {
     if (index < questions.length - 1) {
@@ -631,7 +617,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       mt: 3,
       mb: 2,
       width: '100%',
-      height: '85vh',
+      height: '100%', // Use 100% height when it's the main content
       minHeight: '600px',
       position: 'relative',
       overflow: 'visible',
@@ -681,10 +667,12 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
             const heightPercent = maxPossiblePoints > 0 ? Math.min(1, entry.score / maxPossiblePoints) : 0;
             const maxHeight = '70%';
             const y = `calc(${maxHeight} * ${heightPercent})`;
-            const angle = (idx * (2 * Math.PI / arr.length)) + (heightPercent * Math.PI * 2);
-            const radius = `${30 - (heightPercent * 10)}%`;
-            const horizontalOffset = `calc(${Math.sin(angle)} * ${radius})`;
-            const baseX = `calc(50% + ${horizontalOffset} + ${idx * 2}%)`;
+            
+            const totalPlayers = arr.length;
+            const horizontalPositionPercent = totalPlayers > 1 
+              ? (idx / (totalPlayers - 1)) * 80 + 10 // Spread from 10% to 90%
+              : 50; // Center if only one player
+            const baseX = `${horizontalPositionPercent}%`;
 
             const topScore = arr.length > 0 ? arr[0].score : 0;
             const isLeader = entry.score === topScore && topScore > 0;
@@ -703,6 +691,7 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
                   transform: `translateX(-50%) ${isLeader ? 'scale(1.1)' : 'scale(1)'}`,
                   transition: 'all 0.5s cubic-bezier(.4,0,.2,1)',
                   zIndex: isLeader ? 2 : 1,
+                  marginLeft: `calc(${idx * 4}px)`,
                 }}
               >
                 <Typography sx={{
@@ -786,31 +775,55 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
       >
         Leave
       </Button>
-      <Box sx={{ display: 'flex', flexDirection: 'row', width: 1920, height: 520, justifyContent: 'center', alignItems: 'center', gap: 0 }}>
-        <Box sx={{ width: 850, height: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 4, boxShadow: 2, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, p: 3, ml: 0 }}>
-          <MultiplayerGameRoomGameContent
-            q={q}
-            progress={progress}
-            index={index}
-            questions={questions}
-            shuffledOptions={shuffledOptions}
-            shuffledChoices={shuffledChoices}
-            selected={selected}
-            handleChoice={handleChoice}
-            handleSelect={handleSelect}
-            handleRemove={handleRemove}
-            handleSubmit={handleSubmit}
-            pendingAnswer={pendingAnswer}
-            userRole={userRole}
-            waitingForTeacher={waitingForTeacher}
-            pastels={pastels}
-            synthesizeSpeech={synthesizeSpeech}
-          />
-        </Box>
-        <Box sx={{ width: 850, height: '90vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 4, boxShadow: 2, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, p: 3, ml: 0 }}>
-          {leaderboardBlock}
+
+      <Box sx={{ 
+        width: 'clamp(800px, 90vw, 1200px)', // Single pane size
+        height: '90vh', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        gap: 0 
+      }}>
+        <Box sx={{ 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          background: '#fff', 
+          borderRadius: 4, 
+          boxShadow: 2, 
+          alignItems: 'center', 
+          justifyContent: 'flex-start', 
+          minWidth: 0, 
+          p: 3 
+        }}>
+          {/* Game Content until showDialog is true */}
+          {!showDialog && (
+            <MultiplayerGameRoomGameContent
+              q={q}
+              progress={progress}
+              index={index}
+              questions={questions}
+              shuffledOptions={shuffledOptions}
+              shuffledChoices={shuffledChoices}
+              selected={selected}
+              handleChoice={handleChoice}
+              handleSelect={handleSelect}
+              handleRemove={handleRemove}
+              handleSubmit={handleSubmit}
+              pendingAnswer={pendingAnswer}
+              userRole={userRole}
+              waitingForTeacher={waitingForTeacher}
+              pastels={pastels}
+              synthesizeSpeech={synthesizeSpeech}
+            />
+          )}
+
+          {/* Leaderboard appears only when showDialog is true */}
+          {showDialog && leaderboardBlock}
         </Box>
       </Box>
+
       {userRole === 'TEACHER' && !showDialog && (
         index < questions.length - 1 ? (
           <Button
@@ -839,7 +852,20 @@ export default function MultiplayerGameRoom({ activityId: propActivityId, onLeav
           </Button>
         )
       )}
-      <Dialog open={showDialog} onClose={handleDialogClose}>
+      <Dialog 
+        open={showDialog} 
+        onClose={handleDialogClose}
+        BackdropProps={{ invisible: true }} // Removes the dark background overlay
+        PaperProps={{
+          sx: {
+            position: 'absolute', // Positions the dialog
+            right: '3%',       // Shifts it to the right
+            top: '10%',        // Positions it near the top
+            m: 0,              // Removes default centering margin
+            boxShadow: 8,      // Keeps a prominent shadow
+          }
+        }}
+      >
         <DialogTitle>🎉 Quiz Complete!</DialogTitle>
         <DialogContent>
           <Typography>Your final scores:</Typography>
