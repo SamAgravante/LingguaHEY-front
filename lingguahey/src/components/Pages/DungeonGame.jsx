@@ -70,11 +70,64 @@ export default function DungeonGame() {
   const [enemyAttacking, setEnemyAttacking] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
   const [potions, setPotions] = useState([]);
-
+  const [mistakeCounter, setMistakeCounter] = useState(0);
+  // displayedMistakeCounter controls when the hint updates (only after the round finishes)
+  const [displayedMistakeCounter, setDisplayedMistakeCounter] = useState(0);
+  
   // --- NEW Potion State ---
   const [potionUsedThisRound, setPotionUsedThisRound] = useState(false);
   const [skipPotionUsed, setSkipPotionUsed] = useState(false);
   // ------------------------
+
+  // helper: reveal tagalog name progressively based on mistakes
+  function getPartialTagalogName() {
+    const name = currentMonster?.tagalogName || '';
+    // Use displayedMistakeCounter so the hint only changes after a round finishes
+    if (!name || displayedMistakeCounter <= 0) return { revealed: null, fully: false };
+
+    const parts = 3; // divide the string into 3 reveal segments
+    const progress = Math.min(displayedMistakeCounter, 4); // cap at 4 mistakes
+    const revealSegments = Math.min(progress, parts); // 1->1/3, 2->2/3, 3/->full
+    const revealLen = Math.ceil((name.length / parts) * revealSegments);
+
+    const revealed = name.slice(0, revealLen);
+    const fully = revealLen >= name.length;
+    return { revealed, fully, fullName: name };
+  }
+
+  useEffect(() => {
+    // 1. Get the current hint string (e.g., "AHA" from "AHAS")
+    const { revealed } = getPartialTagalogName();
+
+    // 2. Ensure we have a revealed string and a monster with letters
+    if (!revealed || !currentMonster.jumbledLetters) return;
+
+    const availableLetters = currentMonster.jumbledLetters.map(l => l.toUpperCase());
+    const newSelectedTiles = [];
+    const usedIndices = new Set();
+
+    // 3. Loop through every character in the revealed hint
+    for (const rawChar of revealed) {
+      const char = rawChar.toUpperCase();
+      // skip whitespace / non-printable
+      if (!char || char.trim() === '') continue;
+
+      // Find the index of this character in the available jumbled letters
+      // Ensure we don't pick the same tile index twice using !usedIndices.has(idx)
+      const foundIndex = availableLetters.findIndex((l, idx) =>
+        l === char && !usedIndices.has(idx)
+      );
+
+      if (foundIndex !== -1) {
+        usedIndices.add(foundIndex);
+        // mark as preselected so we can style it with a glow
+        newSelectedTiles.push({ label: char, index: foundIndex, preselected: true });
+      }
+    }
+
+    // 4. Update the selected tiles state to reflect the hint
+    setSelectedTiles(newSelectedTiles);
+  }, [displayedMistakeCounter, currentMonster]);
 
   const hints = [
     'Read the Codex to learn about the monsters',
@@ -241,12 +294,18 @@ export default function DungeonGame() {
   const handleTileClick = (letter, index) => {
     playDungeonClick();
     if (!selectedTiles.find((t) => t.index === index)) {
-      setSelectedTiles((prev) => [...prev, { label: letter, index }]);
+      // user-picked tiles are not preselected
+      setSelectedTiles((prev) => [...prev, { label: letter, index, preselected: false }]);
     }
   };
 
   // Handle removal from selected area
   const handleSelectedTileClick = (tileToRemove) => {
+    // Prevent removing preselected (hint) tiles
+    if (tileToRemove.preselected) {
+      playDenied?.(); // optional feedback if you want a denied sound
+      return;
+    }
     playDungeonClick(); // <-- SFX: Tile deselection sound
     setSelectedTiles((prev) => prev.filter((tile) => tile.index !== tileToRemove.index));
   };
@@ -262,8 +321,10 @@ export default function DungeonGame() {
       setSelectedTiles([]);
 
       if (skipPotionUsed) {
-        setSkipPotionUsed(false);
+        setSkipPotionUsed(true);
         setPotionUsedThisRound(true);
+        setMistakeCounter(0);
+        // displayedMistakeCounter remains until round finishes
       }
       setCanCastAgain(false);
 
@@ -271,7 +332,7 @@ export default function DungeonGame() {
         // Wrong answer -> play fail laser
         setLaserEffect("fail");
         playLaserFail(); // <-- SFX: Laser Fail
-
+        setMistakeCounter((prev) => prev + 1);
         setPotionUsedThisRound(false);
 
         // Enemy counterattack sequence
@@ -308,8 +369,11 @@ export default function DungeonGame() {
           setTimeout(() => {
             setEnemyAttacking(false);
           }, 2000);
+          // End of round: enable casting again AND update displayed hint counter
           setTimeout(() => {
             setCanCastAgain(true);
+            setDisplayedMistakeCounter(prev => prev + 1); // update hint now that round finished
+            setPotionUsedThisRound(false); // Reset potion usage after each turn
           }, 3000);
         }, 2500);
       }
@@ -318,7 +382,7 @@ export default function DungeonGame() {
         // Correct answer -> play success laser
         setLaserEffect("success");
         playLaserSuccess(); // <-- SFX: Laser Success
-
+        setMistakeCounter(0);
         setTimeout(() => {
           if (userAnswer.data.gameOver) {
             setEnemyDefeated(true);
@@ -342,9 +406,10 @@ export default function DungeonGame() {
               setEnemyDefeated(false);
               getMonster();
               setCanCastAgain(true);
-
-              setPotionUsedThisRound(false);
-              setSkipPotionUsed(false);
+              // reset displayed hint because round fully finished successfully
+              setDisplayedMistakeCounter(0);
+              setPotionUsedThisRound(false); // Reset potion usage after each turn
+              setSkipPotionUsed(true);
             }, 1200);
 
             setLaserEffect(null);
@@ -382,12 +447,12 @@ export default function DungeonGame() {
       isAvailable = false;
     }
 
-    // 2. Check one-per-round limit (only if not out of potions)
+    // 2. Check one-per-turn limit (only if not out of potions)
     if (isAvailable && potionUsedThisRound) {
       playDenied(); // <-- SFX: Denied
       message = {
         mainMessage: 'Limit Reached!',
-        subMessage: 'You can only use one potion per round.'
+        subMessage: 'You can only use one potion per turn.'
       };
       isAvailable = false;
     }
@@ -398,6 +463,16 @@ export default function DungeonGame() {
       message = {
         mainMessage: 'Action Required!',
         subMessage: 'You must attack before you can drink a potion again.'
+      };
+      isAvailable = false;
+    }
+
+    // 4. Check Skip Potion can only be used once per round
+    if (isAvailable && skipPotionUsed && potionType === 'SKIP') {
+      playDenied();
+      message = {
+        mainMessage: 'Limit Reached!',
+        subMessage: 'You can only use 1 Skip Potion per Round.'
       };
       isAvailable = false;
     }
@@ -667,6 +742,8 @@ export default function DungeonGame() {
           <Button
             key={tile.index}
             onClick={() => handleSelectedTileClick(tile)}
+            // make hint-driven tiles unclickable
+            disabled={tile.preselected}
             sx={{
               backgroundImage: `url(${ItemBox})`,
               backgroundSize: 'cover',
@@ -677,7 +754,10 @@ export default function DungeonGame() {
               fontWeight: 'bold',
               fontFamily: 'RetroGaming',
               fontSize: 24,
-              '&:hover': { opacity: 0.8, cursor: 'pointer' }
+              '&:hover': { cursor: tile.preselected ? 'default' : 'pointer' },
+              // yellow glow for preselected (hint) tiles
+              boxShadow: tile.preselected ? '0 0 16px 6px rgba(255,235,59,0.85)' : undefined,
+              border: tile.preselected ? '1px solid rgba(255,215,64,0.6)' : undefined,
             }}
           >
             {tile.label}
@@ -1101,13 +1181,14 @@ export default function DungeonGame() {
                           opacity: 1, '&:hover': { opacity: 0.8, cursor: 'pointer' }
                         }}
                       >
+
                         {letter}
                       </Button>
 
                     );
                   })}
               </Stack>
-            ))}
+            ))} 
           </Stack>
           {/* Hint Box */}
           <Box
@@ -1121,10 +1202,25 @@ export default function DungeonGame() {
 
             }}
           >
-            <Typography sx={{ padding: 2, textAlign:'center',mt:1 }}>
-              I think that's {currentMonster.description} ...
-            </Typography>
-
+            {displayedMistakeCounter === 0 ? (
+              <Typography sx={{ padding: 2, textAlign:'center', mt: 1 }}>
+                I think that's {currentMonster.description} ...
+              </Typography>
+            ) : (() => {
+              const { revealed, fully, fullName } = getPartialTagalogName();
+              if (fully) {
+                return (
+                  <Typography sx={{ padding: 2, textAlign:'center', mt: 1 }}>
+                    Oh I remember now! that's {fullName}.
+                  </Typography>
+                );
+              }
+              return (
+                <Typography sx={{ padding: 2, textAlign:'center', mt: 1 }}>
+                  I think that monster's name is {revealed || '???'}...
+                </Typography>
+              );
+            })()}
             <img
               src={PixieFly}
               alt="Pixie"

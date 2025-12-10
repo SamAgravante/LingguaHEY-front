@@ -74,12 +74,19 @@ export default function MultiplayerGameRoomGameContent({
                   onClick={() => { userRole !== 'TEACHER' && handleChoice(choice); playCancel(); }}
                   sx={{
                     backgroundColor: pastels[i % pastels.length],
-                    border: (userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' :
+                    border: /*(userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' :*/
                       (pendingAnswer === choice.choiceId ? '3px solid #4CAF50' : 'none'),
                     '&:hover': {
                       opacity: userRole === 'TEACHER' ? 1 :
                         (pendingAnswer !== null && pendingAnswer !== choice.choiceId ? 0.7 : 1)
                     },
+                    // FIX: Added comma after spread expression
+                    ...(userRole === 'TEACHER' && {
+                      '&.Mui-disabled': {
+                        opacity: 1,
+                        color: '#2E2E34 !important' 
+                      }
+                    }),
                     cursor: userRole === 'TEACHER' ? 'default' : 'pointer'
                   }}
                   disabled={userRole === 'TEACHER'}
@@ -146,7 +153,24 @@ export default function MultiplayerGameRoomGameContent({
                   onDelete={() => { handleRemove(id); playCancel(); }}
                   onClick={() => { handleRemove(id); playCancel(); }}
                   deleteIcon={<CloseIcon sx={{ color: '#bb998f', fontSize: 18, '&:hover': { color: '#E6bbad' } }} />}
-                  sx={{ m: 0.5, backgroundColor: '#FFECB3', color: '#2E2E34', fontSize: '1.2rem', minHeight: 36, minWidth: 30, p: 0.5, '& .MuiChip-label': { fontSize: '1.2rem', pr: 1 } }} disabled={userRole === 'TEACHER'}
+                  sx={{ 
+                    m: 0.5, 
+                    backgroundColor: '#FFECB3', 
+                    color: '#2E2E34', 
+                    fontSize: '1.2rem', 
+                    minHeight: 36, 
+                    minWidth: 30, 
+                    p: 0.5, 
+                    '& .MuiChip-label': { fontSize: '1.2rem', pr: 1 },
+                    // FIX: Comma not needed here as this is the last property before }}
+                    ...(userRole === 'TEACHER' && {
+                      '&.Mui-disabled': {
+                        opacity: 1,
+                        color: '#2E2E34 !important',
+                      }
+                    })
+                  }} 
+                  disabled={userRole === 'TEACHER'}
                 />
               );
             })}
@@ -162,7 +186,16 @@ export default function MultiplayerGameRoomGameContent({
                 onClick={() => { userRole !== 'TEACHER' && handleSelect(c); playCancel(); }}
                 variant={selected.includes(c.choiceId)}
                 disabled={userRole === 'TEACHER'}
-                sx={{ backgroundColor: pastels[i % pastels.length] }}
+                sx={{ 
+                  backgroundColor: pastels[i % pastels.length],
+                  // FIX: Added comma after spread expression
+                  ...(userRole === 'TEACHER' && {
+                    '&.Mui-disabled': {
+                      opacity: 1,
+                      color: '#2E2E34 !important'
+                    }
+                  }),
+                }}
               >
                 {c.choiceText}
               </ChoiceButton>
@@ -220,12 +253,19 @@ export default function MultiplayerGameRoomGameContent({
                   onClick={() => { userRole !== 'TEACHER' && handleChoice(choice); playCancel(); }}
                   sx={{
                     backgroundColor: pastels[i % pastels.length],
-                    border: (userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' :
+                    border: /*(userRole === 'TEACHER' && choice.correct) ? '3px solid #4CAF50' :*/
                       (pendingAnswer === choice.choiceId ? '3px solid #4CAF50' : 'none'),
                     '&:hover': {
                       opacity: userRole === 'TEACHER' ? 1 :
                         (pendingAnswer !== null && pendingAnswer !== choice.choiceId ? 0.7 : 1)
                     },
+                    // FIX: Added comma after spread expression
+                    ...(userRole === 'TEACHER' && {
+                      '&.Mui-disabled': {
+                        opacity: 1,
+                        color: '#2E2E34 !important' 
+                      }
+                    }),
                     cursor: userRole === 'TEACHER' ? 'default' : 'pointer'
                   }}
                   disabled={userRole === 'TEACHER'}
