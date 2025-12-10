@@ -321,7 +321,7 @@ export default function DungeonGame() {
       setSelectedTiles([]);
 
       if (skipPotionUsed) {
-        setSkipPotionUsed(false);
+        setSkipPotionUsed(true);
         setPotionUsedThisRound(true);
         setMistakeCounter(0);
         // displayedMistakeCounter remains until round finishes
@@ -373,6 +373,7 @@ export default function DungeonGame() {
           setTimeout(() => {
             setCanCastAgain(true);
             setDisplayedMistakeCounter(prev => prev + 1); // update hint now that round finished
+            setPotionUsedThisRound(false); // Reset potion usage after each turn
           }, 3000);
         }, 2500);
       }
@@ -407,8 +408,8 @@ export default function DungeonGame() {
               setCanCastAgain(true);
               // reset displayed hint because round fully finished successfully
               setDisplayedMistakeCounter(0);
-              setPotionUsedThisRound(false);
-              setSkipPotionUsed(false);
+              setPotionUsedThisRound(false); // Reset potion usage after each turn
+              setSkipPotionUsed(true);
             }, 1200);
 
             setLaserEffect(null);
@@ -446,12 +447,12 @@ export default function DungeonGame() {
       isAvailable = false;
     }
 
-    // 2. Check one-per-round limit (only if not out of potions)
+    // 2. Check one-per-turn limit (only if not out of potions)
     if (isAvailable && potionUsedThisRound) {
       playDenied(); // <-- SFX: Denied
       message = {
         mainMessage: 'Limit Reached!',
-        subMessage: 'You can only use one potion per round.'
+        subMessage: 'You can only use one potion per turn.'
       };
       isAvailable = false;
     }
@@ -462,6 +463,16 @@ export default function DungeonGame() {
       message = {
         mainMessage: 'Action Required!',
         subMessage: 'You must attack before you can drink a potion again.'
+      };
+      isAvailable = false;
+    }
+
+    // 4. Check Skip Potion can only be used once per round
+    if (isAvailable && skipPotionUsed && potionType === 'SKIP') {
+      playDenied();
+      message = {
+        mainMessage: 'Limit Reached!',
+        subMessage: 'You can only use 1 Skip Potion per Round.'
       };
       isAvailable = false;
     }

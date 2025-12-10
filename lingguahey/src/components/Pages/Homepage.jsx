@@ -319,6 +319,9 @@ export default function Homepage() {
       // 1. FETCH USER DETAILS
       try {
         userResp = await API.get(`/users/${user.userId}`);
+        if(userResp.data.shopTutorialCheckpoint != true && userResp.data.summonTutorialCheckpoint != true){
+          navigate("/tutorial");
+        }
         setUserDetails(userResp.data);
         setCoins(userResp.data.coins);
         setGems(userResp.data.gems);
