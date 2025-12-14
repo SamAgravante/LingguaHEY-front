@@ -82,6 +82,38 @@ export default function DungeonGame() {
   const [potionUsedThisRound, setPotionUsedThisRound] = useState(false);
   const [skipPotionUsed, setSkipPotionUsed] = useState(false);
   // --------------------
+  
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [currentPotion, setCurrentPotion] = useState();
+  const [showLaser, setShowLaser] = useState(false);
+  const [shieldActive, setShieldActive] = useState(false);
+  const [laserEffect, setLaserEffect] = useState(null);
+  const [enemyDefeated, setEnemyDefeated] = useState(false);
+  const [isBoss, setIsBoss] = useState(false);
+  const [bossCounter, setBossCounter] = useState(0);
+  const [laserKey, setLaserKey] = useState(0);
+  const [canCastAgain, setCanCastAgain] = useState(true);
+
+  // --- SFX and BGM Hook Integration ---
+  const {
+    setSrc,
+    setActivityMode,
+    playLaserSuccess,
+    playLaserFail,
+    playHeal,
+    playShield,
+    playSkip,
+    playHit,
+    playEnemyAttack,
+    playEnemyDead,
+    playConfirm,
+    playDenied,
+    playCancel,
+    playPotionClick,
+    playDungeonClick,
+    playLevelClear,
+    playDungeonFailed,
+  } = useContext(MusicContext);
 
   // --- TTS API Client Setup ---
   const token = localStorage.getItem('token');
@@ -123,7 +155,7 @@ export default function DungeonGame() {
     return { revealed, fully, fullName: name };
   }
 
-  // --- MODIFIED EFFECT FOR TRIGGERING TTS DIALOGUE ---
+  // --- EFFECT FOR TRIGGERING TTS DIALOGUE ---
   useEffect(() => {
     // 1. Guard against running if no monster is loaded
     if (!currentMonster.englishName) return; 
@@ -163,7 +195,7 @@ export default function DungeonGame() {
 
   // The TTS is triggered every time the displayed hint counter changes, 
   // or the current monster's identifying properties change.
-  }, [displayedMistakeCounter, currentMonster.englishName, currentMonster.description]);
+  }, [displayedMistakeCounter, currentMonster.englishName, currentMonster.description, currentMonster.monsterId]); // <-- ADDED monsterId dependency
 // ---------------------------------------------
 
 
@@ -205,11 +237,16 @@ export default function DungeonGame() {
 
   const getMonster = async () => {
     try {
-      // --- FIX: Reset TTS flag before fetching new monster ---
-      setInitialHintSpoken(false); 
-      // ------------------------------------------------------
       const response = await API.get(`/game/current-monster`);
+      
+      // FIX START: Update state with new monster first
       setCurrentMonster(response.data);
+      setSelectedTiles([]); // <--- NEW FIX: Clear tiles for old monster immediately
+      
+      // Reset hint state AFTER new monster data is loaded
+      setInitialHintSpoken(false); 
+      setDisplayedMistakeCounter(0); 
+      // FIX END
 
       const monsterType = levelData.monsterData[roundCounter]?.monsterType;
       const isBossMonster = monsterType === "BOSS";
@@ -291,14 +328,16 @@ export default function DungeonGame() {
         setCurrentMonster(monster.data);
         console.log("Monster Info: ", monster.data);
         setRoundCounter(1);
+        setSelectedTiles([]); // <--- Ensure tiles are clear on start
 
         // --- INITIAL Potion State Reset ---
         setPotionUsedThisRound(false);
         setSkipPotionUsed(false);
         // ----------------------------------
         
-        // --- FIX: Ensure initial hint is spoken on first load ---
+        // --- Hint State Reset (Correct location for initial load) ---
         setInitialHintSpoken(false);
+        setDisplayedMistakeCounter(0);
         // -------------------------------------------------------
 
         //Boss Check
@@ -319,28 +358,9 @@ export default function DungeonGame() {
   }, [location.state, navigate]);
 
 
-  // --- SFX and BGM Hook Integration ---
-  const {
-    setSrc,
-    setActivityMode,
-    playLaserSuccess,
-    playLaserFail,
-    playHeal,
-    playShield,
-    playSkip,
-    playHit,
-    playEnemyAttack,
-    playEnemyDead,
-    playConfirm,
-    playDenied,
-    playCancel,
-    playPotionClick,
-    playDungeonClick,
-    playLevelClear,
-    playDungeonFailed,
-  } = useContext(MusicContext);
-
-
+  useEffect(() => {
+    if (laserEffect) setLaserKey(prev => prev + 1);
+  }, [laserEffect]);
 
 
   // Handle selection from bottom bar
@@ -457,10 +477,8 @@ export default function DungeonGame() {
             // load next monster
             setTimeout(() => {
               setEnemyDefeated(false);
-              getMonster();
+              getMonster(); // This call now handles setDisplayedMistakeCounter(0) reset 
               setCanCastAgain(true);
-              // reset displayed hint because round fully finished successfully
-              setDisplayedMistakeCounter(0);
               setPotionUsedThisRound(false); // Reset potion usage after each turn
               setSkipPotionUsed(false); // Reset skip potion usage for the new round
             }, 1200);
@@ -588,7 +606,6 @@ export default function DungeonGame() {
         getMonster();
         setSkipPotionUsed(true);
         setPotionUsedThisRound(false);
-        setDisplayedMistakeCounter(0); // Reset hint counter on skip
       }
 
       const userResp = await API.get(`/users/${userDetails.userId}`);
@@ -627,27 +644,10 @@ export default function DungeonGame() {
     'Use your potions wisely',
     'You buy potions in the shop'
   ];
-  const [isGameOver, setIsGameOver] = useState(false);
 
   //Uppercase letters
   const uppercaseLetters = currentMonster.jumbledLetters?.map(l => l.toUpperCase()) || [];
-
-  const [currentPotion, setCurrentPotion] = useState();
-  const [showLaser, setShowLaser] = useState(false);
-
-  const [shieldActive, setShieldActive] = useState(false);
-  const [laserEffect, setLaserEffect] = useState(null);
-  const [enemyDefeated, setEnemyDefeated] = useState(false);
-  const [isBoss, setIsBoss] = useState(false);
-  const [bossCounter, setBossCounter] = useState(0);
-
-  //COUNTER FOR RESETTING LASER
-  const [laserKey, setLaserKey] = useState(0);
-  const [canCastAgain, setCanCastAgain] = useState(true);
-
-  useEffect(() => {
-    if (laserEffect) setLaserKey(prev => prev + 1);
-  }, [laserEffect]);
+  
 
 
   return (
@@ -672,7 +672,6 @@ export default function DungeonGame() {
       }}
     >
       {/* Player Tab */}
-      {/* ... (Existing Player Tab JSX) ... */}
       <Box sx={{
         position: 'absolute', top: 16, left: 16,
         backgroundImage: `url(${NameTabvar2})`,
@@ -711,7 +710,6 @@ export default function DungeonGame() {
       </Box>
 
       {/* Round Counter */}
-      {/* ... (Existing Round Counter JSX) ... */}
       <Stack
         direction="column"
         spacing={1}
@@ -734,7 +732,6 @@ export default function DungeonGame() {
       </Stack>
 
       {/* Enemy Tab */}
-      {/* ... (Existing Enemy Tab JSX) ... */}
       <Box
         sx={{
           position: 'absolute',
@@ -814,7 +811,6 @@ export default function DungeonGame() {
       />
 
       {/* Selected Tiles */}
-      {/* ... (Existing Selected Tiles JSX) ... */}
       <Box sx={{
         width: 600, height: 100,
         //border: '2px solid red',  
