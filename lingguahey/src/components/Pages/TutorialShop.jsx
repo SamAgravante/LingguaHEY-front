@@ -194,6 +194,9 @@ export default function TutorialShop() {
             try {
                 // ⚠️ Assuming API.get utility is available and imports correctly
                 const userResp = await API.get(`/users/${id}`);
+                if (userResp.data.dungeonTutorialCheckpoint===false){
+                    navigate("/Tutorial");
+                }
 
                 if (isMounted) {
                     // *** ONLY UPDATE FIRST NAME - KEEP COINS/GEMS SCRIPTED ***
@@ -227,6 +230,7 @@ export default function TutorialShop() {
 
         const payload = {
             shopTutorialCheckpoint: true, // Key from your API schema
+            dungeonTutorialCheckpoint: true,
         };
 
         try {
