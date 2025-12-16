@@ -53,7 +53,7 @@ import ShieldEnemy from "../../assets/images/effects/ShieldEnemy.png";
 import MCNoWeaponHit from '../../assets/images/characters/MCNoWeaponHit.png';
 
 // Placeholder for Monster Images to keep code clean
-const PLACEHOLDER_IMG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const PLACEHOLDER_IMG = "";
 
 // ---------------------------------------------------------------------
 // 1. POINTER COMPONENT
@@ -65,7 +65,7 @@ const Pointer = ({ style }) => (
         style={{
             position: 'absolute',
             top: 0,
-            left: '50%', // REVERTED: Changed back to '50%' for true centering by default
+            left: '50%',
             transform: 'translateX(-50%) translateY(-100%)',
             fontSize: '40px',
             color: 'yellow',
@@ -110,7 +110,7 @@ export default function TutorialDungeonGame() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Monsters Data
+    // Monsters Data - Image Data Removed as requested
     const [tutorialMonsters] = useState([
         {
             description: "a creature that slides and crawls",
@@ -184,7 +184,7 @@ export default function TutorialDungeonGame() {
         if (!revealed || !currentMonster.jumbledLetters) return;
 
         const availableLetters = currentMonster.jumbledLetters.map(l => String(l).toUpperCase());
-        const newSelectedTiles = []; // Correctly initialized here
+        const newSelectedTiles = []; 
         const usedIndices = new Set();
 
         for (const rawChar of revealed) {
@@ -198,7 +198,6 @@ export default function TutorialDungeonGame() {
             }
         }
 
-        // FIX: Replaced 'newTiles' with the correctly initialized 'newSelectedTiles'
         setSelectedTiles(newSelectedTiles); 
     }, [displayedMistakeCounter, currentMonster]);
 
@@ -235,7 +234,6 @@ export default function TutorialDungeonGame() {
     const [skipPotionVisible, setSkipPotionVisible] = useState(false);
     const [user, setUser] = useState(null); // State for the decoded user object
 
-    // State for pointer cycling removed as requested.
     useEffect(() => {
         if (!token) return;
         const decoded = getUserFromToken(token);
@@ -265,8 +263,30 @@ export default function TutorialDungeonGame() {
     useEffect(() => {
         if (laserEffect) setLaserKey(prev => prev + 1);
     }, [laserEffect]);
-    
-    // Logic for pointer animation in step 2 removed as requested.
+
+
+    // --- NEW: Dungeon Checkpoint Update Function ---
+    const updateDungeonTutorialCheckpoint = useCallback(async (id) => {
+        // Prevent API call if we don't have a valid ID (e.g., if using a mock guest ID)
+        if (!id || id === 'mock-guest-id') {
+            console.warn("User ID is missing or guest. Cannot update checkpoint in API.");
+            return;
+        }
+
+        const payload = {
+            dungeonTutorialCheckpoint: true, // Key matches your shop checkpoint logic
+        };
+
+        try {
+            // REVERTED TO API.put because your backend likely expects PUT (as seen in TutorialShop)
+            await API.put(`/users/${id}`, payload);
+            console.log('Dungeon tutorial checkpoint updated successfully.');
+
+        } catch (err) {
+            console.error('Failed to update dungeon tutorial checkpoint:', err);
+        }
+    }, []);
+    // --- END NEW Function ---
 
 
     // --- Tutorial Override Logic ---
@@ -329,16 +349,13 @@ export default function TutorialDungeonGame() {
 
 
     // --- Init (Initial Game Setup) ---
-    // 🚩 FIX 1: Added 'user' to the dependency array and checked if 'user' is loaded
     useEffect(() => {
         // Ensure user is loaded before making API calls
         if (!user) return;
 
         const initGame = async () => {
             try {
-                // NOTE: 'userResp' should be declared with 'const' or 'let' if not global
                 const userResp = await API.get(`/users/${user.userId}`);
-                //console.log(userResp.data);
                 
                 setUserDetails(userResp.data);
                 setLevelData({
@@ -364,22 +381,18 @@ export default function TutorialDungeonGame() {
             }
         };
         initGame();
-    // Added 'user' and 'setSrc' to dependency array
     }, [tutorialMonsters, user, setSrc]); 
 
     // --- Fetch Game Info (Round/Location Change Setup) ---
-    // 🚩 FIX 2: Added 'user' to the dependency array and checked if 'user' is loaded
     useEffect(() => {
         // Ensure user is loaded before making API calls
         if (!user) return;
 
         const fetchGameInfo = async () => {
           try {
-            // NOTE: 'userResp' should be declared with 'const' or 'let' if not global
             const userResp = await API.get(`/users/${user.userId}`);
             
             setUserDetails(userResp.data);
-            //console.log(userResp.data);
             // --- INITIAL Potion State Reset ---
             setPotionUsedThisRound(false);
             setSkipPotionUsed(false);
@@ -389,7 +402,6 @@ export default function TutorialDungeonGame() {
           }
         };
         fetchGameInfo();
-    // Added 'user' to dependency array
     }, [location.state, navigate, user]);
 
     const loadNextMonster = (nextIndex) => {
@@ -415,6 +427,10 @@ export default function TutorialDungeonGame() {
                 mainMessage: 'Level Cleared',
                 subMessage: `Tutorial Complete! Rewards: `
             });
+            // Update Checkpoint upon successful level completion (Trigger 1)
+            if(user?.userId) {
+                updateDungeonTutorialCheckpoint(user.userId);
+            }
         } else {
             playDungeonFailed();
             setSrc();
@@ -540,10 +556,9 @@ export default function TutorialDungeonGame() {
             setDialogText("Let me unlock your ability to cast runes");
             setDialogTextOverride(true);
             isContinueVisible(true);
-            setUpperRowVisible(true); // MODIFIED: Make tiles visible here
+            setUpperRowVisible(true); 
         }
         else if (tutorialProgressCounter === 3) {
-            // setUpperRowVisible(true); // Already done in step 2
             setMakeTutorialBoxAppear(true);
             setDialogTextOverride(true);
             isContinueVisible(false);
@@ -557,7 +572,7 @@ export default function TutorialDungeonGame() {
             setDialogText("You are hurt drink this Health Potion");
             setHealthPotionVisible(true);
             setDialogTextOverride(true);
-            isContinueVisible(false); // Guided interaction
+            isContinueVisible(false); 
         }
         else if (tutorialProgressCounter === 6) {
             setDialogText("Now it's time to attack again!");
@@ -597,7 +612,7 @@ export default function TutorialDungeonGame() {
             setDialogText("Drink this shield potion, it will protect you from the next attack!");
             setShieldPotionVisible(true);
             setDialogTextOverride(true);
-            isContinueVisible(false); // Guided interaction
+            isContinueVisible(false); 
         }
         else if (tutorialProgressCounter === 13) {
             setDialogText("Now, try casting a random spell. Don't worry, the Shield Potion will protect you!");
@@ -613,11 +628,11 @@ export default function TutorialDungeonGame() {
             setDialogText("Take this Skip Potion! Use it to instantly defeat the monster.");
             setSkipPotionVisible(true);
             setDialogTextOverride(true);
-            isContinueVisible(false); // Guided interaction
+            isContinueVisible(false); 
             setSkipPotionUsed(true);
         }
         else if (tutorialProgressCounter === 16) {
-            setDialogText("That's it! This is the final enemy—a BOSS! Good luck, you'll take it from here!");
+            setDialogText("That's it! This is the final enemy... a BOSS! Good luck, you'll take it from here!");
             setDialogTextOverride(true);
             isContinueVisible(true);
             setIsBoss(true);
@@ -1069,7 +1084,6 @@ export default function TutorialDungeonGame() {
                     disabled={!canCastAgain || isButtonDisabled('CAST_BUTTON')}
                     data-action="CAST_BUTTON"
                 >
-                    {/* UPDATED Pointer Style: Removed left/transform override, using new 50% default centering */}
                     {targetKey === 'CAST_BUTTON' && <Pointer style={{ top: '-30px' }} />}
                 </Button>
             </Box>
@@ -1101,7 +1115,6 @@ export default function TutorialDungeonGame() {
                             }}
                         >
                             {tile.label}
-                            {/* UPDATED Pointer Style: Using new 50% default centering */}
                             {targetKey === `SELECTED_TILE_${tile.index}` && <Pointer style={{ top: '-30px' }} />}
                         </Button>
                     </Box>
@@ -1305,7 +1318,6 @@ export default function TutorialDungeonGame() {
                     }}
                     onClick={() => {
                         setMakeTutorialBoxAppear(false);
-                        // setTutorialProgressCounter((prev) => prev + 1); // Not needed, let Effect handle it
                     }}
                 >
                     <Box sx={{
@@ -1394,6 +1406,10 @@ export default function TutorialDungeonGame() {
                                 }}
                                 onClick={() => {
                                     playConfirm();
+                                    // Update checkpoint one last time on exit if completed (Trigger 2)
+                                    if(messageDetails.mainMessage === 'Level Cleared' && user?.userId){
+                                         updateDungeonTutorialCheckpoint(user.userId);
+                                    }
                                     navigate('/TutorialHomepage');
                                 }}
                             >
@@ -1544,7 +1560,6 @@ export default function TutorialDungeonGame() {
                                                 data-action={actionKey}
                                             >
                                                 <img src={potion.img} alt={potion.label} style={{ width: '40px', height: '50px' }} />
-                                                {/* UPDATED Pointer Style: Using new 50% default centering */}
                                                 {targetKey === actionKey && <Pointer style={{ top: '-30px' }} />}
                                             </Button>
                                         </Box>
@@ -1613,7 +1628,6 @@ export default function TutorialDungeonGame() {
                                                         }}
                                                     >
                                                         {letter}
-                                                        {/* Render pointer based on the combined logic, using new 50% default centering */}
                                                         {showPointerOnTile && <Pointer style={{ top: '-30px' }} />}
                                                     </Button>
                                                 </Box>
@@ -1641,14 +1655,19 @@ export default function TutorialDungeonGame() {
                             const disabled = isButtonDisabled('CONTINUE_BUTTON');
                             if (continueVisible && !makeTutorialBoxAppear && !disabled) {
                                 playConfirm();
-                                setTutorialProgressCounter(prev => prev + 1);
+                                setTutorialProgressCounter(prev => {
+                                    const next = prev + 1;
+                                    // Removed Checkpoint Trigger here because step 17 is not the end of the game, just end of dialog.
+                                    // The checkpoint is now handled exclusively in finishLevel (upon winning)
+                                    // or returning to town after winning.
+                                    return next;
+                                });
                             } else if (disabled && continueVisible) {
                                 playDenied();
                             }
                         }}
                         data-action="CONTINUE_BUTTON"
                     >
-                            {/* NEW Pointer location: Centered above the whole box */}
                             {targetKey === 'CONTINUE_BUTTON' && <Pointer style={{ top: '-10px' }} />}
 
                             {/* If dialog override is active (scripted dialog), show it; otherwise show normal hint UI */}
@@ -1699,7 +1718,6 @@ export default function TutorialDungeonGame() {
                                                     height: '30px',
                                                 }}
                                             />
-                                            {/* OLD Pointer location REMOVED */}
                                         </Stack>
                                     )}
                                 </>

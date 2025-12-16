@@ -119,6 +119,7 @@ export default function TutorialSummon() {
     const [pulledItem, setPulledItem] = useState({});
     const [showItem, setShowItem] = useState(false); // Controls showing the result item after animation
     const [animationKey, setAnimationKey] = useState(Date.now()); // Forces GIF restart
+    const [userDetails, setUserDetails] = useState({});
 
     // Tutorial state
     const [tutorialStep, setTutorialStep] = useState(1);
@@ -161,6 +162,30 @@ export default function TutorialSummon() {
             }
         }
 
+        const fetchUserDetails = async (id) => {
+            try {
+                // ⚠️ Assuming API.get utility is available and imports correctly
+                const userResp = await API.get(`/users/${id}`);
+                if (userResp.data.shopTutorialCheckpoint===false){
+                    navigate("/TutorialShop");
+                }
+
+                if (isMounted) {
+                    // *** ONLY UPDATE FIRST NAME - KEEP COINS/GEMS SCRIPTED ***
+                    setFirstName(userResp.data.firstName || 'Adventurer');
+                    console.log('User name retrieved successfully:', userResp.data.firstName);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    console.error('Error retrieving user name:', err);
+                }
+            }
+        };
+
+        if (decodedUser?.userId) {
+            fetchUserDetails(decodedUser.userId);
+        }
+        
         return () => {
             isMounted = false;
         };
@@ -177,7 +202,8 @@ export default function TutorialSummon() {
 
         const payload = {
             summonTutorialCheckpoint: true, // Key based on user request (summon_tutorial_checkpoint)
-            shopTutorialCheckpoint: true,
+            shopTutorialCheckpoint: true, // Key from your API schema
+            dungeonTutorialCheckpoint: true,
         };
 
         try {

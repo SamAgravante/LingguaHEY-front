@@ -371,6 +371,9 @@ const LiveActivityGame = forwardRef(function LiveActivityGame({
                 totalPoints: userDetails.totalPoints,
                 profilePic: selectedChar, // <-- THIS IS THE CRITICAL UPDATE
                 role: userDetails.role,
+                summonTutorialCheckpoint: userDetails.summonTutorialCheckpoint,
+                shopTutorialCheckpoint: userDetails.shopTutorialCheckpoint,
+                dungeonTutorialCheckpoint: userDetails.dungeonTutorialCheckpoint,
               };
               await USER_API.put(`/${user}`, payload);
               playCancel();
